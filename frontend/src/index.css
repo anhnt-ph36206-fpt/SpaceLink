@@ -1,1 +1,193 @@
-@import "tailwindcss";
+/* Import Bootstrap CSS */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+/* Import FontAwesome */
+@import url('https://use.fontawesome.com/releases/v5.15.4/css/all.css');
+
+/* Import AOS */
+@import 'aos/dist/aos.css';
+
+/* Custom styles */
+body {
+    font-family: 'Open Sans', sans-serif;
+}
+
+/* Back to top button */
+.back-to-top {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 99;
+}
+
+/* Product card animations */
+.product-item-add {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.product-item:hover .product-item-add {
+    max-height: 500px;
+}
+
+/* Custom button sizes */
+.btn-md-square {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.btn-sm-square {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.btn-lg-square {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+/* Product badges */
+.product-new,
+.product-sale {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #ff6f61;
+    color: white;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 1;
+}
+
+.product-new {
+    background: #28a745;
+}
+
+/* Product details overlay */
+.product-details {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.product-item-inner-item:hover .product-details {
+    opacity: 1;
+}
+
+.product-item-inner-item {
+    position: relative;
+}
+
+/* Categories bars */
+.categories-bars {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.categories-bars-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.categories-bars-item:hover {
+    background: #f8f9fa;
+}
+
+.categories-bars-item a {
+    text-decoration: none;
+    color: #333;
+}
+
+/* Footer styles */
+.footer {
+    background: #1a1a2e;
+}
+
+.footer a {
+    color: #aaa;
+    text-decoration: none;
+    display: block;
+    padding: 5px 0;
+}
+
+.footer a:hover {
+    color: #fff;
+}
+
+/* Copyright */
+.copyright {
+    background: #0f0f1e;
+}
+
+/* Carousel banner */
+.carousel-header-banner {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.carousel-banner-offer {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.carousel-banner {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    width: 90%;
+}
+
+.carousel-banner-content {
+    margin-bottom: 15px;
+}
+
+.carousel-banner a {
+    text-decoration: none;
+}
+
+/* Nav pills */
+.nav-pills .nav-link.active {
+    background-color: #007bff;
+    color: white !important;
+}
+
+.nav-pills .nav-link {
+    cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+    .navbar-collapse {
+        background: #007bff;
+        padding: 15px;
+    }
+}
