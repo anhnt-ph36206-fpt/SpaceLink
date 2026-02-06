@@ -11,9 +11,8 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    // Cập nhật đúng tên cột trong database của bạn
     protected $fillable = [
-        'fullname', // Đổi name thành fullname
+        'fullname',
         'email',
         'password',
         'phone',
