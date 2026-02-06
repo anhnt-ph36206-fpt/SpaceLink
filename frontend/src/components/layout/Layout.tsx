@@ -1,4 +1,4 @@
-import React, { ReactNode, useLayoutEffect, useEffect } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import Header from './Header';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -33,11 +33,15 @@ const Layout: React.FC<LayoutProps> = ({ children, showSpinner = false }) => {
             s.src = src;
             s.async = false;
             document.body.appendChild(s);
-            return;
+            return s;
         });
 
         return () => {
-            scriptElements.forEach(s => document.body.removeChild(s));
+            scriptElements.forEach(s => {
+                if (s && s.parentNode) {
+                    document.body.removeChild(s);
+                }
+            });
         };
     }, []);
 
