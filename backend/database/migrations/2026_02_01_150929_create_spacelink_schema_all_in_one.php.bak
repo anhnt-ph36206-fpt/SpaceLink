@@ -37,7 +37,7 @@ return new class extends Migration
             $table->foreign('permission_id')->references('id')->on('permissions')->cascadeOnDelete();
         });
 
-        Schema::create('users', function (Blueprint $table) {
+Schema::create('users', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('role_id')->default(3);
             $table->string('email', 255)->unique();
@@ -54,12 +54,7 @@ return new class extends Migration
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             $table->softDeletes();
-
             $table->foreign('role_id')->references('id')->on('roles')->restrictOnDelete();
-            $table->index('role_id', 'idx_role');
-            $table->index('email', 'idx_email');
-            $table->index('status', 'idx_status');
-            $table->index('deleted_at', 'idx_deleted');
         });
 
         Schema::create('user_addresses', function (Blueprint $table) {
@@ -75,7 +70,6 @@ return new class extends Migration
             $table->enum('address_type', ['home', 'office', 'other'])->default('home');
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
-
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->index('user_id', 'idx_user');
             $table->index('is_default', 'idx_default');
