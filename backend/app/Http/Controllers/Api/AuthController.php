@@ -18,9 +18,9 @@ class AuthController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['fullname', 'email', 'password', 'password_confirmation'],
+                required: ['name', 'email', 'password', 'password_confirmation'],
                 properties: [
-                    new OA\Property(property: 'fullname', type: 'string', example: 'Nguyen Van A'),
+                    new OA\Property(property: 'name', type: 'string', example: 'Nguyen Van A'),
                     new OA\Property(property: 'email', type: 'string', format: 'email', example: 'user@example.com'),
                     new OA\Property(property: 'password', type: 'string', format: 'password', example: '123456'),
                     new OA\Property(property: 'password_confirmation', type: 'string', format: 'password', example: '123456'),
@@ -49,7 +49,7 @@ class AuthController extends Controller
     {
         // ... (Giữ nguyên code xử lý của bạn)
         $validator = Validator::make($request->all(), [
-            'fullname' => 'required|string|max:150',
+            'name' => 'required|string|max:150',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
         ]);
@@ -63,7 +63,7 @@ class AuthController extends Controller
         }
 
         $user = User::create([
-            'fullname' => $request->fullname,
+            'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'status' => 'active',

@@ -13,7 +13,16 @@ use OpenApi\Attributes as OA;
     url: "http://localhost:8000",
     description: "Local Server"
 )]
+// --- THÊM ĐOẠN NÀY ĐỂ HIỆN Ổ KHÓA ---
+#[OA\SecurityScheme(
+    securityScheme: "sanctum",
+    type: "http",
+    scheme: "bearer",
+    bearerFormat: "JWT",
+    description: "Nhập Token theo định dạng: Bearer {token}"
+)]
+// ------------------------------------
 abstract class Controller
 {
     //
-}   
+}
