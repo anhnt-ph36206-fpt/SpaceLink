@@ -17,7 +17,7 @@ const ProductOffers: React.FC = () => {
                                     40% <span className="text-primary fw-normal">Off</span>
                                 </h1>
                             </div>
-                            <img src="/images/product-1.png" className="img-fluid" alt="Smart Camera" />
+                            <img src="/assets/client/img/product-1.png" className="img-fluid" alt="Smart Camera" />
                         </a>
                     </div>
                     <div className="col-lg-6 wow fadeInRight" data-wow-delay="0.3s">
@@ -32,7 +32,7 @@ const ProductOffers: React.FC = () => {
                                     20% <span className="text-primary fw-normal">Off</span>
                                 </h1>
                             </div>
-                            <img src="/images/product-2.png" className="img-fluid" alt="Smart Watch" />
+                            <img src="/assets/client/img/product-2.png" className="img-fluid" alt="Smart Watch" />
                         </a>
                     </div>
                 </div>
