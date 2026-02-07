@@ -42,7 +42,7 @@ Schema::create('users', function (Blueprint $table) {
             $table->unsignedBigInteger('role_id')->default(3);
             $table->string('email', 255)->unique();
             $table->string('password', 255);
-            $table->string('fullname', 150);
+            $table->string('name', 150);
             $table->string('phone', 15)->nullable();
             $table->string('avatar', 255)->nullable();
             $table->date('date_of_birth')->nullable();
@@ -60,7 +60,7 @@ Schema::create('users', function (Blueprint $table) {
         Schema::create('user_addresses', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id');
-            $table->string('fullname', 150);
+            $table->string('name', 150);
             $table->string('phone', 15);
             $table->string('province', 100);
             $table->string('district', 100);
