@@ -3,11 +3,22 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Attribute extends Model {
-    use HasFactory;
-    protected $fillable = ['attribute_group_id', 'value', 'color_code', 'display_order'];
 
-    public function group() {
-        return $this->belongsTo(AttributeGroup::class, 'attribute_group_id');
+class AttributeGroup extends Model
+{
+    protected $fillable = [
+        'name',
+        'display_name',
+        'display_order',
+    ];
+
+    /**
+     * Relationships
+     */
+
+    // AttributeGroup has many attributes
+    public function attributes()
+    {
+        return $this->hasMany(Attribute::class);
     }
 }
