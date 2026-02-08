@@ -10,31 +10,28 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable;
+
+    // --- 1. KHAI BÁO HẰNG SỐ (CONSTANTS) ---
+    const ROLE_ADMIN = 1;
+    const ROLE_STAFF = 2;
+    const ROLE_CUSTOMER = 3;
+
+    const STATUS_ACTIVE = 'active';
+    const STATUS_INACTIVE = 'inactive';
+    const STATUS_BANNED = 'banned';
 
     protected $fillable = [
-        'role_id',
-        'email',
-        'password',
-        'fullname',
-        'phone',
-        'avatar',
-        'date_of_birth',
-        'gender',
-        'status',
-        'last_login_at',
+        'fullname', 'email', 'password', 'phone', 
+        'role_id', 'status', 'avatar', 'gender', 'date_of_birth'
     ];
 
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'last_login_at' => 'datetime',
-        'date_of_birth' => 'date',
         'password' => 'hashed',
+        'date_of_birth' => 'date', // Tự động format ngày tháng
     ];
 
     /**

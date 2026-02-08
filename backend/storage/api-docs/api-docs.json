@@ -12,26 +12,98 @@
         }
     ],
     "paths": {
-        "/api/register": {
+        "/api/addresses": {
+            "get": {
+                "tags": [
+                    "Address"
+                ],
+                "summary": "Danh sách địa chỉ",
+                "operationId": "dc6b190d3f07db7ed032fa181dc45150",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Address"
+                ],
+                "summary": "Thêm địa chỉ mới",
+                "operationId": "6344fc023028e43a5490f1c6372bd391",
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/addresses/{id}": {
+            "put": {
+                "tags": [
+                    "Address"
+                ],
+                "summary": "Sửa địa chỉ",
+                "operationId": "b4967e4140f305290dbde0982a3fc7d0",
+                "responses": {
+                    "200": {
+                        "description": "Updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Address"
+                ],
+                "summary": "Xóa địa chỉ",
+                "operationId": "eedadf79fef97e5ee1af0b11c8856d8b",
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/register": {
             "post": {
                 "tags": [
                     "Authentication"
                 ],
                 "summary": "Đăng ký tài khoản mới",
-                "operationId": "8e4e3cb7b46126f4696379d3c7eeb4ad",
+                "operationId": "c7bb21a0d87049e161b8e4c9b0d909f2",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "name",
+                                    "fullname",
                                     "email",
                                     "password",
                                     "password_confirmation"
                                 ],
                                 "properties": {
-                                    "name": {
+                                    "fullname": {
                                         "type": "string",
                                         "example": "Nguyen Van A"
                                     },
@@ -49,6 +121,10 @@
                                         "type": "string",
                                         "format": "password",
                                         "example": "123456"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0912345678"
                                     }
                                 },
                                 "type": "object"
@@ -73,6 +149,9 @@
                                         },
                                         "data": {
                                             "properties": {
+                                                "user": {
+                                                    "type": "object"
+                                                },
                                                 "token": {
                                                     "type": "string",
                                                     "example": "1|abcde..."
@@ -91,18 +170,18 @@
                         }
                     },
                     "422": {
-                        "description": "Lỗi kiểm tra dữ liệu (Validation)"
+                        "description": "Lỗi kiểm tra dữ liệu"
                     }
                 }
             }
         },
-        "/api/login": {
+        "/api/auth/login": {
             "post": {
                 "tags": [
                     "Authentication"
                 ],
                 "summary": "Đăng nhập hệ thống",
-                "operationId": "222b2625838e3c57e017987f73598fda",
+                "operationId": "dd51a484b7fa0f97c7680fdbde14cf5f",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -132,24 +211,43 @@
                         "description": "Đăng nhập thành công"
                     },
                     "401": {
-                        "description": "Sai thông tin đăng nhập"
+                        "description": "Thông tin đăng nhập không chính xác"
                     }
                 }
             }
         },
-        "/api/logout": {
+        "/api/auth/me": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Lấy thông tin người dùng hiện tại",
+                "operationId": "b5de204f5e452ef51327c691aa99e77c",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "401": {
+                        "description": "Chưa xác thực"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/logout": {
             "post": {
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Đăng xuất",
-                "operationId": "ad65cbbd4e9f201619eae184a5961a98",
+                "summary": "Đăng xuất tài khoản",
+                "operationId": "df9bdc6c7a6d9f20b983526b2ec0f698",
                 "responses": {
                     "200": {
                         "description": "Đăng xuất thành công"
-                    },
-                    "401": {
-                        "description": "Chưa xác thực"
                     }
                 },
                 "security": [
@@ -520,6 +618,71 @@
                     }
                 }
             }
+        },
+        "/api/profile": {
+            "get": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Lấy thông tin profile và danh sách địa chỉ",
+                "operationId": "f1784685f8270527da017b3616288443",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Cập nhật thông tin cá nhân",
+                "operationId": "875e8801180287e4193f1aced9023960",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "fullname": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "enum": [
+                                            "male",
+                                            "female",
+                                            "other"
+                                        ]
+                                    },
+                                    "date_of_birth": {
+                                        "type": "string",
+                                        "format": "date"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -534,6 +697,10 @@
     },
     "tags": [
         {
+            "name": "Address",
+            "description": "Address"
+        },
+        {
             "name": "Authentication",
             "description": "Authentication"
         },
@@ -544,6 +711,10 @@
         {
             "name": "Products",
             "description": "Products"
+        },
+        {
+            "name": "Profile",
+            "description": "Profile"
         }
     ]
 }

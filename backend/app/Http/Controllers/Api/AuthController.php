@@ -7,23 +7,25 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use OpenApi\Attributes as OA; // Import thư viện Swagger
+use App\Http\Resources\UserResource; // Import Resource
+use OpenApi\Attributes as OA;
 
 class AuthController extends Controller
 {
     #[OA\Post(
-        path: '/api/register',
+        path: '/api/auth/register',
         summary: 'Đăng ký tài khoản mới',
         tags: ['Authentication'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['name', 'email', 'password', 'password_confirmation'],
+                required: ['fullname', 'email', 'password', 'password_confirmation'],
                 properties: [
-                    new OA\Property(property: 'name', type: 'string', example: 'Nguyen Van A'),
+                    new OA\Property(property: 'fullname', type: 'string', example: 'Nguyen Van A'),
                     new OA\Property(property: 'email', type: 'string', format: 'email', example: 'user@example.com'),
                     new OA\Property(property: 'password', type: 'string', format: 'password', example: '123456'),
                     new OA\Property(property: 'password_confirmation', type: 'string', format: 'password', example: '123456'),
+                    new OA\Property(property: 'phone', type: 'string', example: '0912345678'),
                 ]
             )
         ),
@@ -36,22 +38,23 @@ class AuthController extends Controller
                         new OA\Property(property: 'status', type: 'boolean', example: true),
                         new OA\Property(property: 'message', type: 'string', example: 'Đăng ký thành công'),
                         new OA\Property(property: 'data', type: 'object', properties: [
+                            new OA\Property(property: 'user', type: 'object'),
                             new OA\Property(property: 'token', type: 'string', example: '1|abcde...'),
                             new OA\Property(property: 'token_type', type: 'string', example: 'Bearer'),
                         ])
                     ]
                 )
             ),
-            new OA\Response(response: 422, description: 'Lỗi kiểm tra dữ liệu (Validation)')
+            new OA\Response(response: 422, description: 'Lỗi kiểm tra dữ liệu')
         ]
     )]
     public function register(Request $request)
     {
-        // ... (Giữ nguyên code xử lý của bạn)
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:150',
+            'fullname' => 'required|string|max:150',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
+            'phone' => 'nullable|string|max:20',
         ]);
 
         if ($validator->fails()) {
@@ -62,11 +65,14 @@ class AuthController extends Controller
             ], 422);
         }
 
+        // TỐI ƯU: Sử dụng Constant thay vì số 3 và chữ 'active'
         $user = User::create([
-            'name' => $request->name,
+            'fullname' => $request->fullname,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'status' => 'active',
+            'phone' => $request->phone,
+            'status' => User::STATUS_ACTIVE,    // Đảm bảo Model User đã có const STATUS_ACTIVE
+            'role_id' => User::ROLE_CUSTOMER,   // Đảm bảo Model User đã có const ROLE_CUSTOMER
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -75,7 +81,7 @@ class AuthController extends Controller
             'status' => true,
             'message' => 'Đăng ký thành công',
             'data' => [
-                'user' => $user,
+                'user' => new UserResource($user), // TỐI ƯU: Dùng Resource
                 'token' => $token,
                 'token_type' => 'Bearer'
             ]
@@ -83,7 +89,7 @@ class AuthController extends Controller
     }
 
     #[OA\Post(
-        path: '/api/login',
+        path: '/api/auth/login',
         summary: 'Đăng nhập hệ thống',
         tags: ['Authentication'],
         requestBody: new OA\RequestBody(
@@ -98,25 +104,31 @@ class AuthController extends Controller
         ),
         responses: [
             new OA\Response(response: 200, description: 'Đăng nhập thành công'),
-            new OA\Response(response: 401, description: 'Sai thông tin đăng nhập')
+            new OA\Response(response: 401, description: 'Thông tin đăng nhập không chính xác')
         ]
     )]
     public function login(Request $request)
     {
-        // ... (Giữ nguyên code xử lý của bạn)
         $validator = Validator::make($request->all(), [
             'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['status' => false, 'message' => 'Dữ liệu không hợp lệ', 'errors' => $validator->errors()], 422);
+            return response()->json([
+                'status' => false, 
+                'message' => 'Dữ liệu không hợp lệ', 
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json(['status' => false, 'message' => 'Thông tin đăng nhập không chính xác'], 401);
+            return response()->json([
+                'status' => false, 
+                'message' => 'Thông tin đăng nhập không chính xác'
+            ], 401);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -125,29 +137,53 @@ class AuthController extends Controller
             'status' => true,
             'message' => 'Đăng nhập thành công',
             'data' => [
-                'user' => $user,
+                'user' => new UserResource($user), // TỐI ƯU: Dùng Resource
                 'token' => $token,
                 'token_type' => 'Bearer'
             ]
         ], 200);
     }
 
-    #[OA\Post(
-        path: '/api/logout',
-        summary: 'Đăng xuất',
+    #[OA\Get(
+        path: '/api/auth/me',
+        summary: 'Lấy thông tin người dùng hiện tại',
         tags: ['Authentication'],
-        security: [['bearerAuth' => []]], // Yêu cầu phải có token mới logout được
+        security: [['bearerAuth' => []]],
         responses: [
-            new OA\Response(response: 200, description: 'Đăng xuất thành công'),
+            new OA\Response(response: 200, description: 'Thành công'),
             new OA\Response(response: 401, description: 'Chưa xác thực')
+        ]
+    )]
+    public function me(Request $request)
+    {
+        // TỐI ƯU: Load thêm role và addresses để trả về đầy đủ info cho Frontend
+        $user = $request->user()->load(['role', 'addresses']);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Lấy dữ liệu thành công',
+            'data' => [
+                'user' => new UserResource($user) // TỐI ƯU: Resource sẽ format cả addresses bên trong
+            ]
+        ], 200);
+    }
+
+    #[OA\Post(
+        path: '/api/auth/logout',
+        summary: 'Đăng xuất tài khoản',
+        tags: ['Authentication'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Đăng xuất thành công')
         ]
     )]
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
+
         return response()->json([
             'status' => true,
             'message' => 'Đăng xuất thành công'
-        ]);
+        ], 200);
     }
 }
