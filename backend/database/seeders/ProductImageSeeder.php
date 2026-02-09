@@ -12,6 +12,7 @@ class ProductImageSeeder extends Seeder
      */
     public function run(): void
     {
-        //
+        // Gộp vào ProductSeeder nên tạm thời không dùng, bỏ trống
+        // Để sau này có thể tách ra nếu cần thì dùng
     }
 }

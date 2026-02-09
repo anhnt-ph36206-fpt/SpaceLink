@@ -38,12 +38,14 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Xóa indexes và foreign key
+            // Xóa foreign key trước (QUAN TRỌNG: phải xóa FK trước khi xóa index)
+            $table->dropForeign(['role_id']);
+            
+            // Sau đó mới xóa indexes
             $table->dropIndex('idx_role');
             $table->dropIndex('idx_email');
             $table->dropIndex('idx_status');
             $table->dropIndex('idx_deleted');
-            $table->dropForeign(['role_id']);
 
             // Xóa các cột đã thêm
             $table->dropColumn([
