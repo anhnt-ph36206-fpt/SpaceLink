@@ -1,6 +1,6 @@
 import React from 'react';
 import ProductCard from '../components/common/ProductCard';
-import { Product } from '../types';
+import type {Product} from '../types';
 
 const BestsellerPage: React.FC = () => {
     // Sample bestseller products
