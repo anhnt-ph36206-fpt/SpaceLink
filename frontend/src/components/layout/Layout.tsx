@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, {type ReactNode} from 'react';
 import Header from './Header';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -10,16 +10,16 @@ interface LayoutProps {
     showSpinner?: boolean;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, showSpinner = false }) => {
+const Layout: React.FC<LayoutProps> = ({children, showSpinner = false}) => {
 
     return (
         <>
-            {showSpinner && <Spinner />}
-            <Header />
-            <Navbar />
+            {showSpinner && <Spinner/>}
+            <Header/>
+            <Navbar/>
             <main>{children}</main>
-            <Footer />
-            <BackToTop />
+            <Footer/>
+            <BackToTop/>
         </>
     );
 };

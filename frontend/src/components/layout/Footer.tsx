@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import {Link} from 'react-router-dom';
 
 const Footer: React.FC = () => {
     return (
@@ -15,7 +15,8 @@ const Footer: React.FC = () => {
                                         <i className="fas fa-shopping-bag text-primary me-3"></i>Electro
                                     </h4>
                                     <p className="mb-3">
-                                        Dolor amet sit justo amet elitr clita ipsum elitr est. Lorem ipsum dolor sit amet,
+                                        Dolor amet sit justo amet elitr clita ipsum elitr est. Lorem ipsum dolor sit
+                                        amet,
                                         consectetur adipiscing elit consectetur adipiscing elit.
                                     </p>
                                     <div className="position-relative">
@@ -125,8 +126,10 @@ const Footer: React.FC = () => {
                             </span>
                         </div>
                         <div className="col-md-6 text-center text-md-end text-white">
-                            Designed By <a className="border-bottom text-white" href="https://htmlcodex.com">HTML Codex</a>.
-                            Distributed By <a className="border-bottom text-white" href="https://themewagon.com">ThemeWagon</a>
+                            Designed By <a className="border-bottom text-white" href="https://htmlcodex.com">HTML
+                            Codex</a>.
+                            Distributed By <a className="border-bottom text-white"
+                                              href="https://themewagon.com">ThemeWagon</a>
                         </div>
                     </div>
                 </div>

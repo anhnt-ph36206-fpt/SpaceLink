@@ -1,44 +1,29 @@
 <?php
-
 namespace Database\Seeders;
 
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class RoleSeeder extends Seeder
 {
+    /**
+     * Dữ liệu cứng: 3 role cố định (doc 22).
+     * Code có thể check: $user->role->name === 'admin'.
+     */
     public function run(): void
     {
-        // Xóa dữ liệu cũ để tránh trùng lặp
-        DB::table('roles')->delete();
+        $roles = [
+            ['name' => 'admin', 'display_name' => 'Quản Trị Viên', 'description' => 'Toàn quyền quản lý, truy cập'],
+            ['name' => 'staff', 'display_name' => 'Nhân viên', 'description' => 'Quản lý sản phẩm, đơn hàng'],
+            ['name' => 'customer', 'display_name' => 'Khách hàng', 'description' => 'Người mua hàng'],
+        ];
 
-        // Tạo các Role cơ bản
-        // Lưu ý: Cần đảm bảo có ID = 3 cho User thường
-        DB::table('roles')->insert([
-            [
-                'id' => 1,
-                'name' => 'admin',
-                'display_name' => 'Administrator',
-                'description' => 'Quản trị viên cao cấp',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'id' => 2,
-                'name' => 'staff',
-                'display_name' => 'Staff',
-                'description' => 'Nhân viên',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'id' => 3, // <--- ĐÂY LÀ ROLE MẶC ĐỊNH
-                'name' => 'user',
-                'display_name' => 'Customer',
-                'description' => 'Khách hàng',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        ]);
+        foreach ($roles as $role) {
+            Role::firstOrCreate(
+                ['name' => $role['name']],
+                $role
+            );
+        }
     }
 }

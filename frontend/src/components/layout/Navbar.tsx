@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, {useState} from 'react';
+import {Link, useLocation} from 'react-router-dom';
 
 const Navbar: React.FC = () => {
     const location = useLocation();
@@ -8,18 +8,18 @@ const Navbar: React.FC = () => {
     const isActive = (path: string) => location.pathname === path ? 'active' : '';
 
     const categories = [
-        { name: 'Accessories', count: 3 },
-        { name: 'Electronics & Computer', count: 5 },
-        { name: 'Laptops & Desktops', count: 2 },
-        { name: 'Mobiles & Tablets', count: 8 },
-        { name: 'SmartPhone & Smart TV', count: 5 },
+        {name: 'Accessories', count: 3},
+        {name: 'Electronics & Computer', count: 5},
+        {name: 'Laptops & Desktops', count: 2},
+        {name: 'Mobiles & Tablets', count: 8},
+        {name: 'SmartPhone & Smart TV', count: 5},
     ];
 
     return (
         <div className="container-fluid nav-bar p-0">
             <div className="row gx-0 bg-primary px-5 align-items-center">
                 <div className="col-lg-3 d-none d-lg-block">
-                    <nav className="navbar navbar-light position-relative" style={{ width: '250px' }}>
+                    <nav className="navbar navbar-light position-relative" style={{width: '250px'}}>
                         <button
                             className="navbar-toggler border-0 fs-4 w-100 px-0 text-start"
                             type="button"
@@ -29,7 +29,8 @@ const Navbar: React.FC = () => {
                                 <i className="fa fa-bars me-2"></i>All Categories
                             </h4>
                         </button>
-                        <div className={`collapse navbar-collapse rounded-bottom ${showCategories ? 'show' : ''}`} id="allCat">
+                        <div className={`collapse navbar-collapse rounded-bottom ${showCategories ? 'show' : ''}`}
+                             id="allCat">
                             <div className="navbar-nav ms-auto py-0">
                                 <ul className="list-unstyled categories-bars">
                                     {categories.map((category, index) => (
@@ -105,7 +106,8 @@ const Navbar: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
-                            <a href="#" className="btn btn-secondary rounded-pill py-2 px-4 px-lg-3 mb-3 mb-md-3 mb-lg-0">
+                            <a href="#"
+                               className="btn btn-secondary rounded-pill py-2 px-4 px-lg-3 mb-3 mb-md-3 mb-lg-0">
                                 <i className="fa fa-mobile-alt me-2"></i> +0123 456 7890
                             </a>
                         </div>
