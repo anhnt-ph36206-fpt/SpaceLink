@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ProductCard from '../components/common/ProductCard';
-import { Product } from '../types';
+import type {Product} from '../types';
 
 const ProductDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
