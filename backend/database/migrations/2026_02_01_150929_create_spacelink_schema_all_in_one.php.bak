@@ -1,0 +1,636 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        // =========================
+        // AUTH / USERS
+        // =========================
+        Schema::create('roles', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name', 50)->unique();
+            $table->string('display_name', 100);
+            $table->text('description')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+        });
+
+        Schema::create('permissions', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name', 100)->unique();
+            $table->string('display_name', 100);
+            $table->string('group_name', 50);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+        });
+
+        Schema::create('role_permissions', function (Blueprint $table) {
+            $table->unsignedBigInteger('role_id');
+            $table->unsignedBigInteger('permission_id');
+            $table->primary(['role_id', 'permission_id']);
+            $table->foreign('role_id')->references('id')->on('roles')->cascadeOnDelete();
+            $table->foreign('permission_id')->references('id')->on('permissions')->cascadeOnDelete();
+        });
+
+Schema::create('users', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('role_id')->default(3);
+            $table->string('email', 255)->unique();
+            $table->string('password', 255);
+            $table->string('name', 150);
+            $table->string('phone', 15)->nullable();
+            $table->string('avatar', 255)->nullable();
+            $table->date('date_of_birth')->nullable();
+            $table->enum('gender', ['male', 'female', 'other'])->nullable();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->enum('status', ['active', 'inactive', 'banned'])->default('active');
+            $table->string('remember_token', 100)->nullable();
+            $table->timestamp('last_login_at')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->softDeletes();
+            $table->foreign('role_id')->references('id')->on('roles')->restrictOnDelete();
+        });
+
+        Schema::create('user_addresses', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('user_id');
+            $table->string('name', 150);
+            $table->string('phone', 15);
+            $table->string('province', 100);
+            $table->string('district', 100);
+            $table->string('ward', 100);
+            $table->text('address_detail');
+            $table->boolean('is_default')->default(false);
+            $table->enum('address_type', ['home', 'office', 'other'])->default('home');
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->index('user_id', 'idx_user');
+            $table->index('is_default', 'idx_default');
+        });
+
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email', 255)->primary();
+            $table->string('token', 255);
+            $table->timestamp('created_at')->nullable();
+        });
+
+        // =========================
+        // PRODUCTS / CATALOG
+        // =========================
+        Schema::create('brands', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name', 255);
+            $table->string('slug', 255)->unique();
+            $table->string('logo', 255)->nullable();
+            $table->text('description')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->integer('display_order')->default(0);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->index('slug', 'idx_slug');
+            $table->index('is_active', 'idx_active');
+        });
+
+        Schema::create('categories', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('parent_id')->nullable();
+            $table->string('name', 255);
+            $table->string('slug', 255)->unique();
+            $table->string('image', 255)->nullable();
+            $table->string('icon', 100)->nullable();
+            $table->text('description')->nullable();
+            $table->integer('display_order')->default(0);
+            $table->boolean('is_active')->default(true);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->softDeletes();
+
+            $table->foreign('parent_id')->references('id')->on('categories')->nullOnDelete();
+            $table->index('parent_id', 'idx_parent');
+            $table->index('slug', 'idx_slug');
+            $table->index('is_active', 'idx_active');
+        });
+
+        Schema::create('attribute_groups', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name', 100);
+            $table->string('display_name', 100);
+            $table->integer('display_order')->default(0);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+        });
+
+        Schema::create('attributes', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('attribute_group_id');
+            $table->string('value', 100);
+            $table->string('color_code', 7)->nullable();
+            $table->integer('display_order')->default(0);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->foreign('attribute_group_id')->references('id')->on('attribute_groups')->cascadeOnDelete();
+            $table->index('attribute_group_id', 'idx_group');
+        });
+
+        Schema::create('products', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('category_id');
+            $table->unsignedBigInteger('brand_id')->nullable();
+
+            $table->string('name', 255);
+            $table->string('slug', 255)->unique();
+            $table->string('sku', 100)->unique()->nullable();
+
+            $table->text('description')->nullable();
+            $table->longText('content')->nullable();
+
+            $table->decimal('price', 15, 2);
+            $table->decimal('sale_price', 15, 2)->nullable();
+
+            $table->unsignedInteger('quantity')->default(0);
+            $table->unsignedInteger('sold_count')->default(0);
+            $table->unsignedInteger('view_count')->default(0);
+
+            $table->boolean('is_featured')->default(false);
+            $table->boolean('is_active')->default(true);
+
+            $table->string('meta_title', 255)->nullable();
+            $table->text('meta_description')->nullable();
+
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->softDeletes();
+
+            $table->foreign('category_id')->references('id')->on('categories');
+            $table->foreign('brand_id')->references('id')->on('brands')->nullOnDelete();
+
+            $table->index('category_id', 'idx_category');
+            $table->index('brand_id', 'idx_brand');
+            $table->index('price', 'idx_price');
+            $table->index('sold_count', 'idx_sold');
+            $table->index('view_count', 'idx_view');
+            $table->index('is_featured', 'idx_featured');
+            $table->index('is_active', 'idx_active');
+
+            $table->fullText(['name', 'description'], 'ft_search');
+        });
+
+        Schema::create('product_images', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('product_id');
+            $table->string('image_path', 255);
+            $table->boolean('is_primary')->default(false);
+            $table->integer('display_order')->default(0);
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();
+            $table->index('product_id', 'idx_product');
+            $table->index('is_primary', 'idx_primary');
+        });
+
+        Schema::create('product_variants', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('product_id');
+            $table->string('sku', 100)->unique()->nullable();
+            $table->decimal('price', 15, 2);
+            $table->decimal('sale_price', 15, 2)->nullable();
+            $table->unsignedInteger('quantity')->default(0);
+            $table->string('image', 255)->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();
+            $table->index('product_id', 'idx_product');
+            $table->index('is_active', 'idx_active');
+        });
+
+        Schema::create('product_variant_attributes', function (Blueprint $table) {
+            $table->unsignedBigInteger('variant_id');
+            $table->unsignedBigInteger('attribute_id');
+            $table->primary(['variant_id', 'attribute_id']);
+
+            $table->foreign('variant_id')->references('id')->on('product_variants')->cascadeOnDelete();
+            $table->foreign('attribute_id')->references('id')->on('attributes')->cascadeOnDelete();
+        });
+
+        Schema::create('product_views', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('session_id', 255)->nullable();
+            $table->string('ip_address', 45)->nullable();
+            $table->timestamp('viewed_at')->useCurrent();
+
+            $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
+            $table->index('product_id', 'idx_product');
+            $table->index('viewed_at', 'idx_date');
+        });
+
+        // =========================
+        // CART / VOUCHER / PROMOTION
+        // =========================
+        Schema::create('cart', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('session_id', 255)->nullable();
+            $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('variant_id')->nullable();
+            $table->unsignedInteger('quantity')->default(1);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();
+            $table->foreign('variant_id')->references('id')->on('product_variants')->nullOnDelete();
+
+            // FIX guest/user trùng item
+            $table->unique(['user_id', 'product_id', 'variant_id'], 'unique_cart_item_user');
+            $table->unique(['session_id', 'product_id', 'variant_id'], 'unique_cart_item_session');
+            $table->index('session_id', 'idx_session');
+        });
+
+        Schema::create('vouchers', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('code', 50)->unique();
+            $table->string('name', 255);
+            $table->text('description')->nullable();
+            $table->enum('discount_type', ['percent', 'fixed']);
+            $table->decimal('discount_value', 15, 2);
+            $table->decimal('max_discount', 15, 2)->nullable();
+            $table->decimal('min_order_amount', 15, 2)->default(0.00);
+            $table->unsignedInteger('quantity')->nullable();
+            $table->unsignedInteger('used_count')->default(0);
+            $table->unsignedInteger('usage_limit_per_user')->default(1);
+            $table->dateTime('start_date');
+            $table->dateTime('end_date');
+            $table->boolean('is_active')->default(true);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->index('code', 'idx_code');
+            $table->index(['start_date', 'end_date'], 'idx_dates');
+            $table->index('is_active', 'idx_active');
+        });
+
+        Schema::create('promotions', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name', 255);
+            $table->text('description')->nullable();
+            $table->dateTime('start_date');
+            $table->dateTime('end_date');
+            $table->boolean('is_active')->default(true);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+        });
+
+        Schema::create('promotion_products', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('promotion_id');
+            $table->unsignedBigInteger('product_id');
+            $table->decimal('discount_percent', 5, 2)->nullable();
+            $table->decimal('discount_amount', 15, 2)->nullable();
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->foreign('promotion_id')->references('id')->on('promotions')->cascadeOnDelete();
+            $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();
+        });
+
+        Schema::create('wishlists', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('product_id');
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();
+            $table->unique(['user_id', 'product_id'], 'uniq_user_product');
+        });
+
+        Schema::create('notifications', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('user_id');
+            $table->string('type', 50)->nullable();
+            $table->string('title', 255)->nullable();
+            $table->text('content')->nullable();
+            $table->boolean('is_read')->default(false);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+        });
+
+        // =========================
+        // ORDERS / PAYMENT
+        // =========================
+        Schema::create('orders', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('order_code', 50)->unique();
+
+            $table->string('shipping_name', 150);
+            $table->string('shipping_phone', 15);
+            $table->string('shipping_email', 255)->nullable();
+            $table->string('shipping_province', 100);
+            $table->string('shipping_district', 100);
+            $table->string('shipping_ward', 100);
+            $table->text('shipping_address');
+
+            $table->decimal('subtotal', 15, 2);
+            $table->decimal('discount_amount', 15, 2)->default(0.00);
+            $table->decimal('shipping_fee', 15, 2)->default(0.00);
+            $table->decimal('total_amount', 15, 2);
+
+            $table->enum('status', ['pending', 'confirmed', 'processing', 'shipping', 'delivered', 'completed', 'cancelled', 'returned'])
+                ->default('pending');
+            $table->enum('payment_status', ['unpaid', 'paid', 'refunded', 'partial_refund'])
+                ->default('unpaid');
+            $table->enum('payment_method', ['cod', 'vnpay', 'momo', 'bank_transfer']);
+
+            // voucher
+            $table->unsignedBigInteger('voucher_id')->nullable();
+            $table->string('voucher_code', 50)->nullable();
+            $table->decimal('voucher_discount', 15, 2)->default(0.00);
+
+            $table->text('note')->nullable();
+            $table->text('admin_note')->nullable();
+
+            $table->text('cancelled_reason')->nullable();
+            $table->unsignedBigInteger('cancelled_by')->nullable();
+            $table->timestamp('cancelled_at')->nullable();
+
+            $table->timestamp('confirmed_at')->nullable();
+            $table->timestamp('shipped_at')->nullable();
+            $table->timestamp('delivered_at')->nullable();
+            $table->timestamp('completed_at')->nullable();
+
+            // shipping extra (bổ sung thực tế)
+            $table->string('shipping_partner', 100)->nullable();
+            $table->string('tracking_code', 100)->nullable();
+            $table->dateTime('estimated_delivery')->nullable();
+
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('voucher_id')->references('id')->on('vouchers')->nullOnDelete();
+            $table->foreign('cancelled_by')->references('id')->on('users')->nullOnDelete();
+
+            $table->index('user_id', 'idx_user');
+            $table->index('status', 'idx_status');
+            $table->index('payment_status', 'idx_payment');
+            $table->index('created_at', 'idx_created');
+            $table->index('order_code', 'idx_code');
+        });
+
+        Schema::create('order_items', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('order_id');
+            $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('variant_id')->nullable();
+
+            $table->string('product_name', 255);
+            $table->string('product_image', 255)->nullable();
+            $table->string('product_sku', 100)->nullable();
+            $table->json('variant_info')->nullable();
+
+            $table->decimal('price', 15, 2);
+            $table->unsignedInteger('quantity');
+            $table->decimal('total', 15, 2);
+
+            $table->boolean('is_reviewed')->default(false);
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->foreign('order_id')->references('id')->on('orders')->cascadeOnDelete();
+            $table->foreign('product_id')->references('id')->on('products');
+            $table->foreign('variant_id')->references('id')->on('product_variants')->nullOnDelete();
+            $table->index('order_id', 'idx_order');
+            $table->index('is_reviewed', 'idx_reviewed');
+        });
+
+        Schema::create('order_status_history', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('order_id');
+            $table->string('from_status', 50)->nullable();
+            $table->string('to_status', 50);
+            $table->text('note')->nullable();
+            $table->unsignedBigInteger('changed_by')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->foreign('order_id')->references('id')->on('orders')->cascadeOnDelete();
+            $table->foreign('changed_by')->references('id')->on('users')->nullOnDelete();
+            $table->index('order_id', 'idx_order');
+        });
+
+        Schema::create('payment_transactions', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('order_id');
+            $table->string('transaction_id', 255)->unique()->nullable();
+            $table->string('payment_method', 50);
+            $table->decimal('amount', 15, 2);
+            $table->enum('status', ['pending', 'processing', 'success', 'failed', 'refunded', 'cancelled'])->default('pending');
+            $table->string('bank_code', 50)->nullable();
+            $table->string('response_code', 50)->nullable();
+            $table->text('response_message')->nullable();
+            $table->json('response_data')->nullable();
+            $table->timestamp('paid_at')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->foreign('order_id')->references('id')->on('orders')->cascadeOnDelete();
+            $table->index('transaction_id', 'idx_transaction');
+            $table->index('status', 'idx_status');
+        });
+
+        Schema::create('voucher_usages', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('voucher_id');
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('order_id');
+            $table->timestamp('used_at')->useCurrent();
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->foreign('voucher_id')->references('id')->on('vouchers')->cascadeOnDelete();
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('order_id')->references('id')->on('orders')->cascadeOnDelete();
+            $table->unique(['voucher_id', 'user_id', 'order_id'], 'uniq_voucher_user_order');
+        });
+
+        // =========================
+        // REVIEWS / COMMENTS / CONTENT / SETTINGS
+        // =========================
+        Schema::create('reviews', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('order_item_id');
+
+            $table->unsignedTinyInteger('rating');
+            $table->text('content')->nullable();
+            $table->json('images')->nullable();
+            $table->boolean('is_hidden')->default(false);
+            $table->text('admin_reply')->nullable();
+            $table->timestamp('replied_at')->nullable();
+
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->unique('order_item_id', 'unique_review');
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();
+            $table->foreign('order_item_id')->references('id')->on('order_items')->cascadeOnDelete();
+
+            $table->index('product_id', 'idx_product');
+            $table->index('rating', 'idx_rating');
+            $table->index('is_hidden', 'idx_hidden');
+        });
+
+        Schema::create('comments', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('parent_id')->nullable();
+
+            $table->text('content');
+            $table->boolean('is_hidden')->default(false);
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('approved');
+
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();
+            $table->foreign('parent_id')->references('id')->on('comments')->cascadeOnDelete();
+
+            $table->index('product_id', 'idx_product');
+            $table->index('parent_id', 'idx_parent');
+            $table->index('status', 'idx_status');
+            $table->index('is_hidden', 'idx_hidden');
+        });
+
+        Schema::create('comment_reports', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('comment_id');
+            $table->unsignedBigInteger('user_id');
+
+            $table->string('reason', 255);
+            $table->text('description')->nullable();
+            $table->enum('status', ['pending', 'resolved', 'rejected'])->default('pending');
+            $table->unsignedBigInteger('resolved_by')->nullable();
+            $table->timestamp('resolved_at')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->foreign('comment_id')->references('id')->on('comments')->cascadeOnDelete();
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('resolved_by')->references('id')->on('users')->nullOnDelete();
+
+            $table->index('comment_id', 'idx_comment');
+            $table->index('status', 'idx_status');
+        });
+
+        Schema::create('news', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('author_id')->nullable();
+            $table->string('title', 255);
+            $table->string('slug', 255)->unique();
+            $table->string('thumbnail', 255)->nullable();
+            $table->text('summary')->nullable();
+            $table->longText('content');
+            $table->unsignedInteger('view_count')->default(0);
+            $table->boolean('is_featured')->default(false);
+            $table->boolean('is_active')->default(true);
+            $table->string('meta_title', 255)->nullable();
+            $table->text('meta_description')->nullable();
+            $table->timestamp('published_at')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->softDeletes();
+
+            $table->foreign('author_id')->references('id')->on('users')->nullOnDelete();
+            $table->index('slug', 'idx_slug');
+            $table->index('published_at', 'idx_published');
+            $table->index('is_active', 'idx_active');
+        });
+
+        Schema::create('contacts', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name', 150);
+            $table->string('email', 255);
+            $table->string('phone', 15)->nullable();
+            $table->string('subject', 255)->nullable();
+            $table->text('message');
+            $table->enum('status', ['unread', 'read', 'replied', 'spam'])->default('unread');
+            $table->text('reply_content')->nullable();
+            $table->unsignedBigInteger('replied_by')->nullable();
+            $table->timestamp('replied_at')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->foreign('replied_by')->references('id')->on('users')->nullOnDelete();
+            $table->index('status', 'idx_status');
+        });
+
+        Schema::create('settings', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('key_name', 100)->unique();
+            $table->text('value')->nullable();
+            $table->enum('type', ['string', 'number', 'boolean', 'json', 'html'])->default('string');
+            $table->string('group_name', 50)->default('general');
+            $table->string('description', 255)->nullable();
+            $table->boolean('is_public')->default(false);
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+
+            $table->index('group_name', 'idx_group');
+            $table->index('is_public', 'idx_public');
+        });
+    }
+
+    public function down(): void
+    {
+        // Drop reverse order
+        Schema::dropIfExists('settings');
+        Schema::dropIfExists('contacts');
+        Schema::dropIfExists('news');
+        Schema::dropIfExists('comment_reports');
+        Schema::dropIfExists('comments');
+        Schema::dropIfExists('reviews');
+        Schema::dropIfExists('voucher_usages');
+        Schema::dropIfExists('payment_transactions');
+        Schema::dropIfExists('order_status_history');
+        Schema::dropIfExists('order_items');
+        Schema::dropIfExists('orders');
+        Schema::dropIfExists('notifications');
+        Schema::dropIfExists('wishlists');
+        Schema::dropIfExists('promotion_products');
+        Schema::dropIfExists('promotions');
+        Schema::dropIfExists('vouchers');
+        Schema::dropIfExists('cart');
+        Schema::dropIfExists('product_views');
+        Schema::dropIfExists('product_variant_attributes');
+        Schema::dropIfExists('product_variants');
+        Schema::dropIfExists('product_images');
+        Schema::dropIfExists('products');
+        Schema::dropIfExists('attributes');
+        Schema::dropIfExists('attribute_groups');
+        Schema::dropIfExists('categories');
+        Schema::dropIfExists('brands');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('user_addresses');
+        Schema::dropIfExists('users');
+        Schema::dropIfExists('role_permissions');
+        Schema::dropIfExists('permissions');
+        Schema::dropIfExists('roles');
+    }
+};

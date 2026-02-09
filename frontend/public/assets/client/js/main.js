@@ -1,6 +1,6 @@
 (function ($) {
     "use strict";
-
+    console.log('js loaded')
     // Spinner
     var spinner = function () {
         setTimeout(function () {
