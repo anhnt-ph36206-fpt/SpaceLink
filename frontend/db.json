@@ -1,0 +1,155 @@
+{
+    "categories": [
+        {
+            "id": 1,
+            "parent_id": null,
+            "name": "SmartPhone",
+            "slug": "smartphone",
+            "image": "https://cdn-icons-png.flaticon.com/512/15/15874.png",
+            "icon": "fa-mobile",
+            "description": "Danh mục điện thoại thông minh",
+            "display_order": 1,
+            "is_active": true,
+            "created_at": "2026-02-09T10:00:00Z",
+            "updated_at": "2026-02-09T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 2,
+            "parent_id": null,
+            "name": "Tablet",
+            "slug": "tablet",
+            "image": "https://cdn-icons-png.flaticon.com/512/0/191.png",
+            "icon": "fa-tablet",
+            "description": "Danh mục máy tính bảng",
+            "display_order": 2,
+            "is_active": true,
+            "created_at": "2026-02-09T10:00:00Z",
+            "updated_at": "2026-02-09T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 3,
+            "parent_id": 1,
+            "name": "iPhone",
+            "slug": "iphone",
+            "image": "https://cdn-icons-png.flaticon.com/512/731/731985.png",
+            "icon": "fa-apple",
+            "description": "Điện thoại Apple iPhone",
+            "display_order": 1,
+            "is_active": true,
+            "created_at": "2026-02-09T10:00:00Z",
+            "updated_at": "2026-02-09T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 4,
+            "parent_id": 1,
+            "name": "Samsung",
+            "slug": "samsung",
+            "image": "https://cdn-icons-png.flaticon.com/512/5969/5969129.png",
+            "icon": "fa-android",
+            "description": "Điện thoại Samsung",
+            "display_order": 2,
+            "is_active": true,
+            "created_at": "2026-02-09T10:00:00Z",
+            "updated_at": "2026-02-09T10:00:00Z",
+            "deleted_at": null
+        }
+    ],
+    "products": [
+        {
+            "id": 1,
+            "category_id": 1,
+            "brand_id": 1,
+            "name": "iPhone 15 Pro Max",
+            "slug": "iphone-15-pro-max",
+            "sku": "IP15PM",
+            "description": "iPhone cao cấp mới nhất",
+            "content": "iPhone 15 Pro Max sử dụng chip A17 Pro và khung titanium.",
+            "price": 34990000,
+            "sale_price": 32990000,
+            "quantity": 50,
+            "sold_count": 20,
+            "view_count": 150,
+            "rating": 5,
+            "category": "SmartPhone",
+            "is_featured": true,
+            "is_active": true
+        },
+        {
+            "id": 2,
+            "category_id": 1,
+            "brand_id": 2,
+            "name": "Samsung Galaxy S24 Ultra",
+            "slug": "samsung-s24-ultra",
+            "sku": "SS24U",
+            "description": "Flagship Samsung",
+            "content": "Galaxy S24 Ultra có camera 200MP và bút S-Pen.",
+            "price": 31990000,
+            "sale_price": 29990000,
+            "quantity": 40,
+            "sold_count": 15,
+            "view_count": 120,
+            "rating": 5,
+            "category": "SmartPhone",
+            "is_featured": true,
+            "is_active": true
+        }
+    ],
+    "product_variants": [
+        {
+            "id": 1,
+            "product_id": 1,
+            "sku": "IP15PM-256",
+            "price": 34990000,
+            "sale_price": 32990000,
+            "quantity": 30,
+            "image": "https://cdn.tgdd.vn/News/1548159/thuc-te-hinh-anh-iphone-15-pro-max-anh-iphone-15-2-800x450.jpg",
+            "is_active": true
+        },
+        {
+            "id": 2,
+            "product_id": 1,
+            "sku": "IP15PM-512",
+            "price": 37990000,
+            "sale_price": 35990000,
+            "quantity": 20,
+            "image": "https://cdn.tgdd.vn/Products/Images/42/305659/iphone-15-pro-max.jpg",
+            "is_active": true
+        },
+        {
+            "id": 3,
+            "product_id": 2,
+            "sku": "SS24U-256",
+            "price": 31990000,
+            "sale_price": 29990000,
+            "quantity": 40,
+            "image": "https://cdn.tgdd.vn/Products/Images/42/307174/samsung-galaxy-s24-ultra.jpg",
+            "is_active": true
+        }
+    ],
+    "product_images": [
+        {
+            "id": 1,
+            "product_id": 1,
+            "image_path": "https://cdn.tgdd.vn/News/1548159/thuc-te-hinh-anh-iphone-15-pro-max-anh-iphone-15-2-800x450.jpg",
+            "is_primary": true,
+            "display_order": 1
+        },
+        {
+            "id": 2,
+            "product_id": 1,
+            "image_path": "https://cdn.tgdd.vn/News/1548159/thuc-te-hinh-anh-iphone-15-pro-max-anh-iphone-15-2-800x450.jpg",
+            "is_primary": false,
+            "display_order": 2
+        },
+        {
+            "id": 3,
+            "product_id": 2,
+            "image_path": "https://i.ebayimg.com/images/g/OAMAAeSwd7FoL3LP/s-l1600.webp",
+            "is_primary": true,
+            "display_order": 1
+        }
+    ]
+}

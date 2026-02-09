@@ -1,78 +1,144 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import ProductCard from '../components/common/ProductCard';
-import { Product } from '../types';
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import ProductCard from "../components/common/ProductCard";
+import { Product } from "../types";
 
 const ProductDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+
+    const [product, setProduct] = useState<Product | null>(null);
+    const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
     const [quantity, setQuantity] = useState(1);
-    const [activeTab, setActiveTab] = useState('description');
+    const [activeTab, setActiveTab] = useState("description");
 
-    // Sample product data
-    const product: Product = {
-        id: id || '1',
-        name: 'Apple iPad Mini G2356',
-        category: 'SmartPhone',
-        image: '/assets/client/img/product-3.png',
-        price: 1050,
-        oldPrice: 1250,
-        rating: 4,
-        isNew: true,
-        description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-    };
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [productRes, imageRes] = await Promise.all([
+                    fetch("http://localhost:3000/products"),
+                    fetch("http://localhost:3000/product_images")
+                ]);
 
-    const relatedProducts: Product[] = Array.from({ length: 4 }, (_, i) => ({
-        id: `${i + 10}`,
-        name: 'Apple iPad Mini G2356',
-        category: 'SmartPhone',
-        image: `/assets/client/img/product-${(i % 8) + 3}.png`,
-        price: 1050,
-        oldPrice: 1250,
-        rating: 4,
-    }));
+                const products = await productRes.json();
+                const images = await imageRes.json();
+
+                const foundProduct = products.find(
+                    (p: any) => String(p.id) === id
+                );
+
+                if (!foundProduct) return;
+
+                const primaryImage = images.find(
+                    (img: any) =>
+                        img.product_id === foundProduct.id && img.is_primary
+                );
+
+                const mappedProduct: Product = {
+                    id: String(foundProduct.id),
+                    name: foundProduct.name,
+                    category: foundProduct.category,
+                    image: primaryImage?.image_path || "",
+                    price: foundProduct.sale_price || foundProduct.price,
+                    oldPrice: foundProduct.price,
+                    rating: foundProduct.rating,
+                    isNew: foundProduct.is_featured,
+                    description: foundProduct.description
+                };
+
+                setProduct(mappedProduct);
+
+                // sản phẩm liên quan
+                const related = products
+                    .filter(
+                        (p: any) =>
+                            p.category === foundProduct.category &&
+                            p.id !== foundProduct.id
+                    )
+                    .slice(0, 4)
+                    .map((p: any) => {
+                        const img = images.find(
+                            (i: any) =>
+                                i.product_id === p.id && i.is_primary
+                        );
+
+                        return {
+                            id: String(p.id),
+                            name: p.name,
+                            category: p.category,
+                            image: img?.image_path || "",
+                            price: p.sale_price || p.price,
+                            oldPrice: p.price,
+                            rating: p.rating
+                        };
+                    });
+
+                setRelatedProducts(related);
+
+            } catch (error) {
+                console.error(error);
+            }
+        };
+
+        if (id) fetchData();
+    }, [id]);
+
+    if (!product) return <p>Đang tải dữ liệu...</p>;
 
     return (
         <div className="container-fluid py-5">
             <div className="container">
-                {/* Product Details */}
+
+                {/* CHI TIẾT SẢN PHẨM */}
                 <div className="row g-4 mb-5">
                     <div className="col-lg-6">
                         <img src={product.image} className="img-fluid rounded" alt={product.name} />
                     </div>
+
                     <div className="col-lg-6">
                         <h3 className="mb-3">{product.name}</h3>
+
+                        {/* đánh giá */}
                         <div className="d-flex mb-3">
                             {[...Array(5)].map((_, i) => (
                                 <i
                                     key={i}
-                                    className={`fas fa-star ${i < product.rating ? 'text-primary' : ''}`}
-                                ></i>
+                                    className={`fas fa-star ${i < product.rating ? "text-primary" : ""}`}
+                                />
                             ))}
-                            <span className="ms-2">(24 Reviews)</span>
                         </div>
+
+                        {/* giá */}
                         <div className="mb-3">
                             {product.oldPrice && (
-                                <del className="me-2 fs-4 text-muted">${product.oldPrice.toFixed(2)}</del>
+                                <del className="me-2 fs-4 text-muted">
+                                    {product.oldPrice.toLocaleString()} đ
+                                </del>
                             )}
-                            <span className="text-primary fs-3 fw-bold">${product.price.toFixed(2)}</span>
+                            <span className="text-primary fs-3 fw-bold">
+                                {product.price.toLocaleString()} đ
+                            </span>
                         </div>
+
                         <p className="mb-4">{product.description}</p>
 
+                        {/* số lượng */}
                         <div className="d-flex align-items-center mb-4">
-                            <label className="me-3">Quantity:</label>
-                            <div className="input-group" style={{ width: '150px' }}>
+                            <label className="me-3">Số lượng:</label>
+
+                            <div className="input-group" style={{ width: 150 }}>
                                 <button
                                     className="btn btn-outline-secondary"
                                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                                 >
                                     -
                                 </button>
+
                                 <input
-                                    type="text"
                                     className="form-control text-center"
                                     value={quantity}
                                     readOnly
                                 />
+
                                 <button
                                     className="btn btn-outline-secondary"
                                     onClick={() => setQuantity(quantity + 1)}
@@ -82,99 +148,65 @@ const ProductDetailPage: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="d-flex gap-2 mb-4">
-                            <button className="btn btn-primary rounded-pill py-3 px-5">
-                                <i className="fas fa-shopping-cart me-2"></i>Add To Cart
-                            </button>
-                            <button className="btn btn-outline-primary rounded-pill py-3 px-4">
-                                <i className="fas fa-heart"></i>
-                            </button>
-                        </div>
+                        {/* nút hành động */}
+                        <button className="btn btn-primary rounded-pill py-3 px-5">
+                            Thêm vào giỏ hàng
+                        </button>
 
-                        <div>
-                            <p><strong>Category:</strong> {product.category}</p>
-                            <p><strong>Availability:</strong> In Stock</p>
+                        <div className="mt-3">
+                            <p><strong>Danh mục:</strong> {product.category}</p>
+                            <p><strong>Tình trạng:</strong> Còn hàng</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Product Tabs */}
+                {/* TAB */}
                 <div className="row mb-5">
-                    <div className="col-12">
-                        <ul className="nav nav-tabs">
-                            <li className="nav-item">
-                                <a
-                                    className={`nav-link ${activeTab === 'description' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('description')}
-                                    href="#"
-                                >
-                                    Description
-                                </a>
-                            </li>
-                            <li className="nav-item">
-                                <a
-                                    className={`nav-link ${activeTab === 'additional' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('additional')}
-                                    href="#"
-                                >
-                                    Additional Information
-                                </a>
-                            </li>
-                            <li className="nav-item">
-                                <a
-                                    className={`nav-link ${activeTab === 'reviews' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('reviews')}
-                                    href="#"
-                                >
-                                    Reviews (24)
-                                </a>
-                            </li>
-                        </ul>
-                        <div className="tab-content border border-top-0 p-4">
-                            {activeTab === 'description' && (
-                                <div>
-                                    <p>{product.description}</p>
-                                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
-                                </div>
-                            )}
-                            {activeTab === 'additional' && (
-                                <div>
-                                    <table className="table">
-                                        <tbody>
-                                            <tr>
-                                                <td><strong>Weight</strong></td>
-                                                <td>1.2 kg</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Dimensions</strong></td>
-                                                <td>20 × 15 × 5 cm</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Color</strong></td>
-                                                <td>Black, White, Silver</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                            {activeTab === 'reviews' && (
-                                <div>
-                                    <p>Customer reviews will be displayed here.</p>
-                                </div>
-                            )}
-                        </div>
+                    <ul className="nav nav-tabs">
+                        <li className="nav-item">
+                            <button
+                                className={`nav-link ${activeTab === "description" ? "active" : ""}`}
+                                onClick={() => setActiveTab("description")}
+                            >
+                                Mô tả
+                            </button>
+                        </li>
+
+                        <li className="nav-item">
+                            <button
+                                className={`nav-link ${activeTab === "additional" ? "active" : ""}`}
+                                onClick={() => setActiveTab("additional")}
+                            >
+                                Thông tin bổ sung
+                            </button>
+                        </li>
+
+                        <li className="nav-item">
+                            <button
+                                className={`nav-link ${activeTab === "reviews" ? "active" : ""}`}
+                                onClick={() => setActiveTab("reviews")}
+                            >
+                                Đánh giá
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div className="border p-4">
+                        {activeTab === "description" && <p>{product.description}</p>}
+                        {activeTab === "additional" && <p>Thông tin bổ sung sẽ được cập nhật.</p>}
+                        {activeTab === "reviews" && <p>Đánh giá khách hàng sẽ hiển thị tại đây.</p>}
                     </div>
                 </div>
 
-                {/* Related Products */}
+                {/* SẢN PHẨM LIÊN QUAN */}
                 <div className="row">
-                    <div className="col-12 mb-4">
-                        <h3>Related Products</h3>
-                    </div>
-                    {relatedProducts.map((relProduct) => (
-                        <ProductCard key={relProduct.id} product={relProduct} />
+                    <h3 className="mb-4">Sản phẩm liên quan</h3>
+
+                    {relatedProducts.map((p) => (
+                        <ProductCard key={p.id} product={p} />
                     ))}
                 </div>
+
             </div>
         </div>
     );

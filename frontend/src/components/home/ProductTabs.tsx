@@ -1,151 +1,84 @@
-import React, { useState } from 'react';
-import ProductCard from '../common/ProductCard';
-import { Product } from '../../types';
+import React, { useEffect, useState } from "react";
+import ProductCard from "../common/ProductCard";
+import { Product } from "../../types";
 
 const ProductTabs: React.FC = () => {
-    const [activeTab, setActiveTab] = useState('all');
+    const [activeTab, setActiveTab] = useState("all");
+    const [products, setProducts] = useState<Product[]>([]);
 
-    // Sample product data - will be replaced with real data later
-    const sampleProducts: Product[] = [
-        {
-            id: '1',
-            name: 'Apple iPad Mini G2356',
-            category: 'SmartPhone',
-            image: '/assets/client/img/product-3.png',
-            price: 1050,
-            oldPrice: 1250,
-            rating: 4,
-            isNew: true,
-        },
-        {
-            id: '2',
-            name: 'Apple iPad Mini G2356',
-            category: 'SmartPhone',
-            image: '/assets/client/img/product-4.png',
-            price: 1050,
-            oldPrice: 1250,
-            rating: 4,
-            isSale: true,
-        },
-        {
-            id: '3',
-            name: 'Apple iPad Mini G2356',
-            category: 'SmartPhone',
-            image: '/assets/client/img/product-5.png',
-            price: 1050,
-            oldPrice: 1250,
-            rating: 4,
-        },
-        {
-            id: '4',
-            name: 'Apple iPad Mini G2356',
-            category: 'SmartPhone',
-            image: '/assets/client/img/product-6.png',
-            price: 1050,
-            oldPrice: 1250,
-            rating: 4,
-            isNew: true,
-        },
-        {
-            id: '5',
-            name: 'Apple iPad Mini G2356',
-            category: 'SmartPhone',
-            image: '/assets/client/img/product-7.png',
-            price: 1050,
-            oldPrice: 1250,
-            rating: 4,
-            isSale: true,
-        },
-        {
-            id: '6',
-            name: 'Apple iPad Mini G2356',
-            category: 'SmartPhone',
-            image: '/assets/client/img/product-8.png',
-            price: 1050,
-            oldPrice: 1250,
-            rating: 4,
-        },
-        {
-            id: '7',
-            name: 'Apple iPad Mini G2356',
-            category: 'SmartPhone',
-            image: '/assets/client/img/product-9.png',
-            price: 1050,
-            oldPrice: 1250,
-            rating: 4,
-            isNew: true,
-        },
-        {
-            id: '8',
-            name: 'Apple iPad Mini G2356',
-            category: 'SmartPhone',
-            image: '/assets/client/img/product-10.png',
-            price: 1050,
-            oldPrice: 1250,
-            rating: 4,
-            isSale: true,
-        },
-    ];
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const [productRes, imageRes] = await Promise.all([
+                    fetch("http://localhost:3000/products"),
+                    fetch("http://localhost:3000/product_images")
+                ]);
+
+                const productData = await productRes.json();
+                const imageData = await imageRes.json();
+
+                // merge product + ảnh chính
+                const merged = productData.map((p: any) => {
+                    const primaryImage = imageData.find(
+                        (img: any) =>
+                            img.product_id === p.id && img.is_primary
+                    );
+
+                    return {
+                        id: String(p.id),
+                        name: p.name,
+                        image: primaryImage?.image_path || "",
+                        price: p.sale_price || p.price,
+                        oldPrice: p.price,
+                        isNew: p.is_featured,
+                        isSale: p.sale_price < p.price
+                    };
+                });
+
+                setProducts(merged);
+            } catch (error) {
+                console.error("Fetch product error:", error);
+            }
+        };
+
+        fetchProducts();
+    }, []);
+
+    // filter theo tab
+    const filteredProducts = products.filter((p) => {
+        if (activeTab === "featured") return p.isNew;
+        return true;
+    });
 
     return (
         <div className="container-fluid product py-5">
             <div className="container py-5">
-                <div className="tab-class">
-                    <div className="row g-4">
-                        <div className="col-lg-4 text-start wow fadeInLeft" data-wow-delay="0.1s">
-                            <h1>Our Products</h1>
-                        </div>
-                        <div className="col-lg-8 text-end wow fadeInRight" data-wow-delay="0.1s">
-                            <ul className="nav nav-pills d-inline-flex text-center mb-5">
-                                <li className="nav-item mb-4">
-                                    <a
-                                        className={`d-flex mx-2 py-2 bg-light rounded-pill ${activeTab === 'all' ? 'active' : ''}`}
-                                        onClick={() => setActiveTab('all')}
-                                        href="#"
-                                    >
-                                        <span className="text-dark" style={{ width: '130px' }}>All Products</span>
-                                    </a>
-                                </li>
-                                <li className="nav-item mb-4">
-                                    <a
-                                        className={`d-flex py-2 mx-2 bg-light rounded-pill ${activeTab === 'new' ? 'active' : ''}`}
-                                        onClick={() => setActiveTab('new')}
-                                        href="#"
-                                    >
-                                        <span className="text-dark" style={{ width: '130px' }}>New Arrivals</span>
-                                    </a>
-                                </li>
-                                <li className="nav-item mb-4">
-                                    <a
-                                        className={`d-flex mx-2 py-2 bg-light rounded-pill ${activeTab === 'featured' ? 'active' : ''}`}
-                                        onClick={() => setActiveTab('featured')}
-                                        href="#"
-                                    >
-                                        <span className="text-dark" style={{ width: '130px' }}>Featured</span>
-                                    </a>
-                                </li>
-                                <li className="nav-item mb-4">
-                                    <a
-                                        className={`d-flex mx-2 py-2 bg-light rounded-pill ${activeTab === 'top' ? 'active' : ''}`}
-                                        onClick={() => setActiveTab('top')}
-                                        href="#"
-                                    >
-                                        <span className="text-dark" style={{ width: '130px' }}>Top Selling</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div className="tab-content">
-                        <div className="tab-pane fade show active p-0">
-                            <div className="row g-4">
-                                {sampleProducts.map((product) => (
-                                    <ProductCard key={product.id} product={product} />
-                                ))}
-                            </div>
-                        </div>
+
+                <div className="d-flex justify-content-between align-items-center mb-5">
+                    <h1>Our Products</h1>
+
+                    <div>
+                        {["all", "featured"].map((tab) => (
+                            <button
+                                key={tab}
+                                className={`btn mx-2 ${activeTab === tab
+                                    ? "btn-primary"
+                                    : "btn-outline-primary"
+                                    }`}
+                                onClick={() => setActiveTab(tab)}
+                            >
+                                {tab === "all" ? "All Products" : "Featured"}
+                            </button>
+                        ))}
                     </div>
                 </div>
+
+                <div className="row g-4">
+                    {filteredProducts.map((product) => (
+                        <ProductCard key={product.id} product={product} />
+                    ))}
+                </div>
+
             </div>
         </div>
     );
