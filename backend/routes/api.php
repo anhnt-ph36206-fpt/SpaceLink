@@ -3,8 +3,11 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ProfileController; // <--- Mới
-use App\Http\Controllers\Api\AddressController; // <--- Mới
+use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\AddressController;
+use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\CartController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -17,8 +20,29 @@ use App\Http\Controllers\Api\AddressController; // <--- Mới
 // ========================================================================
 
 // --- Auth ---
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::prefix('auth')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+});
+
+// --- Categories ---
+use App\Http\Controllers\Api\CategoryController;
+Route::get('/categories', [CategoryController::class, 'index']);
+
+// --- Brands ---
+use App\Http\Controllers\Api\BrandController;
+Route::get('/brands', [BrandController::class, 'index']);
+
+// --- Products ---
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/{id}', [ProductController::class, 'show']);
+
+// --- Cart ---
+Route::get('/cart', [CartController::class, 'index']);
+Route::post('/cart/add', [CartController::class, 'addToCart']);
+Route::put('/cart/update/{id}', [CartController::class, 'updateQuantity']);
+Route::delete('/cart/remove/{id}', [CartController::class, 'remove']);
+
 
 
 // ========================================================================
@@ -27,8 +51,10 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     
     // --- Auth & Profile ---
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/me', [AuthController::class, 'me']); // Lấy info cơ bản
+    Route::prefix('auth')->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/me', [AuthController::class, 'me']); // Lấy info cơ bản
+    });
 
     // --- Quản lý Hồ sơ (Profile) ---
     Route::get('/profile', [ProfileController::class, 'show']);   // Lấy chi tiết + địa chỉ

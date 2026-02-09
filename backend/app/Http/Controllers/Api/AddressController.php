@@ -10,7 +10,7 @@ use OpenApi\Attributes as OA;
 
 class AddressController extends Controller
 {
-    #[OA\Get(path: '/api/addresses', summary: 'Danh sách địa chỉ', tags: ['Address'], security: [['bearerAuth' => []]], responses: [new OA\Response(response: 200, description: 'OK')])]
+    #[OA\Get(path: '/api/addresses', summary: 'Danh sách địa chỉ', tags: ['Address'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'OK')])]
     public function index(Request $request)
     {
         return response()->json([
@@ -19,7 +19,7 @@ class AddressController extends Controller
         ]);
     }
 
-    #[OA\Post(path: '/api/addresses', summary: 'Thêm địa chỉ mới', tags: ['Address'], security: [['bearerAuth' => []]], responses: [new OA\Response(response: 201, description: 'Created')])]
+    #[OA\Post(path: '/api/addresses', summary: 'Thêm địa chỉ mới', tags: ['Address'], security: [['sanctum' => []]], responses: [new OA\Response(response: 201, description: 'Created')])]
     public function store(StoreAddressRequest $request)
     {
         $user = $request->user();
@@ -39,7 +39,7 @@ class AddressController extends Controller
         ], 201);
     }
 
-    #[OA\Put(path: '/api/addresses/{id}', summary: 'Sửa địa chỉ', tags: ['Address'], security: [['bearerAuth' => []]], responses: [new OA\Response(response: 200, description: 'Updated')])]
+    #[OA\Put(path: '/api/addresses/{id}', summary: 'Sửa địa chỉ', tags: ['Address'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Updated')])]
     public function update(StoreAddressRequest $request, string $id)
     {
         $user = $request->user();
@@ -59,7 +59,7 @@ class AddressController extends Controller
         ]);
     }
 
-    #[OA\Delete(path: '/api/addresses/{id}', summary: 'Xóa địa chỉ', tags: ['Address'], security: [['bearerAuth' => []]], responses: [new OA\Response(response: 200, description: 'Deleted')])]
+    #[OA\Delete(path: '/api/addresses/{id}', summary: 'Xóa địa chỉ', tags: ['Address'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Deleted')])]
     public function destroy(Request $request, string $id)
     {
         $user = $request->user();

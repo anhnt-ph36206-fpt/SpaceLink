@@ -10,6 +10,24 @@ use OpenApi\Attributes as OA;
 
 class CartController extends Controller
 {
+    /**
+     * Helper: Resolve User ID or Session ID from Request
+     * Supports optional authentication via Sanctum.
+     */
+    private function getContext(Request $request)
+    {
+        // Try to get authenticated user (sanctum guard)
+        $user = auth('sanctum')->user();
+        
+        if ($user) {
+            return ['user_id' => $user->id, 'session_id' => null];
+        }
+
+        // If not logged in, look for Session ID in Header or Request
+        $sessionId = $request->header('X-Session-ID') ?? $request->input('session_id');
+        return ['user_id' => null, 'session_id' => $sessionId];
+    }
+
     // 1. Lấy danh sách giỏ hàng
     #[OA\Get(
         path: '/api/cart',
@@ -32,7 +50,9 @@ class CartController extends Controller
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'status', type: 'string', example: 'success'),
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object'))
+                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
+                        new OA\Property(property: 'total_items', type: 'integer'),
+                        new OA\Property(property: 'total_price', type: 'number')
                     ]
                 )
             )
@@ -40,25 +60,47 @@ class CartController extends Controller
     )]
     public function index(Request $request)
     {
-        // Lấy giỏ hàng dựa trên User ID (nếu login) HOẶC Session ID (nếu khách)
+        $context = $this->getContext($request);
+        $userId = $context['user_id'];
+        $sessionId = $context['session_id'];
+
+        if (!$userId && !$sessionId) {
+            return response()->json([
+                'status' => 'success',
+                'data' => [],
+                'total_items' => 0,
+                'total_price' => 0
+            ]);
+        }
+
         $query = Cart::with(['product', 'variant', 'product.images']);
 
-        if ($request->user()) {
-            $query->where('user_id', $request->user()->id);
+        if ($userId) {
+            $query->where('user_id', $userId);
         } else {
-            // Nếu là khách, bắt buộc phải có session_id gửi lên từ header hoặc query
-            $sessionId = $request->header('X-Session-ID') ?? $request->session_id;
-            if (!$sessionId) {
-                return response()->json([]); // Trả về rỗng nếu không xác định được khách
-            }
             $query->where('session_id', $sessionId)->whereNull('user_id');
         }
 
         $cartItems = $query->latest()->get();
 
+        $totalItems = $cartItems->sum('quantity');
+        $totalPrice = $cartItems->sum(function($item) {
+             // Logic giá: ưu tiên variant, rồi đến product. Ưu tiên sale_price.
+             $productPrice = $item->product->sale_price ?? $item->product->price;
+             $price = $productPrice;
+
+             if ($item->variant) {
+                 $price = $item->variant->sale_price ?? $item->variant->price;
+             }
+             
+            return $price * $item->quantity;
+        });
+
         return response()->json([
             'status' => 'success',
-            'data' => $cartItems
+            'data' => $cartItems,
+            'total_items' => $totalItems,
+            'total_price' => $totalPrice
         ]);
     }
 
@@ -110,44 +152,45 @@ class CartController extends Controller
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|integer|min:1',
             'variant_id' => 'nullable|exists:product_variants,id',
-            'session_id' => 'nullable|string' // Bắt buộc nếu chưa login
+            'session_id' => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $userId = $request->user() ? $request->user()->id : null;
-        $sessionId = $request->header('X-Session-ID') ?? $request->session_id;
+        $context = $this->getContext($request);
+        $userId = $context['user_id'];
+        $sessionId = $context['session_id'];
 
         if (!$userId && !$sessionId) {
-            return response()->json(['message' => 'Cần User ID hoặc Session ID'], 400);
+            return response()->json(['message' => 'Cần User ID hoặc Session ID (Header X-Session-ID)'], 400);
         }
 
-        // Tìm xem sản phẩm này đã có trong giỏ chưa
-        $existingItem = Cart::where('product_id', $request->product_id)
-            ->where('variant_id', $request->variant_id)
-            ->when($userId, function ($q) use ($userId) {
-                return $q->where('user_id', $userId);
-            })
-            ->when(!$userId, function ($q) use ($sessionId) {
-                return $q->where('session_id', $sessionId)->whereNull('user_id');
-            })
-            ->first();
+        $query = Cart::where('product_id', $request->product_id)
+            ->where('variant_id', $request->variant_id);
+
+        if ($userId) {
+            $query->where('user_id', $userId);
+        } else {
+            $query->where('session_id', $sessionId)->whereNull('user_id');
+        }
+
+        $existingItem = $query->first();
 
         if ($existingItem) {
-            // Nếu có rồi -> Cộng dồn số lượng
             $existingItem->increment('quantity', $request->quantity);
+            $existingItem->load(['product', 'variant']); 
             return response()->json(['message' => 'Đã cập nhật số lượng', 'data' => $existingItem]);
         } else {
-            // Chưa có -> Tạo mới
             $newItem = Cart::create([
                 'user_id' => $userId,
-                'session_id' => $userId ? null : $sessionId, // Nếu đã có user thì ko cần session
+                'session_id' => $userId ? null : $sessionId,
                 'product_id' => $request->product_id,
                 'variant_id' => $request->variant_id,
                 'quantity' => $request->quantity
             ]);
+            $newItem->load(['product', 'variant']);
             return response()->json(['message' => 'Đã thêm vào giỏ', 'data' => $newItem]);
         }
     }
@@ -199,18 +242,25 @@ class CartController extends Controller
             return response()->json(['message' => 'Không tìm thấy sản phẩm'], 404);
         }
 
-        // Check quyền sở hữu (User hoặc Session)
-        $userId = $request->user() ? $request->user()->id : null;
-        $sessionId = $request->header('X-Session-ID') ?? $request->session_id;
+        $context = $this->getContext($request);
+        $userId = $context['user_id'];
+        $sessionId = $context['session_id'];
 
-        if (($userId && $cartItem->user_id != $userId) || (!$userId && $cartItem->session_id != $sessionId)) {
+        $isOwner = false;
+        if ($userId && $cartItem->user_id == $userId) {
+            $isOwner = true;
+        } elseif (!$userId && $cartItem->session_id == $sessionId) {
+            $isOwner = true;
+        }
+
+        if (!$isOwner) {
             return response()->json(['message' => 'Không có quyền truy cập'], 403);
         }
 
         $cartItem->quantity = $request->quantity;
         $cartItem->save();
 
-        return response()->json(['message' => 'Cập nhật thành công']);
+        return response()->json(['message' => 'Cập nhật thành công', 'data' => $cartItem]);
     }
 
     // 4. Xóa khỏi giỏ
@@ -249,11 +299,18 @@ class CartController extends Controller
             return response()->json(['message' => 'Không tìm thấy'], 404);
         }
 
-        // Check quyền (như trên)
-        $userId = $request->user() ? $request->user()->id : null;
-        $sessionId = $request->header('X-Session-ID') ?? $request->session_id;
+        $context = $this->getContext($request);
+        $userId = $context['user_id'];
+        $sessionId = $context['session_id'];
 
-        if (($userId && $cartItem->user_id != $userId) || (!$userId && $cartItem->session_id != $sessionId)) {
+        $isOwner = false;
+        if ($userId && $cartItem->user_id == $userId) {
+            $isOwner = true;
+        } elseif (!$userId && $cartItem->session_id == $sessionId) {
+            $isOwner = true;
+        }
+
+        if (!$isOwner) {
             return response()->json(['message' => 'Không có quyền xóa'], 403);
         }
 

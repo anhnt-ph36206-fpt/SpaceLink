@@ -26,7 +26,7 @@
                 },
                 "security": [
                     {
-                        "bearerAuth": []
+                        "sanctum": []
                     }
                 ]
             },
@@ -43,7 +43,7 @@
                 },
                 "security": [
                     {
-                        "bearerAuth": []
+                        "sanctum": []
                     }
                 ]
             }
@@ -62,7 +62,7 @@
                 },
                 "security": [
                     {
-                        "bearerAuth": []
+                        "sanctum": []
                     }
                 ]
             },
@@ -79,7 +79,7 @@
                 },
                 "security": [
                     {
-                        "bearerAuth": []
+                        "sanctum": []
                     }
                 ]
             }
@@ -97,13 +97,13 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "fullname",
+                                    "name",
                                     "email",
                                     "password",
                                     "password_confirmation"
                                 ],
                                 "properties": {
-                                    "fullname": {
+                                    "name": {
                                         "type": "string",
                                         "example": "Nguyen Van A"
                                     },
@@ -233,7 +233,7 @@
                 },
                 "security": [
                     {
-                        "bearerAuth": []
+                        "sanctum": []
                     }
                 ]
             }
@@ -252,7 +252,7 @@
                 },
                 "security": [
                     {
-                        "bearerAuth": []
+                        "sanctum": []
                     }
                 ]
             }
@@ -291,6 +291,12 @@
                                             "items": {
                                                 "type": "object"
                                             }
+                                        },
+                                        "total_items": {
+                                            "type": "integer"
+                                        },
+                                        "total_price": {
+                                            "type": "number"
                                         }
                                     },
                                     "type": "object"
@@ -520,12 +526,39 @@
                         }
                     },
                     {
+                        "name": "keyword",
+                        "in": "query",
+                        "description": "Tìm kiếm theo tên sản phẩm",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
                         "name": "min_price",
                         "in": "query",
                         "description": "Lọc sản phẩm có giá từ mức này trở lên",
                         "required": false,
                         "schema": {
                             "type": "number"
+                        }
+                    },
+                    {
+                        "name": "max_price",
+                        "in": "query",
+                        "description": "Lọc sản phẩm có giá đến mức này",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "description": "Sắp xếp theo: price_asc, price_desc, latest, oldest, view_count",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
                         }
                     },
                     {
@@ -545,25 +578,16 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "data": {
-                                            "properties": {
-                                                "current_page": {
-                                                    "type": "integer"
-                                                },
-                                                "data": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "object"
-                                                    }
-                                                },
-                                                "total": {
-                                                    "type": "integer"
-                                                }
-                                            },
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
                                             "type": "object"
                                         }
                                     },
@@ -600,10 +624,6 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "data": {
                                             "type": "object"
                                         }
@@ -633,7 +653,7 @@
                 },
                 "security": [
                     {
-                        "bearerAuth": []
+                        "sanctum": []
                     }
                 ]
             },
@@ -679,7 +699,7 @@
                 },
                 "security": [
                     {
-                        "bearerAuth": []
+                        "sanctum": []
                     }
                 ]
             }

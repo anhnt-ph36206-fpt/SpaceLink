@@ -22,7 +22,7 @@ class StoreAddressRequest extends FormRequest
     public function rules(): array
 {
     return [
-        'fullname' => 'required|string|max:100',
+        'name' => 'required|string|max:100',
         'phone' => 'required|string|max:20',
         'province' => 'required|string|max:100',
         'district' => 'required|string|max:100',

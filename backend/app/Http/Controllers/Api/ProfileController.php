@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UpdateProfileRequest;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
+use App\Http\Resources\UserResource;
 
 class ProfileController extends Controller
 {
@@ -13,7 +14,7 @@ class ProfileController extends Controller
         path: '/api/profile',
         summary: 'Lấy thông tin profile và danh sách địa chỉ',
         tags: ['Profile'],
-        security: [['bearerAuth' => []]],
+        security: [['sanctum' => []]],
         responses: [
             new OA\Response(response: 200, description: 'Thành công')
         ]
@@ -31,7 +32,7 @@ class ProfileController extends Controller
         path: '/api/profile',
         summary: 'Cập nhật thông tin cá nhân',
         tags: ['Profile'],
-        security: [['bearerAuth' => []]],
+        security: [['sanctum' => []]],
         requestBody: new OA\RequestBody(
             content: new OA\JsonContent(
                 properties: [

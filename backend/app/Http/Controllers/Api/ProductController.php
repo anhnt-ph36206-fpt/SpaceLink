@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Http\Resources\ProductResource;
+use App\Http\Resources\ProductCollection;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
@@ -22,11 +24,32 @@ class ProductController extends Controller
                 schema: new OA\Schema(type: 'integer')
             ),
             new OA\Parameter(
+                name: 'keyword',
+                in: 'query',
+                description: 'Tìm kiếm theo tên sản phẩm',
+                required: false,
+                schema: new OA\Schema(type: 'string')
+            ),
+            new OA\Parameter(
                 name: 'min_price',
                 in: 'query',
                 description: 'Lọc sản phẩm có giá từ mức này trở lên',
                 required: false,
                 schema: new OA\Schema(type: 'number')
+            ),
+             new OA\Parameter(
+                name: 'max_price',
+                in: 'query',
+                description: 'Lọc sản phẩm có giá đến mức này',
+                required: false,
+                schema: new OA\Schema(type: 'number')
+            ),
+            new OA\Parameter(
+                name: 'sort_by',
+                in: 'query',
+                description: 'Sắp xếp theo: price_asc, price_desc, latest, oldest, view_count',
+                required: false,
+                schema: new OA\Schema(type: 'string')
             ),
              new OA\Parameter(
                 name: 'page',
@@ -42,14 +65,9 @@ class ProductController extends Controller
                 description: 'Danh sách sản phẩm thành công',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'status', type: 'string', example: 'success'),
-                        new OA\Property(property: 'data', type: 'object',
-                            properties: [
-                                new OA\Property(property: 'current_page', type: 'integer'),
-                                new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
-                                new OA\Property(property: 'total', type: 'integer'),
-                            ]
-                        )
+                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
+                        new OA\Property(property: 'links', type: 'object'),
+                        new OA\Property(property: 'meta', type: 'object'),
                     ]
                 )
             )
@@ -57,7 +75,7 @@ class ProductController extends Controller
     )]
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'brand'])
+        $query = Product::with(['category', 'brand', 'images'])
             ->where('is_active', true);
 
         // Lọc theo danh mục
@@ -65,17 +83,54 @@ class ProductController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
+        // Lọc theo thương hiệu
+        if ($request->has('brand_id')) {
+            $query->where('brand_id', $request->brand_id);
+        }
+
+        // Tìm kiếm theo tên
+        if ($request->has('keyword')) {
+            $keyword = $request->keyword;
+            $query->where('name', 'like', "%{$keyword}%");
+        }
+
         // Lọc theo khoảng giá
         if ($request->has('min_price')) {
             $query->where('price', '>=', $request->min_price);
         }
+        if ($request->has('max_price')) {
+            $query->where('price', '<=', $request->max_price);
+        }
 
-        $products = $query->latest()->paginate(10);
+        // Sắp xếp
+        if ($request->has('sort_by')) {
+            switch ($request->sort_by) {
+                case 'price_asc':
+                    $query->orderBy('price', 'asc');
+                    break;
+                case 'price_desc':
+                    $query->orderBy('price', 'desc');
+                    break;
+                case 'latest':
+                    $query->latest();
+                    break;
+                case 'oldest':
+                    $query->oldest();
+                    break;
+                case 'view_count':
+                    $query->orderBy('view_count', 'desc');
+                    break;
+                default:
+                    $query->latest();
+                    break;
+            }
+        } else {
+            $query->latest();
+        }
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $products
-        ]);
+        $products = $query->paginate(12);
+
+        return new ProductCollection($products);
     }
 
     #[OA\Get(
@@ -97,7 +152,6 @@ class ProductController extends Controller
                 description: 'Chi tiết sản phẩm',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'status', type: 'string', example: 'success'),
                         new OA\Property(property: 'data', type: 'object')
                     ]
                 )
@@ -110,12 +164,13 @@ class ProductController extends Controller
     )]
     public function show($id)
     {
-        // Eager Loading sâu để lấy: Variants -> Attributes -> Group
+        // Eager Loading sâu để lấy: Variants -> Attributes -> AttributeGroup
+        // Cần truyền chính xác tên method trong Model
         $product = Product::with([
             'category', 
             'brand', 
             'images', 
-            'variants.attributes.group' // Lấy ra biến thể kèm thuộc tính (Màu gì, Size gì)
+            'variants.attributes.attributeGroup' 
         ])->find($id);
 
         if (!$product) {
@@ -125,9 +180,6 @@ class ProductController extends Controller
         // Tăng lượt xem
         $product->increment('view_count');
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $product
-        ]);
+        return new ProductResource($product);
     }
 }

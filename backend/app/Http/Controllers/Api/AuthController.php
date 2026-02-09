@@ -19,9 +19,9 @@ class AuthController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['fullname', 'email', 'password', 'password_confirmation'],
+                required: ['name', 'email', 'password', 'password_confirmation'],
                 properties: [
-                    new OA\Property(property: 'fullname', type: 'string', example: 'Nguyen Van A'),
+                    new OA\Property(property: 'name', type: 'string', example: 'Nguyen Van A'),
                     new OA\Property(property: 'email', type: 'string', format: 'email', example: 'user@example.com'),
                     new OA\Property(property: 'password', type: 'string', format: 'password', example: '123456'),
                     new OA\Property(property: 'password_confirmation', type: 'string', format: 'password', example: '123456'),
@@ -49,44 +49,43 @@ class AuthController extends Controller
         ]
     )]
     public function register(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'fullname' => 'required|string|max:150',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6|confirmed',
-            'phone' => 'nullable|string|max:20',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'name' => 'required|string|max:150',
+        'email' => 'required|string|email|max:255|unique:users',
+        'password' => 'required|string|min:6|confirmed',
+        'phone' => 'nullable|string|max:20', // Không bắt buộc (nullable)
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Lỗi kiểm tra dữ liệu',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // TỐI ƯU: Sử dụng Constant thay vì số 3 và chữ 'active'
-        $user = User::create([
-            'fullname' => $request->fullname,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'phone' => $request->phone,
-            'status' => User::STATUS_ACTIVE,    // Đảm bảo Model User đã có const STATUS_ACTIVE
-            'role_id' => User::ROLE_CUSTOMER,   // Đảm bảo Model User đã có const ROLE_CUSTOMER
-        ]);
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
+    if ($validator->fails()) {
         return response()->json([
-            'status' => true,
-            'message' => 'Đăng ký thành công',
-            'data' => [
-                'user' => new UserResource($user), // TỐI ƯU: Dùng Resource
-                'token' => $token,
-                'token_type' => 'Bearer'
-            ]
-        ], 201);
+            'status' => false,
+            'message' => 'Lỗi kiểm tra dữ liệu',
+            'errors' => $validator->errors()
+        ], 422);
     }
+
+    $user = User::create([
+        'fullname' => $request->name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'phone' => $request->phone, // Nếu không gửi, DB sẽ tự lưu NULL
+        'status' => User::STATUS_ACTIVE,
+        'role_id' => User::ROLE_CUSTOMER, // Sẽ lấy giá trị 3 từ hằng số trong Model
+    ]);
+
+    $token = $user->createToken('auth_token')->plainTextToken;
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Đăng ký thành công',
+        'data' => [
+            'user' => $user,
+            'token' => $token,
+            'token_type' => 'Bearer'
+        ]
+    ], 201);
+}
 
     #[OA\Post(
         path: '/api/auth/login',
@@ -148,7 +147,7 @@ class AuthController extends Controller
         path: '/api/auth/me',
         summary: 'Lấy thông tin người dùng hiện tại',
         tags: ['Authentication'],
-        security: [['bearerAuth' => []]],
+        security: [['sanctum' => []]],
         responses: [
             new OA\Response(response: 200, description: 'Thành công'),
             new OA\Response(response: 401, description: 'Chưa xác thực')
@@ -172,7 +171,7 @@ class AuthController extends Controller
         path: '/api/auth/logout',
         summary: 'Đăng xuất tài khoản',
         tags: ['Authentication'],
-        security: [['bearerAuth' => []]],
+        security: [['sanctum' => []]],
         responses: [
             new OA\Response(response: 200, description: 'Đăng xuất thành công')
         ]
