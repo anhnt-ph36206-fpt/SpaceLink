@@ -33,8 +33,8 @@ const HeroSlider: React.FC = () => {
                 // Lọc sản phẩm nổi bật (is_featured = true) hoặc active
                 const featuredProducts = products.filter((p: any) => p.is_featured && p.is_active);
 
-                // Merge ảnh vào sản phẩm
-                const mergedData = featuredProducts.map((p: any) => {
+                // Hàm giúp merge ảnh vào sản phẩm
+                const mergeImage = (p: any) => {
                     const thumb = images.find((i: any) => i.product_id === p.id && i.is_primary);
                     return {
                         id: String(p.id),
@@ -45,17 +45,22 @@ const HeroSlider: React.FC = () => {
                         sale_price: p.sale_price,
                         category: p.category
                     };
-                });
+                };
 
-                // Chia dữ liệu: 
-                // - 3 sản phẩm đầu tiên cho vào Slider chính
-                // - Sản phẩm thứ 4 (nếu có) cho vào Banner bên phải
-                setSlides(mergedData.slice(0, 3));
-                if (mergedData.length > 3) {
-                    setRightBanner(mergedData[3]);
-                } else {
-                    // Nếu ít sản phẩm quá thì lấy đại cái đầu tiên làm banner phải
-                    setRightBanner(mergedData[0]);
+                // --- SLIDER CHÍNH (Lấy 3 sản phẩm đầu tiên) ---
+                const sliderData = featuredProducts.slice(0, 3).map(mergeImage);
+                setSlides(sliderData);
+
+                // --- BANNER PHẢI (Lấy NGẪU NHIÊN 1 sản phẩm) ---
+                if (products.length > 4) {
+                    // Random từ 0 đến độ dài mảng sản phẩm
+                    const randomIndex = Math.floor(Math.random() * products.length);
+                    const randomProduct = products[randomIndex];
+
+                    const bannerData = mergeImage(randomProduct);
+                    bannerData.category = "GỢI Ý HÔM NAY"; // Đổi tên danh mục cho hấp dẫn
+
+                    setRightBanner(bannerData);
                 }
 
             } catch (error) {
@@ -74,45 +79,30 @@ const HeroSlider: React.FC = () => {
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-expect-error
             if (window.$ && window.$.fn.owlCarousel) {
-                // Destroy slider cũ nếu có để tránh lỗi render lại
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                 // @ts-expect-error
                 const $carousel = window.$(".header-carousel");
 
                 // Khởi tạo mới
                 $carousel.owlCarousel({
-                    loop: true,
-                    margin: 10,
-                    nav: true,
-                    items: 1,
-                    autoplay: true,
-                    autoplayTimeout: 5000,
-                    smartSpeed: 1000,
-                    navText: [
-                        '<i class="fas fa-chevron-left"></i>',
-                        '<i class="fas fa-chevron-right"></i>',
-                    ]
+                    loop: true, margin: 10, nav: true, items: 1, autoplay: true, autoplayTimeout: 5000, smartSpeed: 1000,
+                    navText: ['<i class="fas fa-chevron-left"></i>', '<i class="fas fa-chevron-right"></i>']
                 });
             }
         }
-    }, [isLoading, slides]); // Chạy lại khi loading xong và có slides
+    }, [isLoading, slides]);
 
-    if (isLoading) return null; // Hoặc hiển thị Skeleton loading
+    if (isLoading) return null;
 
     return (
         <div className="container-fluid carousel bg-white px-0 mb-5">
             <div className="row g-0 justify-content-center">
 
-                {/* --- SLIDER CHÍNH (DYNAMIC TỪ DB) --- */}
+                {/* --- SLIDER CHÍNH --- */}
                 <div className="col-12 col-lg-8 col-xl-9">
                     <div className="header-carousel owl-carousel bg-light rounded shadow-sm">
-
                         {slides.map((item) => {
-                            // Tính giảm giá
-                            const discount = item.price > item.sale_price
-                                ? item.price - item.sale_price
-                                : 0;
-
+                            const discount = item.price > item.sale_price ? item.price - item.sale_price : 0;
                             return (
                                 <div key={item.id} className="row g-0 header-carousel-item align-items-center" style={{ minHeight: '450px' }}>
                                     <div className="col-md-6 carousel-img position-relative h-100">
@@ -147,11 +137,10 @@ const HeroSlider: React.FC = () => {
                                 </div>
                             )
                         })}
-
                     </div>
                 </div>
 
-                {/* --- BANNER PHỤ (DYNAMIC - LẤY SẢN PHẨM THỨ 4) --- */}
+                {/* --- BANNER PHẢI --- */}
                 {rightBanner && (
                     <div className="col-12 col-lg-4 col-xl-3 mt-3 mt-lg-0 ps-lg-3">
                         <div className="carousel-header-banner h-100 position-relative rounded overflow-hidden shadow-sm bg-dark">
@@ -170,10 +159,9 @@ const HeroSlider: React.FC = () => {
                             </div>
 
                             {/* Nội dung banner */}
-                            {/* Nội dung banner */}
                             <div className="carousel-banner-content position-absolute bottom-0 start-0 w-100 p-4">
 
-                                {/* Danh mục: Giữ nguyên màu vàng (warning) hoặc màu xám */}
+                                {/* Danh mục: Giữ nguyên màu vàng */}
                                 <p className="text-warning fw-bold mb-1 text-uppercase small ls-1">
                                     {rightBanner.category}
                                 </p>
@@ -189,7 +177,7 @@ const HeroSlider: React.FC = () => {
                                         {rightBanner.sale_price.toLocaleString('vi-VN')}đ
                                     </span>
 
-                                    {/* Giá gốc: Để màu xám đen cho dễ nhìn trên nền sáng */}
+                                    {/* Giá gốc: Màu xám */}
                                     {rightBanner.price > rightBanner.sale_price && (
                                         <del className="text-secondary small">
                                             {rightBanner.price.toLocaleString('vi-VN')}đ
