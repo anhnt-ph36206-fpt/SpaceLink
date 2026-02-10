@@ -211,7 +211,7 @@
             "ram": "12GB",
             "rom": "256GB",
             "color": "Titan Gray",
-            "image": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcTbwqRrki7r0xyk_3b4E_2jvZ-xKKTCLsi8YB44P49z-sFGl_B9GnDqs9I2dHITH9S4AOAGRFEdH-fhacWRA1es4n6pnff06mKIUv60SVc&usqp=CAc",
+            "image": "https://cdn.tgdd.vn/2026/02/timerseo/307174.jpg",
             "is_active": true
         },
         {
@@ -324,7 +324,7 @@
         {
             "id": 3,
             "product_id": 2,
-            "image_path": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcTbwqRrki7r0xyk_3b4E_2jvZ-xKKTCLsi8YB44P49z-sFGl_B9GnDqs9I2dHITH9S4AOAGRFEdH-fhacWRA1es4n6pnff06mKIUv60SVc&usqp=CAc",
+            "image_path": "https://cdn.tgdd.vn/2026/02/timerseo/307174.jpg",
             "is_primary": true,
             "display_order": 1
         },

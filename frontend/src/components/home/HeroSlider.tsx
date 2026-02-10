@@ -170,24 +170,34 @@ const HeroSlider: React.FC = () => {
                             </div>
 
                             {/* Nội dung banner */}
+                            {/* Nội dung banner */}
                             <div className="carousel-banner-content position-absolute bottom-0 start-0 w-100 p-4">
+
+                                {/* Danh mục: Giữ nguyên màu vàng (warning) hoặc màu xám */}
                                 <p className="text-warning fw-bold mb-1 text-uppercase small ls-1">
                                     {rightBanner.category}
                                 </p>
-                                <h4 className="text-white fw-bold mb-2 text-truncate">
+
+                                {/* 1. TÊN SẢN PHẨM: Đen đậm */}
+                                <h4 className="text-black fw-bold mb-2 text-truncate">
                                     {rightBanner.name}
                                 </h4>
+
                                 <div className="d-flex align-items-end mb-3">
-                                    <span className="text-white fw-bold fs-4 me-2">
+                                    {/* 2. GIÁ BÁN: Đen đậm & To */}
+                                    <span className="text-black fw-bold fs-4 me-2">
                                         {rightBanner.sale_price.toLocaleString('vi-VN')}đ
                                     </span>
+
+                                    {/* Giá gốc: Để màu xám đen cho dễ nhìn trên nền sáng */}
                                     {rightBanner.price > rightBanner.sale_price && (
-                                        <del className="text-white-50 small">
+                                        <del className="text-secondary small">
                                             {rightBanner.price.toLocaleString('vi-VN')}đ
                                         </del>
                                     )}
                                 </div>
-                                <Link to={`/product/${rightBanner.id}`} className="btn btn-light rounded-pill py-2 px-4 w-100 fw-bold text-primary">
+
+                                <Link to={`/product/${rightBanner.id}`} className="btn btn-primary rounded-pill py-2 px-4 w-100 fw-bold text-white">
                                     <i className="fas fa-shopping-bag me-2"></i> Xem Chi Tiết
                                 </Link>
                             </div>
