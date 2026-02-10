@@ -1,6 +1,54 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { User } from '../types/user';
+import { useNavigate } from 'react-router-dom';
+import {  useForm } from 'react-hook-form';
 
 const RegisterPage: React.FC = () => {
+
+  const {register , handleSubmit , formState: {errors}} = useForm<User>();
+  const navigate = useNavigate();
+
+  const onRegister = async (data:User) => {
+    try {
+
+      //check email tồn tại chưa 
+
+      const checkEmail = await fetch('http://localhost:3000/users?email=' + data.email);
+      const checkEmailJson = await checkEmail.json();
+      if(checkEmailJson.length > 0){
+        alert('Email already exists');
+        return;
+      }
+
+         const newUser = {
+        ...data,
+        role: 'customer',
+        status: 'active',
+        avatar : ""
+      }
+
+
+      const res = await fetch('http://localhost:3000/users' , {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newUser)
+      });
+
+      if(!res.ok){
+        throw new Error('Register failed');
+      }
+      const json = await res.json();
+      console.log(json);
+      alert('Register success');
+      navigate('/login');
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+
+
     return (
       <div className="min-h-screen bg-gray-100 text-gray-900 flex justify-center">
   <div className="max-w-screen-xl m-0 sm:m-10 bg-white shadow sm:rounded-lg flex justify-center flex-1">
@@ -43,7 +91,7 @@ const RegisterPage: React.FC = () => {
               Or sign up with e-mail
             </div>
           </div>
-          <div className="mx-auto max-w-xs">
+          {/* <div className="mx-auto max-w-xs">
             <input className="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white" type="email" placeholder="Email" />
             <input className="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white mt-5" type="password" placeholder="Password" />
             <button className="mt-5 tracking-wide font-semibold bg-indigo-500 text-gray-100 w-full py-4 rounded-lg hover:bg-indigo-700 transition-all duration-300 ease-in-out flex items-center justify-center focus:shadow-outline focus:outline-none">
@@ -66,7 +114,129 @@ const RegisterPage: React.FC = () => {
                 Privacy Policy
               </a>
             </p>
-          </div>
+          </div> */}
+          {/* <div className="min-h-screen flex items-center justify-center bg-gray-100"> */}
+      {/* <form
+        onSubmit={handleSubmit(onRegister)}
+        className="mx-auto max-w-xs bg-white p-6 rounded-xl shadow-md"
+      >
+        
+        <input
+          
+          type="text"
+          placeholder="Fullname"
+          {...register("fullname")}
+          // value={form.email}
+          // onChange={handleChange}
+          required
+          className="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 
+          placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white"
+        />
+
+        <input
+          // name="email"
+          type="email"
+          placeholder="Email"
+          {...register("email")}
+          // value={form.email}
+          // onChange={handleChange}
+          required
+          className="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 
+          placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white"
+        />
+
+        <input
+          // name="password"
+          type="password"
+          placeholder="Password"
+          {...register("password")}
+          // value={form.password}
+          // onChange={handleChange}
+          required
+          className="w-full px-8 py-4 mt-5 rounded-lg font-medium bg-gray-100 border border-gray-200 
+          placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white"
+        />
+
+        <button
+          type="submit"
+          className="mt-5 tracking-wide font-semibold bg-indigo-500 text-gray-100 w-full py-4 
+          rounded-lg hover:bg-indigo-700 transition-all duration-300 ease-in-out 
+          flex items-center justify-center focus:outline-none"
+        >
+          <svg
+            className="w-6 h-6 -ml-2"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+            <circle cx="8.5" cy="7" r="4" />
+            <path d="M20 8v6M23 11h-6" />
+          </svg>
+          <span className="ml-3">Sign Up</span>
+        </button>
+
+        <p className="mt-6 text-xs text-gray-600 text-center">
+          I agree to the{" "}
+          <a href="#" className="border-b border-gray-500 border-dotted">
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a href="#" className="border-b border-gray-500 border-dotted">
+            Privacy Policy
+          </a>
+        </p>
+      </form> */}
+      <form
+  onSubmit={handleSubmit(onRegister)}
+  className="mx-auto max-w-xs bg-white p-6 rounded-xl shadow-md 
+             flex flex-col gap-5"
+>
+  <input
+    type="text"
+    placeholder="Full name"
+    {...register("fullname")}
+    required
+    className="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200
+    placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white"
+  />
+
+  <input
+    type="email"
+    placeholder="Email"
+    {...register("email")}
+    required
+    className="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200
+    placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white"
+  />
+
+  <input
+    type="password"
+    placeholder="Password"
+    {...register("password")}
+    required
+    className="w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200
+    placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white"
+  />
+
+  <button
+    type="submit"
+    className="w-full py-4 rounded-lg font-semibold bg-indigo-500 text-white
+    hover:bg-indigo-700 transition flex items-center justify-center"
+  >
+    Sign Up
+  </button>
+
+  <p className="text-xs text-gray-600 text-center">
+    I agree to the{" "}
+    <a className="border-b border-dotted">Terms</a> &{" "}
+    <a className="border-b border-dotted">Privacy</a>
+  </p>
+</form>
+
+    {/* </div> */}
         </div>
       </div>
     </div>
