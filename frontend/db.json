@@ -151,5 +151,25 @@
             "is_primary": true,
             "display_order": 1
         }
+    ],
+    "users": [
+        {
+            "id": 1,
+            "email": "admin@gmail.com",
+            "password": "123456",
+            "fullname": "Admin",
+            "role": "admin",
+            "status": "active",
+            "avatar": "https://i.pravatar.cc/150?img=1"
+        },
+        {
+            "id": 2,
+            "email": "user@gmail.com",
+            "password": "123456",
+            "fullname": "User Test",
+            "role": "customer",
+            "status": "active",
+            "avatar": "https://i.pravatar.cc/150?img=2"
+        }
     ]
 }
