@@ -9,6 +9,7 @@ import BestsellerPage from './pages/BestsellerPage';
 import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
 import './App.css';
+import SearchPage from './components/home/SearchPage';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="/bestseller" element={<BestsellerPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="*" element={<NotFoundPage />} />
+          <Route path="/search" element={<SearchPage />} />
         </Routes>
       </Layout>
     </BrowserRouter>
