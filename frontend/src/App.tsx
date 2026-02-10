@@ -8,6 +8,8 @@ import CheckoutPage from './pages/CheckoutPage';
 import BestsellerPage from './pages/BestsellerPage';
 import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import './App.css';
 
 function App() {
@@ -23,6 +25,8 @@ function App() {
           <Route path="/bestseller" element={<BestsellerPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="*" element={<NotFoundPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
         </Routes>
       </Layout>
     </BrowserRouter>
