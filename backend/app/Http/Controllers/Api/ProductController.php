@@ -79,26 +79,26 @@ class ProductController extends Controller
             ->where('is_active', true);
 
         // Lọc theo danh mục
-        if ($request->has('category_id')) {
+        if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
         }
 
         // Lọc theo thương hiệu
-        if ($request->has('brand_id')) {
+        if ($request->filled('brand_id')) {
             $query->where('brand_id', $request->brand_id);
         }
 
         // Tìm kiếm theo tên
-        if ($request->has('keyword')) {
+        if ($request->filled('keyword')) {
             $keyword = $request->keyword;
             $query->where('name', 'like', "%{$keyword}%");
         }
 
         // Lọc theo khoảng giá
-        if ($request->has('min_price')) {
+        if ($request->filled('min_price')) {
             $query->where('price', '>=', $request->min_price);
         }
-        if ($request->has('max_price')) {
+        if ($request->filled('max_price')) {
             $query->where('price', '<=', $request->max_price);
         }
 
@@ -165,16 +165,20 @@ class ProductController extends Controller
     public function show($id)
     {
         // Eager Loading sâu để lấy: Variants -> Attributes -> AttributeGroup
-        // Cần truyền chính xác tên method trong Model
         $product = Product::with([
-            'category', 
-            'brand', 
-            'images', 
-            'variants.attributes.attributeGroup' 
-        ])->find($id);
+            'category',
+            'brand',
+            'images',
+            'variants' => function ($q) {
+                $q->where('is_active', true); // Chỉ lấy variant đang bán
+            },
+            'variants.attributes.attributeGroup',
+        ])
+        ->where('is_active', true)  // Không lấy sản phẩm đã ẩn
+        ->find($id);
 
         if (!$product) {
-            return response()->json(['message' => 'Không tìm thấy sản phẩm'], 404);
+            return response()->json(['message' => 'Không tìm thấy sản phẩm.'], 404);
         }
 
         // Tăng lượt xem

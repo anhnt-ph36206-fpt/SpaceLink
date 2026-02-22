@@ -22,13 +22,17 @@ class User extends Authenticatable
     const STATUS_BANNED = 'banned';
 
     protected $fillable = [
-    'fullname', 
-    'email', 
-    'password', 
-    'phone', 
-    'role_id', 
-    'status'
-];
+        'fullname',
+        'email',
+        'password',
+        'phone',
+        'avatar',
+        'date_of_birth',
+        'gender',
+        'role_id',
+        'status',
+        'last_login_at',
+    ];
 
     protected $hidden = ['password', 'remember_token'];
 

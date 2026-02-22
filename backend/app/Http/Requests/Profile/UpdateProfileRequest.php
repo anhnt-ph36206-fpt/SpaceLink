@@ -20,13 +20,13 @@ class UpdateProfileRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
-{
-    return [
-        'fullname' => 'required|string|max:150',
-        'phone'    => 'nullable|string|max:20',
-        'gender'   => 'nullable|in:male,female,other',
-        'date_of_birth' => 'nullable|date',
-        'avatar'   => 'nullable|string', // Tạm thời để string (URL), sau này xử lý upload file sau
-    ];
-}
+    {
+        return [
+            'fullname'      => 'nullable|string|max:150', // Partial update: không bắt buộc
+            'phone'         => 'nullable|string|max:20',
+            'gender'        => 'nullable|in:male,female,other',
+            'date_of_birth' => 'nullable|date|before:today',
+            'avatar'        => 'nullable|string|max:500',
+        ];
+    }
 }

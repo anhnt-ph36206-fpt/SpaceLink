@@ -80,7 +80,7 @@ class AuthController extends Controller
         'status' => true,
         'message' => 'Đăng ký thành công',
         'data' => [
-            'user' => $user,
+            'user' => new UserResource($user), // Dùng Resource để tránh expose password hash
             'token' => $token,
             'token_type' => 'Bearer'
         ]
@@ -125,10 +125,28 @@ class AuthController extends Controller
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
-                'status' => false, 
-                'message' => 'Thông tin đăng nhập không chính xác'
+                'status' => false,
+                'message' => 'Email hoặc mật khẩu không chính xác.'
             ], 401);
         }
+
+        // Kiểm tra trạng thái tài khoản
+        if ($user->status === User::STATUS_BANNED) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Tài khoản của bạn đã bị cấm. Vui lòng liên hệ hỗ trợ.',
+            ], 403);
+        }
+
+        if ($user->status === User::STATUS_INACTIVE) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Tài khoản chưa được kích hoạt.',
+            ], 403);
+        }
+
+        // Cập nhật thời gian đăng nhập
+        $user->update(['last_login_at' => now()]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -136,7 +154,7 @@ class AuthController extends Controller
             'status' => true,
             'message' => 'Đăng nhập thành công',
             'data' => [
-                'user' => new UserResource($user), // TỐI ƯU: Dùng Resource
+                'user' => new UserResource($user),
                 'token' => $token,
                 'token_type' => 'Bearer'
             ]

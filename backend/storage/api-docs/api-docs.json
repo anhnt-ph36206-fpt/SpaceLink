@@ -17,11 +17,67 @@
                 "tags": [
                     "Address"
                 ],
-                "summary": "Danh sách địa chỉ",
+                "summary": "Danh sách địa chỉ của user hiện tại",
                 "operationId": "dc6b190d3f07db7ed032fa181dc45150",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "Danh sách địa chỉ",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "fullname": {
+                                                        "type": "string"
+                                                    },
+                                                    "phone": {
+                                                        "type": "string"
+                                                    },
+                                                    "province": {
+                                                        "type": "string"
+                                                    },
+                                                    "district": {
+                                                        "type": "string"
+                                                    },
+                                                    "ward": {
+                                                        "type": "string"
+                                                    },
+                                                    "address_detail": {
+                                                        "type": "string"
+                                                    },
+                                                    "is_default": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "address_type": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "home",
+                                                            "office",
+                                                            "other"
+                                                        ]
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Chưa xác thực"
                     }
                 },
                 "security": [
@@ -36,9 +92,72 @@
                 ],
                 "summary": "Thêm địa chỉ mới",
                 "operationId": "6344fc023028e43a5490f1c6372bd391",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fullname",
+                                    "phone",
+                                    "province",
+                                    "district",
+                                    "ward",
+                                    "address_detail"
+                                ],
+                                "properties": {
+                                    "fullname": {
+                                        "type": "string",
+                                        "example": "Nguyen Van A"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0912345678"
+                                    },
+                                    "province": {
+                                        "type": "string",
+                                        "example": "Hồ Chí Minh"
+                                    },
+                                    "district": {
+                                        "type": "string",
+                                        "example": "Quận 1"
+                                    },
+                                    "ward": {
+                                        "type": "string",
+                                        "example": "Phường Bến Nghé"
+                                    },
+                                    "address_detail": {
+                                        "type": "string",
+                                        "example": "123 Nguyễn Huệ"
+                                    },
+                                    "is_default": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "address_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "home",
+                                            "office",
+                                            "other"
+                                        ],
+                                        "example": "home"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
-                        "description": "Created"
+                        "description": "Thêm thành công"
+                    },
+                    "422": {
+                        "description": "Lỗi validation"
+                    },
+                    "401": {
+                        "description": "Chưa xác thực"
                     }
                 },
                 "security": [
@@ -49,15 +168,121 @@
             }
         },
         "/api/addresses/{id}": {
+            "get": {
+                "tags": [
+                    "Address"
+                ],
+                "summary": "Chi tiết 1 địa chỉ",
+                "operationId": "2a46bc21bf18060f0ec3a4fff2debe57",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    },
+                    "401": {
+                        "description": "Chưa xác thực"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
             "put": {
                 "tags": [
                     "Address"
                 ],
-                "summary": "Sửa địa chỉ",
+                "summary": "Cập nhật địa chỉ",
                 "operationId": "b4967e4140f305290dbde0982a3fc7d0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fullname",
+                                    "phone",
+                                    "province",
+                                    "district",
+                                    "ward",
+                                    "address_detail"
+                                ],
+                                "properties": {
+                                    "fullname": {
+                                        "type": "string",
+                                        "example": "Nguyen Van B"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0987654321"
+                                    },
+                                    "province": {
+                                        "type": "string",
+                                        "example": "Hà Nội"
+                                    },
+                                    "district": {
+                                        "type": "string",
+                                        "example": "Quận Hoàn Kiếm"
+                                    },
+                                    "ward": {
+                                        "type": "string",
+                                        "example": "Phường Hàng Bạc"
+                                    },
+                                    "address_detail": {
+                                        "type": "string",
+                                        "example": "45 Hàng Ngang"
+                                    },
+                                    "is_default": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "address_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "home",
+                                            "office",
+                                            "other"
+                                        ],
+                                        "example": "office"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Updated"
+                        "description": "Cập nhật thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    },
+                    "422": {
+                        "description": "Lỗi validation"
                     }
                 },
                 "security": [
@@ -72,9 +297,22 @@
                 ],
                 "summary": "Xóa địa chỉ",
                 "operationId": "eedadf79fef97e5ee1af0b11c8856d8b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Deleted"
+                        "description": "Xóa thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
                     }
                 },
                 "security": [
@@ -257,13 +495,13 @@
                 ]
             }
         },
-        "/api/cart": {
+        "/api/client/cart": {
             "get": {
                 "tags": [
-                    "Cart"
+                    "Client - Cart"
                 ],
-                "summary": "Lấy danh sách giỏ hàng",
-                "operationId": "7fdb9b40bd4ad2baf12aa15164eab788",
+                "summary": "Lấy danh sách giỏ hàng của user/session",
+                "operationId": "f720d24cf935e7e06307dde0934eaac6",
                 "parameters": [
                     {
                         "name": "X-Session-ID",
@@ -277,7 +515,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Danh sách sản phẩm trong giỏ",
+                        "description": "Thành công",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -293,10 +531,12 @@
                                             }
                                         },
                                         "total_items": {
-                                            "type": "integer"
+                                            "type": "integer",
+                                            "example": 3
                                         },
                                         "total_price": {
-                                            "type": "number"
+                                            "type": "number",
+                                            "example": 599000
                                         }
                                     },
                                     "type": "object"
@@ -312,109 +552,14 @@
                 ]
             }
         },
-        "/api/cart/add": {
+        "/api/client/cart/add": {
             "post": {
                 "tags": [
-                    "Cart"
+                    "Client - Cart"
                 ],
                 "summary": "Thêm sản phẩm vào giỏ hàng",
-                "operationId": "1fd304ca79daacf6570caa5e412bccc7",
+                "operationId": "b652b666dfee24ec83f1294465e1c2f2",
                 "parameters": [
-                    {
-                        "name": "X-Session-ID",
-                        "in": "header",
-                        "description": "Session ID cho khách vãng lai (nếu chưa login)",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "product_id",
-                                    "quantity"
-                                ],
-                                "properties": {
-                                    "product_id": {
-                                        "description": "ID sản phẩm",
-                                        "type": "integer"
-                                    },
-                                    "quantity": {
-                                        "description": "Số lượng",
-                                        "type": "integer"
-                                    },
-                                    "variant_id": {
-                                        "description": "ID biến thể (nếu có)",
-                                        "type": "integer",
-                                        "nullable": true
-                                    },
-                                    "session_id": {
-                                        "description": "Session ID gửi trong body (dự phòng)",
-                                        "type": "string",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Thêm vào giỏ thành công",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Đã thêm vào giỏ"
-                                        },
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Lỗi validate dữ liệu"
-                    },
-                    "400": {
-                        "description": "Thiếu thông tin User/Session"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/cart/update/{id}": {
-            "put": {
-                "tags": [
-                    "Cart"
-                ],
-                "summary": "Cập nhật số lượng sản phẩm trong giỏ",
-                "operationId": "5d5ecf78ef1c152c09c7ec8629acf957",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID của mục trong giỏ hàng (cart_items.id)",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
                     {
                         "name": "X-Session-ID",
                         "in": "header",
@@ -431,11 +576,83 @@
                         "application/json": {
                             "schema": {
                                 "required": [
+                                    "variant_id",
+                                    "quantity"
+                                ],
+                                "properties": {
+                                    "variant_id": {
+                                        "description": "ID của biến thể sản phẩm",
+                                        "type": "integer"
+                                    },
+                                    "quantity": {
+                                        "description": "Số lượng muốn thêm",
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "session_id": {
+                                        "description": "Session ID (dự phòng nếu không gửi qua header)",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Thêm / cộng dồn số lượng thành công"
+                    },
+                    "400": {
+                        "description": "Thiếu User ID hoặc Session ID"
+                    },
+                    "422": {
+                        "description": "Dữ liệu không hợp lệ"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/client/cart/update/{cart_item_id}": {
+            "put": {
+                "tags": [
+                    "Client - Cart"
+                ],
+                "summary": "Cập nhật số lượng sản phẩm trong giỏ",
+                "operationId": "acbc99fa1ba5ed00e8acf419a9a1e3c8",
+                "parameters": [
+                    {
+                        "name": "cart_item_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "X-Session-ID",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
                                     "quantity"
                                 ],
                                 "properties": {
                                     "quantity": {
-                                        "description": "Số lượng mới",
                                         "type": "integer",
                                         "minimum": 1
                                     }
@@ -449,11 +666,14 @@
                     "200": {
                         "description": "Cập nhật thành công"
                     },
-                    "404": {
-                        "description": "Không tìm thấy sản phẩm"
-                    },
                     "403": {
-                        "description": "Không có quyền truy cập"
+                        "description": "Không có quyền"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy cart item"
+                    },
+                    "409": {
+                        "description": "Số lượng vượt tồn kho"
                     }
                 },
                 "security": [
@@ -463,18 +683,17 @@
                 ]
             }
         },
-        "/api/cart/remove/{id}": {
+        "/api/client/cart/remove/{cart_item_id}": {
             "delete": {
                 "tags": [
-                    "Cart"
+                    "Client - Cart"
                 ],
-                "summary": "Xóa sản phẩm khỏi giỏ hàng",
-                "operationId": "fc5777efe532c8d529ee81efe8751318",
+                "summary": "Xóa 1 sản phẩm khỏi giỏ hàng",
+                "operationId": "c4fbeb7a8c357a0d707780db7a095935",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "cart_item_id",
                         "in": "path",
-                        "description": "ID của mục trong giỏ hàng",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -483,7 +702,6 @@
                     {
                         "name": "X-Session-ID",
                         "in": "header",
-                        "description": "Session ID cho khách vãng lai",
                         "required": false,
                         "schema": {
                             "type": "string"
@@ -492,13 +710,115 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Đã xóa sản phẩm khỏi giỏ"
+                        "description": "Đã xóa khỏi giỏ"
+                    },
+                    "403": {
+                        "description": "Không có quyền"
                     },
                     "404": {
                         "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/client/cart/clear": {
+            "delete": {
+                "tags": [
+                    "Client - Cart"
+                ],
+                "summary": "Xóa toàn bộ giỏ hàng",
+                "operationId": "f41045e03ec641a17558516bd00d01fe",
+                "parameters": [
+                    {
+                        "name": "X-Session-ID",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Đã xóa toàn bộ giỏ hàng"
+                    },
+                    "400": {
+                        "description": "Thiếu định danh user/session"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/client/checkout": {
+            "post": {
+                "tags": [
+                    "Client - Checkout"
+                ],
+                "summary": "Đặt hàng từ giỏ hàng hiện tại",
+                "operationId": "f61fbaf721caf05ca415124401f56c94",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "shipping_address_id",
+                                    "payment_method"
+                                ],
+                                "properties": {
+                                    "shipping_address_id": {
+                                        "description": "ID địa chỉ giao hàng của user",
+                                        "type": "integer"
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "enum": [
+                                            "cod",
+                                            "vnpay",
+                                            "momo",
+                                            "bank_transfer"
+                                        ]
+                                    },
+                                    "voucher_code": {
+                                        "description": "Mã voucher (không bắt buộc)",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "note": {
+                                        "description": "Ghi chú đơn hàng",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Đặt hàng thành công"
+                    },
+                    "400": {
+                        "description": "Giỏ hàng rỗng hoặc lỗi nghiệp vụ"
                     },
                     "403": {
-                        "description": "Không có quyền xóa"
+                        "description": "Địa chỉ không thuộc về user này"
+                    },
+                    "409": {
+                        "description": "Tồn kho không đủ"
+                    },
+                    "422": {
+                        "description": "Dữ liệu không hợp lệ"
                     }
                 },
                 "security": [
@@ -725,8 +1045,12 @@
             "description": "Authentication"
         },
         {
-            "name": "Cart",
-            "description": "Cart"
+            "name": "Client - Cart",
+            "description": "Client - Cart"
+        },
+        {
+            "name": "Client - Checkout",
+            "description": "Client - Checkout"
         },
         {
             "name": "Products",

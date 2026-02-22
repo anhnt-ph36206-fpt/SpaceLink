@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\CheckoutController;
 
 
 /*
@@ -37,16 +38,38 @@ Route::get('/brands', [BrandController::class, 'index']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 
-// --- Cart ---
+// --- Cart (Legacy – giữ để không breaking Swagger cũ) ---
 Route::get('/cart', [CartController::class, 'index']);
 Route::post('/cart/add', [CartController::class, 'addToCart']);
 Route::put('/cart/update/{id}', [CartController::class, 'updateQuantity']);
 Route::delete('/cart/remove/{id}', [CartController::class, 'remove']);
 
 
+// ========================================================================
+// 2. CLIENT ROUTES — /api/client/*
+//    Cart: hỗ trợ Guest (X-Session-ID) lẫn User đã login
+//    Checkout: bắt buộc phải đăng nhập (auth:sanctum)
+// ========================================================================
+Route::prefix('client')->group(function () {
+
+    // --- Client Cart (optional auth – hỗ trợ Guest + User) ---
+    Route::prefix('cart')->group(function () {
+        Route::get('/',            [CartController::class, 'index']);           // GET  /api/client/cart
+        Route::post('/add',        [CartController::class, 'addToCart']);       // POST /api/client/cart/add
+        Route::put('/update/{cart_item_id}',    [CartController::class, 'updateQuantity']); // PUT  /api/client/cart/update/{id}
+        Route::delete('/remove/{cart_item_id}', [CartController::class, 'remove']);         // DELETE /api/client/cart/remove/{id}
+        Route::delete('/clear',    [CartController::class, 'clear']);           // DELETE /api/client/cart/clear
+    });
+
+    // --- Client Checkout (bắt buộc đăng nhập) ---
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/checkout', [CheckoutController::class, 'checkout']);      // POST /api/client/checkout
+    });
+});
+
 
 // ========================================================================
-// 2. PROTECTED ROUTES (Bắt buộc phải có Token)
+// 3. PROTECTED ROUTES (Bắt buộc phải có Token)
 // ========================================================================
 Route::middleware('auth:sanctum')->group(function () {
     
