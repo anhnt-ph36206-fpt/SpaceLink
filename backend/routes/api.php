@@ -2,14 +2,22 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+// Auth (dùng chung, không phải Client/Admin)
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\AddressController;
-use App\Http\Controllers\Api\ProductController;
-use App\Http\Controllers\Api\CartController;
+
+// Client Controllers
+use App\Http\Controllers\Api\Client\ProfileController;
+use App\Http\Controllers\Api\Client\AddressController;
+use App\Http\Controllers\Api\Client\ProductController;
+use App\Http\Controllers\Api\Client\CartController;
 use App\Http\Controllers\Api\Client\CategoryController as ClientCategoryController;
+use App\Http\Controllers\Api\Client\CheckoutController;
+use App\Http\Controllers\Api\Client\BrandController;
+
+// Admin Controllers
 use App\Http\Controllers\Api\Admin\CategoryController as AdminCategoryController;
-use App\Http\Controllers\Api\CheckoutController;
+
 
 
 /*
@@ -29,7 +37,6 @@ Route::prefix('auth')->group(function () {
 });
 
 // --- Brands ---
-use App\Http\Controllers\Api\BrandController;
 Route::get('/brands', [BrandController::class, 'index']);
 
 // --- Products ---
