@@ -15,7 +15,7 @@
         "/api/addresses": {
             "get": {
                 "tags": [
-                    "Address"
+                    "Client - Address"
                 ],
                 "summary": "Danh sách địa chỉ của user hiện tại",
                 "operationId": "dc6b190d3f07db7ed032fa181dc45150",
@@ -88,7 +88,7 @@
             },
             "post": {
                 "tags": [
-                    "Address"
+                    "Client - Address"
                 ],
                 "summary": "Thêm địa chỉ mới",
                 "operationId": "6344fc023028e43a5490f1c6372bd391",
@@ -170,7 +170,7 @@
         "/api/addresses/{id}": {
             "get": {
                 "tags": [
-                    "Address"
+                    "Client - Address"
                 ],
                 "summary": "Chi tiết 1 địa chỉ",
                 "operationId": "2a46bc21bf18060f0ec3a4fff2debe57",
@@ -203,7 +203,7 @@
             },
             "put": {
                 "tags": [
-                    "Address"
+                    "Client - Address"
                 ],
                 "summary": "Cập nhật địa chỉ",
                 "operationId": "b4967e4140f305290dbde0982a3fc7d0",
@@ -293,7 +293,7 @@
             },
             "delete": {
                 "tags": [
-                    "Address"
+                    "Client - Address"
                 ],
                 "summary": "Xóa địa chỉ",
                 "operationId": "eedadf79fef97e5ee1af0b11c8856d8b",
@@ -695,6 +695,687 @@
                     },
                     "403": {
                         "description": "Không có quyền Admin"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/products": {
+            "get": {
+                "tags": [
+                    "Admin - Products"
+                ],
+                "summary": "[Admin] Danh sách sản phẩm",
+                "operationId": "9058305dfe0377e6cf7c5253ed664401",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Tìm theo tên, slug, SKU",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "description": "Lọc theo danh mục",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "brand_id",
+                        "in": "query",
+                        "description": "Lọc theo thương hiệu",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "description": "Lọc theo trạng thái",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "is_featured",
+                        "in": "query",
+                        "description": "Lọc sản phẩm nổi bật",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "trashed",
+                        "in": "query",
+                        "description": "true = chỉ lấy sản phẩm đã xóa mềm",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Số bản ghi mỗi trang (mặc định 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "401": {
+                        "description": "Chưa xác thực"
+                    },
+                    "403": {
+                        "description": "Không có quyền Admin"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Products"
+                ],
+                "summary": "[Admin] Tạo sản phẩm mới",
+                "operationId": "e78a4cd5a8e47d96daa7a5a7a13d3e30",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "category_id",
+                                    "name",
+                                    "slug",
+                                    "price"
+                                ],
+                                "properties": {
+                                    "category_id": {
+                                        "type": "integer"
+                                    },
+                                    "brand_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "slug": {
+                                        "type": "string"
+                                    },
+                                    "sku": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "price": {
+                                        "type": "number"
+                                    },
+                                    "sale_price": {
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "is_featured": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    },
+                                    "meta_title": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "meta_description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công"
+                    },
+                    "422": {
+                        "description": "Validation thất bại"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/products/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Products"
+                ],
+                "summary": "[Admin] Chi tiết sản phẩm",
+                "operationId": "e645351e64571486935b1fbb5743d6b8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID sản phẩm",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy sản phẩm"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin - Products"
+                ],
+                "summary": "[Admin] Cập nhật sản phẩm",
+                "operationId": "78c34d6552e97335a6594ceaf054d60f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "category_id",
+                                    "name",
+                                    "slug",
+                                    "price"
+                                ],
+                                "properties": {
+                                    "category_id": {
+                                        "type": "integer"
+                                    },
+                                    "brand_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "slug": {
+                                        "type": "string"
+                                    },
+                                    "sku": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "price": {
+                                        "type": "number"
+                                    },
+                                    "sale_price": {
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "is_featured": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    },
+                                    "meta_title": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "meta_description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy sản phẩm"
+                    },
+                    "422": {
+                        "description": "Validation thất bại"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Products"
+                ],
+                "summary": "[Admin] Xóa mềm sản phẩm",
+                "operationId": "14131d6e77dc1537765eaa35848d3941",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Đã xóa"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/products/{id}/restore": {
+            "post": {
+                "tags": [
+                    "Admin - Products"
+                ],
+                "summary": "[Admin] Khôi phục sản phẩm đã xóa mềm",
+                "operationId": "5c6ed5a2b24e4f7fc47857fb0f60cb97",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID sản phẩm đã bị xóa mềm",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Khôi phục thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy sản phẩm đã xóa"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/products/{product}/images": {
+            "post": {
+                "tags": [
+                    "Admin - Product Images"
+                ],
+                "summary": "[Admin] Thêm ảnh sản phẩm",
+                "operationId": "498b5618b77b89e2152e0217d347c9c2",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "description": "ID sản phẩm",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "image_path"
+                                ],
+                                "properties": {
+                                    "image_path": {
+                                        "description": "Đường dẫn ảnh (relative: products/...)",
+                                        "type": "string"
+                                    },
+                                    "is_primary": {
+                                        "description": "Có phải ảnh đại diện không?",
+                                        "type": "boolean",
+                                        "nullable": true
+                                    },
+                                    "display_order": {
+                                        "description": "Thứ tự hiển thị",
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Thêm ảnh thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy sản phẩm"
+                    },
+                    "422": {
+                        "description": "Validation thất bại"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/products/{product}/images/{image}": {
+            "delete": {
+                "tags": [
+                    "Admin - Product Images"
+                ],
+                "summary": "[Admin] Xóa ảnh sản phẩm",
+                "operationId": "c90c82bb1af89a448e693d66d1e610f0",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "image",
+                        "in": "path",
+                        "description": "ID ảnh",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Đã xóa ảnh"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy ảnh"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/products/{product}/variants": {
+            "post": {
+                "tags": [
+                    "Admin - Product Variants"
+                ],
+                "summary": "[Admin] Thêm biến thể cho sản phẩm",
+                "operationId": "fffee78e2ad7b08a26028fc4b0c98d27",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "description": "ID sản phẩm",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "price"
+                                ],
+                                "properties": {
+                                    "sku": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "price": {
+                                        "type": "number"
+                                    },
+                                    "sale_price": {
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "image": {
+                                        "description": "Đường dẫn ảnh variant",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo variant thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy sản phẩm"
+                    },
+                    "422": {
+                        "description": "Validation thất bại"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/products/{product}/variants/{variant}": {
+            "put": {
+                "tags": [
+                    "Admin - Product Variants"
+                ],
+                "summary": "[Admin] Cập nhật biến thể sản phẩm",
+                "operationId": "4300b3a09a9ae3c9a6ec66c324059925",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "description": "ID sản phẩm",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "variant",
+                        "in": "path",
+                        "description": "ID biến thể",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "price"
+                                ],
+                                "properties": {
+                                    "sku": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "price": {
+                                        "type": "number"
+                                    },
+                                    "sale_price": {
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "image": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy variant"
+                    },
+                    "422": {
+                        "description": "Validation thất bại"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Product Variants"
+                ],
+                "summary": "[Admin] Xóa biến thể sản phẩm",
+                "operationId": "7c64f36cbadbf84b2ed38b5d2a736ca4",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "variant",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Đã xóa variant"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy variant"
                     }
                 },
                 "security": [
@@ -1425,7 +2106,7 @@
         "/api/products": {
             "get": {
                 "tags": [
-                    "Products"
+                    "Client - Products"
                 ],
                 "summary": "Lấy danh sách sản phẩm",
                 "operationId": "d97d1c3727cbac49708b85f7d11f7d58",
@@ -1516,7 +2197,7 @@
         "/api/products/{id}": {
             "get": {
                 "tags": [
-                    "Products"
+                    "Client - Products"
                 ],
                 "summary": "Xem chi tiết sản phẩm",
                 "operationId": "c87fb2e4d617e7b36c712cad358acdb8",
@@ -1556,7 +2237,7 @@
         "/api/profile": {
             "get": {
                 "tags": [
-                    "Profile"
+                    "Client - Profile"
                 ],
                 "summary": "Lấy thông tin profile và danh sách địa chỉ",
                 "operationId": "f1784685f8270527da017b3616288443",
@@ -1573,7 +2254,7 @@
             },
             "put": {
                 "tags": [
-                    "Profile"
+                    "Client - Profile"
                 ],
                 "summary": "Cập nhật thông tin cá nhân",
                 "operationId": "875e8801180287e4193f1aced9023960",
@@ -1631,12 +2312,24 @@
     },
     "tags": [
         {
-            "name": "Address",
-            "description": "Address"
+            "name": "Client - Address",
+            "description": "Client - Address"
         },
         {
             "name": "Admin - Categories",
             "description": "Admin - Categories"
+        },
+        {
+            "name": "Admin - Products",
+            "description": "Admin - Products"
+        },
+        {
+            "name": "Admin - Product Images",
+            "description": "Admin - Product Images"
+        },
+        {
+            "name": "Admin - Product Variants",
+            "description": "Admin - Product Variants"
         },
         {
             "name": "Authentication",
@@ -1655,12 +2348,12 @@
             "description": "Client - Categories"
         },
         {
-            "name": "Products",
-            "description": "Products"
+            "name": "Client - Products",
+            "description": "Client - Products"
         },
         {
-            "name": "Profile",
-            "description": "Profile"
+            "name": "Client - Profile",
+            "description": "Client - Profile"
         }
     ]
 }

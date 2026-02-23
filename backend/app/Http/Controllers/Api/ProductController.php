@@ -14,7 +14,7 @@ class ProductController extends Controller
     #[OA\Get(
         path: '/api/products',
         summary: 'Lấy danh sách sản phẩm',
-        tags: ['Products'],
+        tags: ['Client - Products'],
         parameters: [
             new OA\Parameter(
                 name: 'category_id',
@@ -136,7 +136,7 @@ class ProductController extends Controller
     #[OA\Get(
         path: '/api/products/{id}',
         summary: 'Xem chi tiết sản phẩm',
-        tags: ['Products'],
+        tags: ['Client - Products'],
         parameters: [
             new OA\Parameter(
                 name: 'id',

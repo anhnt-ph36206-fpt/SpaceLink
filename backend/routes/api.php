@@ -103,10 +103,35 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
 
     // --- Admin Categories ---
     Route::apiResource('categories', AdminCategoryController::class);
-    // Tự động tạo ra:
-    // GET    /api/admin/categories          -> index   (danh sách, hỗ trợ filter)
-    // POST   /api/admin/categories          -> store   (tạo mới)
-    // GET    /api/admin/categories/{id}     -> show    (chi tiết)
-    // PUT    /api/admin/categories/{id}     -> update  (cập nhật)
+    // GET    /api/admin/categories          -> index
+    // POST   /api/admin/categories          -> store
+    // GET    /api/admin/categories/{id}     -> show
+    // PUT    /api/admin/categories/{id}     -> update
     // DELETE /api/admin/categories/{id}     -> destroy (xóa mềm)
+
+    // --- Admin Products ---
+    Route::apiResource('products', \App\Http\Controllers\Api\Admin\ProductController::class);
+    // GET    /api/admin/products            -> index  (filter: search/category/brand/is_active/?trashed=true)
+    // POST   /api/admin/products            -> store
+    // GET    /api/admin/products/{id}       -> show   (kèm variants + images)
+    // PUT    /api/admin/products/{id}       -> update
+    // DELETE /api/admin/products/{id}       -> destroy (xóa mềm)
+
+    // Khôi phục sản phẩm đã xóa mềm
+    Route::post('products/{product}/restore', [\App\Http\Controllers\Api\Admin\ProductController::class, 'restore']);
+    // POST /api/admin/products/{id}/restore -> restore
+
+    // --- Admin Product Variants (nested) ---
+    Route::post(   'products/{product}/variants',             [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'store']);
+    Route::put(    'products/{product}/variants/{variant}',   [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'update']);
+    Route::delete( 'products/{product}/variants/{variant}',   [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'destroy']);
+    // POST   /api/admin/products/{id}/variants              -> thêm variant
+    // PUT    /api/admin/products/{id}/variants/{variantId}  -> sửa variant
+    // DELETE /api/admin/products/{id}/variants/{variantId}  -> xóa variant
+
+    // --- Admin Product Images (nested) ---
+    Route::post(   'products/{product}/images',           [\App\Http\Controllers\Api\Admin\ProductImageController::class, 'store']);
+    Route::delete( 'products/{product}/images/{image}',   [\App\Http\Controllers\Api\Admin\ProductImageController::class, 'destroy']);
+    // POST   /api/admin/products/{id}/images             -> thêm ảnh
+    // DELETE /api/admin/products/{id}/images/{imageId}   -> xóa ảnh
 });

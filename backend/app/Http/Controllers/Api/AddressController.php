@@ -13,7 +13,7 @@ class AddressController extends Controller
     #[OA\Get(
         path: '/api/addresses',
         summary: 'Danh sách địa chỉ của user hiện tại',
-        tags: ['Address'],
+        tags: ['Client - Address'],
         security: [['sanctum' => []]],
         responses: [
             new OA\Response(
@@ -52,7 +52,7 @@ class AddressController extends Controller
     #[OA\Post(
         path: '/api/addresses',
         summary: 'Thêm địa chỉ mới',
-        tags: ['Address'],
+        tags: ['Client - Address'],
         security: [['sanctum' => []]],
         requestBody: new OA\RequestBody(
             required: true,
@@ -97,7 +97,7 @@ class AddressController extends Controller
     #[OA\Get(
         path: '/api/addresses/{id}',
         summary: 'Chi tiết 1 địa chỉ',
-        tags: ['Address'],
+        tags: ['Client - Address'],
         security: [['sanctum' => []]],
         parameters: [
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
@@ -117,7 +117,7 @@ class AddressController extends Controller
     #[OA\Put(
         path: '/api/addresses/{id}',
         summary: 'Cập nhật địa chỉ',
-        tags: ['Address'],
+        tags: ['Client - Address'],
         security: [['sanctum' => []]],
         parameters: [
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
@@ -165,7 +165,7 @@ class AddressController extends Controller
     #[OA\Delete(
         path: '/api/addresses/{id}',
         summary: 'Xóa địa chỉ',
-        tags: ['Address'],
+        tags: ['Client - Address'],
         security: [['sanctum' => []]],
         parameters: [
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),

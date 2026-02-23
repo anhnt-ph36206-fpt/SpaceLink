@@ -13,7 +13,7 @@ class ProfileController extends Controller
     #[OA\Get(
         path: '/api/profile',
         summary: 'Lấy thông tin profile và danh sách địa chỉ',
-        tags: ['Profile'],
+        tags: ['Client - Profile'],
         security: [['sanctum' => []]],
         responses: [
             new OA\Response(response: 200, description: 'Thành công')
@@ -31,7 +31,7 @@ class ProfileController extends Controller
     #[OA\Put(
         path: '/api/profile',
         summary: 'Cập nhật thông tin cá nhân',
-        tags: ['Profile'],
+        tags: ['Client - Profile'],
         security: [['sanctum' => []]],
         requestBody: new OA\RequestBody(
             content: new OA\JsonContent(
