@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\Client\CategoryController as ClientCategoryController;
+use App\Http\Controllers\Api\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Api\CheckoutController;
 
 
@@ -25,10 +27,6 @@ Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 });
-
-// --- Categories ---
-use App\Http\Controllers\Api\CategoryController;
-Route::get('/categories', [CategoryController::class, 'index']);
 
 // --- Brands ---
 use App\Http\Controllers\Api\BrandController;
@@ -50,7 +48,11 @@ Route::delete('/cart/remove/{id}', [CartController::class, 'remove']);
 //    Cart: hỗ trợ Guest (X-Session-ID) lẫn User đã login
 //    Checkout: bắt buộc phải đăng nhập (auth:sanctum)
 // ========================================================================
-Route::prefix('client')->group(function () {
+Route::prefix('client')->name('client.')->group(function () {
+
+    // --- Client Categories (public) ---
+    Route::get('/categories',        [ClientCategoryController::class, 'index'])->name('categories.index'); // GET /api/client/categories
+    Route::get('/categories/{slug}', [ClientCategoryController::class, 'show'])->name('categories.show');  // GET /api/client/categories/{slug}
 
     // --- Client Cart (optional auth – hỗ trợ Guest + User) ---
     Route::prefix('cart')->group(function () {
@@ -90,4 +92,21 @@ Route::middleware('auth:sanctum')->group(function () {
     // POST   /api/addresses          -> Thêm mới
     // PUT    /api/addresses/{id}     -> Sửa
     // DELETE /api/addresses/{id}     -> Xóa
+});
+
+
+// ========================================================================
+// 4. ADMIN ROUTES — /api/admin/*
+//    Bắt buộc: đăng nhập (auth:sanctum) + role_id = 1 (admin)
+// ========================================================================
+Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->group(function () {
+
+    // --- Admin Categories ---
+    Route::apiResource('categories', AdminCategoryController::class);
+    // Tự động tạo ra:
+    // GET    /api/admin/categories          -> index   (danh sách, hỗ trợ filter)
+    // POST   /api/admin/categories          -> store   (tạo mới)
+    // GET    /api/admin/categories/{id}     -> show    (chi tiết)
+    // PUT    /api/admin/categories/{id}     -> update  (cập nhật)
+    // DELETE /api/admin/categories/{id}     -> destroy (xóa mềm)
 });
