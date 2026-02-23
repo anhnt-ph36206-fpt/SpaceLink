@@ -134,4 +134,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     Route::delete( 'products/{product}/images/{image}',   [\App\Http\Controllers\Api\Admin\ProductImageController::class, 'destroy']);
     // POST   /api/admin/products/{id}/images             -> thêm ảnh
     // DELETE /api/admin/products/{id}/images/{imageId}   -> xóa ảnh
+
+    // --- Admin Orders ---
+    Route::get(   'orders',                          [\App\Http\Controllers\Api\Admin\OrderController::class, 'index']);
+    Route::get(   'orders/{order}',                  [\App\Http\Controllers\Api\Admin\OrderController::class, 'show']);
+    Route::patch( 'orders/{order}/status',           [\App\Http\Controllers\Api\Admin\OrderController::class, 'updateStatus']);
+    Route::patch( 'orders/{order}/payment-status',   [\App\Http\Controllers\Api\Admin\OrderController::class, 'updatePaymentStatus']);
+    // GET    /api/admin/orders                          -> index  (filter: search/status/payment_status/date)
+    // GET    /api/admin/orders/{id}                     -> show   (kèm items + statusHistory)
+    // PATCH  /api/admin/orders/{id}/status              -> cập nhật trạng thái (tự ghi timestamp + log)
+    // PATCH  /api/admin/orders/{id}/payment-status      -> cập nhật thanh toán
 });

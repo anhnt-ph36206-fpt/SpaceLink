@@ -704,6 +704,280 @@
                 ]
             }
         },
+        "/api/admin/orders": {
+            "get": {
+                "tags": [
+                    "Admin - Orders"
+                ],
+                "summary": "[Admin] Danh sách đơn hàng",
+                "operationId": "d75d385d3719d4db92df549d42f08cff",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Tìm theo order_code, tên KH, SĐT",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Lọc theo trạng thái đơn",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "payment_status",
+                        "in": "query",
+                        "description": "Lọc theo trạng thái thanh toán",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "payment_method",
+                        "in": "query",
+                        "description": "Lọc theo phương thức thanh toán",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Từ ngày (Y-m-d)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Đến ngày (Y-m-d)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Số bản ghi/trang (mặc định 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "401": {
+                        "description": "Chưa xác thực"
+                    },
+                    "403": {
+                        "description": "Không phải Admin"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/orders/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Orders"
+                ],
+                "summary": "[Admin] Chi tiết đơn hàng",
+                "operationId": "a88c5c24d757abd104b8fd2a66cf89b7",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID đơn hàng",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy đơn hàng"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/orders/{id}/status": {
+            "patch": {
+                "tags": [
+                    "Admin - Orders"
+                ],
+                "summary": "[Admin] Cập nhật trạng thái đơn hàng",
+                "operationId": "5df4d011fb2613db2ceac1cf8af67a82",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pending",
+                                            "confirmed",
+                                            "processing",
+                                            "shipping",
+                                            "delivered",
+                                            "completed",
+                                            "cancelled",
+                                            "returned"
+                                        ]
+                                    },
+                                    "note": {
+                                        "description": "Ghi chú nội bộ",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "cancelled_reason": {
+                                        "description": "Lý do hủy (bắt buộc khi status=cancelled)",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "tracking_code": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "shipping_partner": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "estimated_delivery": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy đơn hàng"
+                    },
+                    "422": {
+                        "description": "Validation thất bại"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/orders/{id}/payment-status": {
+            "patch": {
+                "tags": [
+                    "Admin - Orders"
+                ],
+                "summary": "[Admin] Cập nhật trạng thái thanh toán",
+                "operationId": "a7336f55687b306bfd78df1d01bdb8e4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "payment_status"
+                                ],
+                                "properties": {
+                                    "payment_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "unpaid",
+                                            "paid",
+                                            "refunded",
+                                            "partial_refund"
+                                        ]
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy đơn hàng"
+                    },
+                    "422": {
+                        "description": "Validation thất bại"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/admin/products": {
             "get": {
                 "tags": [
@@ -2318,6 +2592,10 @@
         {
             "name": "Admin - Categories",
             "description": "Admin - Categories"
+        },
+        {
+            "name": "Admin - Orders",
+            "description": "Admin - Orders"
         },
         {
             "name": "Admin - Products",
