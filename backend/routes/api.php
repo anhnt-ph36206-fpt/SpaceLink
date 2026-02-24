@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\Client\BrandController;
 
 // Admin Controllers
 use App\Http\Controllers\Api\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 
 
 
@@ -151,4 +152,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     // GET    /api/admin/orders/{id}                     -> show   (kèm items + statusHistory)
     // PATCH  /api/admin/orders/{id}/status              -> cập nhật trạng thái (tự ghi timestamp + log)
     // PATCH  /api/admin/orders/{id}/payment-status      -> cập nhật thanh toán
+
+    // --- Admin Users ---
+    Route::apiResource('users', AdminUserController::class)->except(['store']);
+    Route::post('users/{user}/restore', [AdminUserController::class, 'restore']);
+    // GET    /api/admin/users                     -> index   (filter: search/role/status/?trashed=true)
+    // GET    /api/admin/users/{id}                -> show    (kèm orders_count, addresses)
+    // PUT    /api/admin/users/{id}                -> update  (role, status, profile)
+    // DELETE /api/admin/users/{id}                -> destroy (soft delete)
+    // POST   /api/admin/users/{id}/restore        -> restore
 });

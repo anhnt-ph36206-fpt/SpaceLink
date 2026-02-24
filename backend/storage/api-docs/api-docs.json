@@ -12,316 +12,6 @@
         }
     ],
     "paths": {
-        "/api/addresses": {
-            "get": {
-                "tags": [
-                    "Client - Address"
-                ],
-                "summary": "Danh sách địa chỉ của user hiện tại",
-                "operationId": "dc6b190d3f07db7ed032fa181dc45150",
-                "responses": {
-                    "200": {
-                        "description": "Danh sách địa chỉ",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "properties": {
-                                                    "id": {
-                                                        "type": "integer"
-                                                    },
-                                                    "fullname": {
-                                                        "type": "string"
-                                                    },
-                                                    "phone": {
-                                                        "type": "string"
-                                                    },
-                                                    "province": {
-                                                        "type": "string"
-                                                    },
-                                                    "district": {
-                                                        "type": "string"
-                                                    },
-                                                    "ward": {
-                                                        "type": "string"
-                                                    },
-                                                    "address_detail": {
-                                                        "type": "string"
-                                                    },
-                                                    "is_default": {
-                                                        "type": "boolean"
-                                                    },
-                                                    "address_type": {
-                                                        "type": "string",
-                                                        "enum": [
-                                                            "home",
-                                                            "office",
-                                                            "other"
-                                                        ]
-                                                    }
-                                                },
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Chưa xác thực"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "Client - Address"
-                ],
-                "summary": "Thêm địa chỉ mới",
-                "operationId": "6344fc023028e43a5490f1c6372bd391",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "fullname",
-                                    "phone",
-                                    "province",
-                                    "district",
-                                    "ward",
-                                    "address_detail"
-                                ],
-                                "properties": {
-                                    "fullname": {
-                                        "type": "string",
-                                        "example": "Nguyen Van A"
-                                    },
-                                    "phone": {
-                                        "type": "string",
-                                        "example": "0912345678"
-                                    },
-                                    "province": {
-                                        "type": "string",
-                                        "example": "Hồ Chí Minh"
-                                    },
-                                    "district": {
-                                        "type": "string",
-                                        "example": "Quận 1"
-                                    },
-                                    "ward": {
-                                        "type": "string",
-                                        "example": "Phường Bến Nghé"
-                                    },
-                                    "address_detail": {
-                                        "type": "string",
-                                        "example": "123 Nguyễn Huệ"
-                                    },
-                                    "is_default": {
-                                        "type": "boolean",
-                                        "example": true
-                                    },
-                                    "address_type": {
-                                        "type": "string",
-                                        "enum": [
-                                            "home",
-                                            "office",
-                                            "other"
-                                        ],
-                                        "example": "home"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Thêm thành công"
-                    },
-                    "422": {
-                        "description": "Lỗi validation"
-                    },
-                    "401": {
-                        "description": "Chưa xác thực"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/addresses/{id}": {
-            "get": {
-                "tags": [
-                    "Client - Address"
-                ],
-                "summary": "Chi tiết 1 địa chỉ",
-                "operationId": "2a46bc21bf18060f0ec3a4fff2debe57",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "404": {
-                        "description": "Không tìm thấy"
-                    },
-                    "401": {
-                        "description": "Chưa xác thực"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "put": {
-                "tags": [
-                    "Client - Address"
-                ],
-                "summary": "Cập nhật địa chỉ",
-                "operationId": "b4967e4140f305290dbde0982a3fc7d0",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "fullname",
-                                    "phone",
-                                    "province",
-                                    "district",
-                                    "ward",
-                                    "address_detail"
-                                ],
-                                "properties": {
-                                    "fullname": {
-                                        "type": "string",
-                                        "example": "Nguyen Van B"
-                                    },
-                                    "phone": {
-                                        "type": "string",
-                                        "example": "0987654321"
-                                    },
-                                    "province": {
-                                        "type": "string",
-                                        "example": "Hà Nội"
-                                    },
-                                    "district": {
-                                        "type": "string",
-                                        "example": "Quận Hoàn Kiếm"
-                                    },
-                                    "ward": {
-                                        "type": "string",
-                                        "example": "Phường Hàng Bạc"
-                                    },
-                                    "address_detail": {
-                                        "type": "string",
-                                        "example": "45 Hàng Ngang"
-                                    },
-                                    "is_default": {
-                                        "type": "boolean",
-                                        "example": false
-                                    },
-                                    "address_type": {
-                                        "type": "string",
-                                        "enum": [
-                                            "home",
-                                            "office",
-                                            "other"
-                                        ],
-                                        "example": "office"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Cập nhật thành công"
-                    },
-                    "404": {
-                        "description": "Không tìm thấy"
-                    },
-                    "422": {
-                        "description": "Lỗi validation"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Client - Address"
-                ],
-                "summary": "Xóa địa chỉ",
-                "operationId": "eedadf79fef97e5ee1af0b11c8856d8b",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Xóa thành công"
-                    },
-                    "404": {
-                        "description": "Không tìm thấy"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
         "/api/admin/categories": {
             "get": {
                 "tags": [
@@ -1659,6 +1349,259 @@
                 ]
             }
         },
+        "/api/admin/users": {
+            "get": {
+                "tags": [
+                    "Admin - Users"
+                ],
+                "summary": "[Admin] Danh sách người dùng",
+                "operationId": "9ded17315e13756cd593b5840cd39a26",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Tìm theo fullname, email, phone",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "role_id",
+                        "in": "query",
+                        "description": "1=Admin, 2=Staff, 3=Customer",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "active | inactive | banned",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "trashed",
+                        "in": "query",
+                        "description": "true = chỉ lấy user đã xóa mềm",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Số bản ghi/trang (mặc định 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "401": {
+                        "description": "Chưa xác thực"
+                    },
+                    "403": {
+                        "description": "Không phải Admin"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Users"
+                ],
+                "summary": "[Admin] Chi tiết người dùng",
+                "operationId": "c6ac2250cb22823f621026268b66f471",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID người dùng",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin - Users"
+                ],
+                "summary": "[Admin] Cập nhật thông tin người dùng",
+                "operationId": "22692373e5a35c609175c1e6441b58ca",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "fullname": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "role_id": {
+                                        "description": "1=Admin 2=Staff 3=Customer",
+                                        "type": "integer"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "active",
+                                            "inactive",
+                                            "banned"
+                                        ]
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "enum": [
+                                            "male",
+                                            "female",
+                                            "other"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "date_of_birth": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    },
+                    "422": {
+                        "description": "Validation thất bại"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Users"
+                ],
+                "summary": "[Admin] Xóa mềm người dùng",
+                "operationId": "fdbad6312957544572f3b379b96abad0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Đã xóa"
+                    },
+                    "400": {
+                        "description": "Không thể tự xóa chính mình"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users/{id}/restore": {
+            "post": {
+                "tags": [
+                    "Admin - Users"
+                ],
+                "summary": "[Admin] Khôi phục người dùng đã xóa mềm",
+                "operationId": "a82e87f11a5976b6379ec8c01c0a1129",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID user đã bị xóa mềm",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Khôi phục thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy user đã xóa"
+                    },
+                    "422": {
+                        "description": "User chưa bị xóa"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/auth/register": {
             "post": {
                 "tags": [
@@ -1832,13 +1775,323 @@
                 ]
             }
         },
+        "/api/addresses": {
+            "get": {
+                "tags": [
+                    "Client - Address"
+                ],
+                "summary": "Danh sách địa chỉ của user hiện tại",
+                "operationId": "318812347cf447a4b8ecbc48f4ca4caf",
+                "responses": {
+                    "200": {
+                        "description": "Danh sách địa chỉ",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "fullname": {
+                                                        "type": "string"
+                                                    },
+                                                    "phone": {
+                                                        "type": "string"
+                                                    },
+                                                    "province": {
+                                                        "type": "string"
+                                                    },
+                                                    "district": {
+                                                        "type": "string"
+                                                    },
+                                                    "ward": {
+                                                        "type": "string"
+                                                    },
+                                                    "address_detail": {
+                                                        "type": "string"
+                                                    },
+                                                    "is_default": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "address_type": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "home",
+                                                            "office",
+                                                            "other"
+                                                        ]
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Chưa xác thực"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Client - Address"
+                ],
+                "summary": "Thêm địa chỉ mới",
+                "operationId": "9355e526e726ca040170c129e099103c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fullname",
+                                    "phone",
+                                    "province",
+                                    "district",
+                                    "ward",
+                                    "address_detail"
+                                ],
+                                "properties": {
+                                    "fullname": {
+                                        "type": "string",
+                                        "example": "Nguyen Van A"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0912345678"
+                                    },
+                                    "province": {
+                                        "type": "string",
+                                        "example": "Hồ Chí Minh"
+                                    },
+                                    "district": {
+                                        "type": "string",
+                                        "example": "Quận 1"
+                                    },
+                                    "ward": {
+                                        "type": "string",
+                                        "example": "Phường Bến Nghé"
+                                    },
+                                    "address_detail": {
+                                        "type": "string",
+                                        "example": "123 Nguyễn Huệ"
+                                    },
+                                    "is_default": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "address_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "home",
+                                            "office",
+                                            "other"
+                                        ],
+                                        "example": "home"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Thêm thành công"
+                    },
+                    "422": {
+                        "description": "Lỗi validation"
+                    },
+                    "401": {
+                        "description": "Chưa xác thực"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/addresses/{id}": {
+            "get": {
+                "tags": [
+                    "Client - Address"
+                ],
+                "summary": "Chi tiết 1 địa chỉ",
+                "operationId": "9dda9707a5b1c229b5190ba40137d081",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    },
+                    "401": {
+                        "description": "Chưa xác thực"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Client - Address"
+                ],
+                "summary": "Cập nhật địa chỉ",
+                "operationId": "9b285b282eed11f227fd2963ba3c6c60",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fullname",
+                                    "phone",
+                                    "province",
+                                    "district",
+                                    "ward",
+                                    "address_detail"
+                                ],
+                                "properties": {
+                                    "fullname": {
+                                        "type": "string",
+                                        "example": "Nguyen Van B"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0987654321"
+                                    },
+                                    "province": {
+                                        "type": "string",
+                                        "example": "Hà Nội"
+                                    },
+                                    "district": {
+                                        "type": "string",
+                                        "example": "Quận Hoàn Kiếm"
+                                    },
+                                    "ward": {
+                                        "type": "string",
+                                        "example": "Phường Hàng Bạc"
+                                    },
+                                    "address_detail": {
+                                        "type": "string",
+                                        "example": "45 Hàng Ngang"
+                                    },
+                                    "is_default": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "address_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "home",
+                                            "office",
+                                            "other"
+                                        ],
+                                        "example": "office"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    },
+                    "422": {
+                        "description": "Lỗi validation"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Client - Address"
+                ],
+                "summary": "Xóa địa chỉ",
+                "operationId": "beab95657bbd097cfb53372ff3d78e66",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/client/cart": {
             "get": {
                 "tags": [
                     "Client - Cart"
                 ],
                 "summary": "Lấy danh sách giỏ hàng của user/session",
-                "operationId": "f720d24cf935e7e06307dde0934eaac6",
+                "operationId": "e5e373a13ee799e1a429de231feee8de",
                 "parameters": [
                     {
                         "name": "X-Session-ID",
@@ -1895,7 +2148,7 @@
                     "Client - Cart"
                 ],
                 "summary": "Thêm sản phẩm vào giỏ hàng",
-                "operationId": "b652b666dfee24ec83f1294465e1c2f2",
+                "operationId": "e9c2f60d7d53c98d20ca4bc539913d49",
                 "parameters": [
                     {
                         "name": "X-Session-ID",
@@ -1961,7 +2214,7 @@
                     "Client - Cart"
                 ],
                 "summary": "Cập nhật số lượng sản phẩm trong giỏ",
-                "operationId": "acbc99fa1ba5ed00e8acf419a9a1e3c8",
+                "operationId": "f1ad536f86cdb22c8b58178fd98e4a96",
                 "parameters": [
                     {
                         "name": "cart_item_id",
@@ -2026,7 +2279,7 @@
                     "Client - Cart"
                 ],
                 "summary": "Xóa 1 sản phẩm khỏi giỏ hàng",
-                "operationId": "c4fbeb7a8c357a0d707780db7a095935",
+                "operationId": "1a5b99dbb33241130467fc28b2cf83a0",
                 "parameters": [
                     {
                         "name": "cart_item_id",
@@ -2069,7 +2322,7 @@
                     "Client - Cart"
                 ],
                 "summary": "Xóa toàn bộ giỏ hàng",
-                "operationId": "f41045e03ec641a17558516bd00d01fe",
+                "operationId": "8797f1b48a8c10f2fd1a77c5eb950b8a",
                 "parameters": [
                     {
                         "name": "X-Session-ID",
@@ -2086,76 +2339,6 @@
                     },
                     "400": {
                         "description": "Thiếu định danh user/session"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/client/checkout": {
-            "post": {
-                "tags": [
-                    "Client - Checkout"
-                ],
-                "summary": "Đặt hàng từ giỏ hàng hiện tại",
-                "operationId": "f61fbaf721caf05ca415124401f56c94",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "shipping_address_id",
-                                    "payment_method"
-                                ],
-                                "properties": {
-                                    "shipping_address_id": {
-                                        "description": "ID địa chỉ giao hàng của user",
-                                        "type": "integer"
-                                    },
-                                    "payment_method": {
-                                        "type": "string",
-                                        "enum": [
-                                            "cod",
-                                            "vnpay",
-                                            "momo",
-                                            "bank_transfer"
-                                        ]
-                                    },
-                                    "voucher_code": {
-                                        "description": "Mã voucher (không bắt buộc)",
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "note": {
-                                        "description": "Ghi chú đơn hàng",
-                                        "type": "string",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Đặt hàng thành công"
-                    },
-                    "400": {
-                        "description": "Giỏ hàng rỗng hoặc lỗi nghiệp vụ"
-                    },
-                    "403": {
-                        "description": "Địa chỉ không thuộc về user này"
-                    },
-                    "409": {
-                        "description": "Tồn kho không đủ"
-                    },
-                    "422": {
-                        "description": "Dữ liệu không hợp lệ"
                     }
                 },
                 "security": [
@@ -2377,13 +2560,83 @@
                 }
             }
         },
+        "/api/client/checkout": {
+            "post": {
+                "tags": [
+                    "Client - Checkout"
+                ],
+                "summary": "Đặt hàng từ giỏ hàng hiện tại",
+                "operationId": "9e36954b0d32c4ea4535e013a5a2dcbd",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "shipping_address_id",
+                                    "payment_method"
+                                ],
+                                "properties": {
+                                    "shipping_address_id": {
+                                        "description": "ID địa chỉ giao hàng của user",
+                                        "type": "integer"
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "enum": [
+                                            "cod",
+                                            "vnpay",
+                                            "momo",
+                                            "bank_transfer"
+                                        ]
+                                    },
+                                    "voucher_code": {
+                                        "description": "Mã voucher (không bắt buộc)",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "note": {
+                                        "description": "Ghi chú đơn hàng",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Đặt hàng thành công"
+                    },
+                    "400": {
+                        "description": "Giỏ hàng rỗng hoặc lỗi nghiệp vụ"
+                    },
+                    "403": {
+                        "description": "Địa chỉ không thuộc về user này"
+                    },
+                    "409": {
+                        "description": "Tồn kho không đủ"
+                    },
+                    "422": {
+                        "description": "Dữ liệu không hợp lệ"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/products": {
             "get": {
                 "tags": [
                     "Client - Products"
                 ],
                 "summary": "Lấy danh sách sản phẩm",
-                "operationId": "d97d1c3727cbac49708b85f7d11f7d58",
+                "operationId": "c7d1e59317d45e7d5b8ff7fea0ed7373",
                 "parameters": [
                     {
                         "name": "category_id",
@@ -2474,7 +2727,7 @@
                     "Client - Products"
                 ],
                 "summary": "Xem chi tiết sản phẩm",
-                "operationId": "c87fb2e4d617e7b36c712cad358acdb8",
+                "operationId": "b2a137b7ac793ab16f6333a0cd7e11be",
                 "parameters": [
                     {
                         "name": "id",
@@ -2514,7 +2767,7 @@
                     "Client - Profile"
                 ],
                 "summary": "Lấy thông tin profile và danh sách địa chỉ",
-                "operationId": "f1784685f8270527da017b3616288443",
+                "operationId": "8338b76e12049fef19ca4cadaf0bd9c2",
                 "responses": {
                     "200": {
                         "description": "Thành công"
@@ -2531,7 +2784,7 @@
                     "Client - Profile"
                 ],
                 "summary": "Cập nhật thông tin cá nhân",
-                "operationId": "875e8801180287e4193f1aced9023960",
+                "operationId": "809146d0b0d2c0318e06a583cd9323c2",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -2586,10 +2839,6 @@
     },
     "tags": [
         {
-            "name": "Client - Address",
-            "description": "Client - Address"
-        },
-        {
             "name": "Admin - Categories",
             "description": "Admin - Categories"
         },
@@ -2610,20 +2859,28 @@
             "description": "Admin - Product Variants"
         },
         {
+            "name": "Admin - Users",
+            "description": "Admin - Users"
+        },
+        {
             "name": "Authentication",
             "description": "Authentication"
+        },
+        {
+            "name": "Client - Address",
+            "description": "Client - Address"
         },
         {
             "name": "Client - Cart",
             "description": "Client - Cart"
         },
         {
-            "name": "Client - Checkout",
-            "description": "Client - Checkout"
-        },
-        {
             "name": "Client - Categories",
             "description": "Client - Categories"
+        },
+        {
+            "name": "Client - Checkout",
+            "description": "Client - Checkout"
         },
         {
             "name": "Client - Products",

@@ -10,7 +10,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     // --- 1. KHAI BÁO HẰNG SỐ (CONSTANTS) ---
     const ROLE_ADMIN = 1;
@@ -38,8 +38,9 @@ class User extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-        'date_of_birth' => 'date', // Tự động format ngày tháng
+        'password'          => 'hashed',
+        'date_of_birth'     => 'date',
+        'last_login_at'     => 'datetime',
     ];
 
     /**
