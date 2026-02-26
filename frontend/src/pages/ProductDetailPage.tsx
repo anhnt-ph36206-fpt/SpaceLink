@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ProductCard from '../components/common/ProductCard';
-import { Product } from '../types';
+import type {Product} from '../types';
 
 const ProductDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -13,7 +13,7 @@ const ProductDetailPage: React.FC = () => {
         id: id || '1',
         name: 'Apple iPad Mini G2356',
         category: 'SmartPhone',
-        image: '/images/product-3.png',
+        image: '/assets/client/img/product-3.png',
         price: 1050,
         oldPrice: 1250,
         rating: 4,
@@ -25,7 +25,7 @@ const ProductDetailPage: React.FC = () => {
         id: `${i + 10}`,
         name: 'Apple iPad Mini G2356',
         category: 'SmartPhone',
-        image: `/images/product-${(i % 8) + 3}.png`,
+        image: `/assets/client/img/product-${(i % 8) + 3}.png`,
         price: 1050,
         oldPrice: 1250,
         rating: 4,

@@ -1,6 +1,24 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 
 const HeroSlider: React.FC = () => {
+    useEffect(() => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
+        if (window.$ && window.$.fn.owlCarousel) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            window.$(".owl-carousel").owlCarousel({
+                loop: true,
+                margin: 10,
+                nav: true,
+                items: 1,
+                navText: [
+                    '<i class="fas fa-chevron-left"></i>',
+                    '<i class="fas fa-chevron-right"></i>',
+                ]
+            });
+        }
+    }, []);
     return (
         <div className="container-fluid carousel bg-light px-0">
             <div className="row g-0 justify-content-end">
@@ -9,7 +27,7 @@ const HeroSlider: React.FC = () => {
                         {/* Slide 1 */}
                         <div className="row g-0 header-carousel-item align-items-center">
                             <div className="col-xl-6 carousel-img wow fadeInLeft" data-wow-delay="0.1s">
-                                <img src="/images/carousel-1.png" className="img-fluid w-100" alt="Carousel 1" />
+                                <img src="/assets/client/img/carousel-1.png" className="img-fluid w-100" alt="Carousel 1" />
                             </div>
                             <div className="col-xl-6 carousel-content p-4">
                                 <h4
@@ -38,7 +56,7 @@ const HeroSlider: React.FC = () => {
                         {/* Slide 2 */}
                         <div className="row g-0 header-carousel-item align-items-center">
                             <div className="col-xl-6 carousel-img wow fadeInLeft" data-wow-delay="0.1s">
-                                <img src="/images/carousel-2.png" className="img-fluid w-100" alt="Carousel 2" />
+                                <img src="/assets/client/img/carousel-2.png" className="img-fluid w-100" alt="Carousel 2" />
                             </div>
                             <div className="col-xl-6 carousel-content p-4">
                                 <h4
@@ -68,7 +86,7 @@ const HeroSlider: React.FC = () => {
                 <div className="col-12 col-lg-5 col-xl-3 wow fadeInRight" data-wow-delay="0.1s">
                     <div className="carousel-header-banner h-100">
                         <img
-                            src="/images/header-img.jpg"
+                            src="/assets/client/img/header-img.jpg"
                             className="img-fluid w-100 h-100"
                             style={{ objectFit: 'cover' }}
                             alt="Special Offer"

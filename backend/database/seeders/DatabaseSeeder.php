@@ -12,9 +12,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Đảm bảo có Danh mục và Thương hiệu để gán cho sản phẩm
-        $catPhone = Category::firstOrCreate(['slug' => 'dien-thoai'], ['name' => 'Điện thoại', 'is_active' => 1]);
-        $catLaptop = Category::firstOrCreate(['slug' => 'laptop'], ['name' => 'Laptop', 'is_active' => 1]);
+        // User::factory(10)->create();
 
         // User::factory()->create([
         //     'name' => 'Test User',

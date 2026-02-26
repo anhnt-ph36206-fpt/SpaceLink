@@ -1,6 +1,6 @@
 import React from 'react';
 import ServiceItem from '../common/ServiceItem';
-import { ServiceItem as ServiceItemType } from '../../types';
+import type {ServiceItem as ServiceItemType} from '../../types';
 
 const ServicesSection: React.FC = () => {
     const services: ServiceItemType[] = [

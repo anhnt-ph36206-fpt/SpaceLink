@@ -7,14 +7,14 @@ const CartPage: React.FC = () => {
         {
             id: '1',
             name: 'Apple iPad Mini G2356',
-            image: '/images/product-3.png',
+            image: '/assets/client/img/product-3.png',
             price: 1050,
             quantity: 2,
         },
         {
             id: '2',
             name: 'Samsung Galaxy Tab',
-            image: '/images/product-4.png',
+            image: '/assets/client/img/product-4.png',
             price: 850,
             quantity: 1,
         },

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ServiceItem as ServiceItemType } from '../../types';
+import type {ServiceItem as ServiceItemType} from '../../types';
 
 interface ServiceItemProps {
     service: ServiceItemType;

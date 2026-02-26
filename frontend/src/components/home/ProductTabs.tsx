@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ProductCard from '../common/ProductCard';
-import { Product } from '../../types';
+import type {Product} from '../../types';
 
 const ProductTabs: React.FC = () => {
     const [activeTab, setActiveTab] = useState('all');
