@@ -1602,6 +1602,308 @@
                 ]
             }
         },
+        "/api/admin/vouchers": {
+            "get": {
+                "tags": [
+                    "Admin - Vouchers"
+                ],
+                "summary": "[Admin] Danh sách voucher",
+                "operationId": "abee94fdceadc392fa35a91c004151e9",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Tìm theo code hoặc tên",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "description": "Lọc theo trạng thái",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Số bản ghi/trang (mặc định 15)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "401": {
+                        "description": "Chưa xác thực"
+                    },
+                    "403": {
+                        "description": "Không phải Admin"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Vouchers"
+                ],
+                "summary": "[Admin] Tạo voucher mới",
+                "operationId": "f79dd1a2145c81d0a067b1214350d154",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code",
+                                    "name",
+                                    "discount_type",
+                                    "discount_value",
+                                    "start_date",
+                                    "end_date"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "description": "Mã voucher (viết hoa, unique)",
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "description": "Tên voucher",
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "discount_type": {
+                                        "description": "Loại giảm giá",
+                                        "type": "string",
+                                        "enum": [
+                                            "percent",
+                                            "fixed"
+                                        ]
+                                    },
+                                    "discount_value": {
+                                        "description": "Giá trị giảm (% hoặc VNĐ)",
+                                        "type": "number"
+                                    },
+                                    "max_discount": {
+                                        "description": "Giảm tối đa (VNĐ, áp dụng cho percent)",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "min_order_amount": {
+                                        "description": "Giá trị đơn tối thiểu để dùng",
+                                        "type": "number"
+                                    },
+                                    "quantity": {
+                                        "description": "Số lượt sử dụng (null = không giới hạn)",
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "usage_limit_per_user": {
+                                        "description": "Giới hạn dùng per-user (0 = không giới hạn)",
+                                        "type": "integer"
+                                    },
+                                    "start_date": {
+                                        "description": "Ngày bắt đầu",
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "end_date": {
+                                        "description": "Ngày kết thúc",
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "is_active": {
+                                        "description": "Kích hoạt ngay",
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công"
+                    },
+                    "422": {
+                        "description": "Validation thất bại"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/vouchers/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Vouchers"
+                ],
+                "summary": "[Admin] Chi tiết voucher",
+                "operationId": "79570f2210349ecc006f87d698b81115",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin - Vouchers"
+                ],
+                "summary": "[Admin] Cập nhật voucher",
+                "operationId": "941e5e152c29fd85697cc796b61dd1ce",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "discount_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "percent",
+                                            "fixed"
+                                        ]
+                                    },
+                                    "discount_value": {
+                                        "type": "number"
+                                    },
+                                    "max_discount": {
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "min_order_amount": {
+                                        "type": "number"
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "usage_limit_per_user": {
+                                        "type": "integer"
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    },
+                    "422": {
+                        "description": "Validation thất bại"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Vouchers"
+                ],
+                "summary": "[Admin] Xóa voucher",
+                "operationId": "648956ca7181a64e063156cf2dfb3564",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Đã xóa"
+                    },
+                    "400": {
+                        "description": "Voucher đang được sử dụng, không thể xóa"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/auth/register": {
             "post": {
                 "tags": [
@@ -1766,6 +2068,150 @@
                 "responses": {
                     "200": {
                         "description": "Đăng xuất thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Gửi email đặt lại mật khẩu",
+                "operationId": "f51c7074de53475eab87e336cc4e06a6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "user@example.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Link đặt lại mật khẩu đã được gửi"
+                    },
+                    "422": {
+                        "description": "Email không hợp lệ hoặc không tồn tại"
+                    }
+                }
+            }
+        },
+        "/api/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Đặt lại mật khẩu (dùng token từ email)",
+                "operationId": "96e44e1ebcd811418fd95ee4c56162f0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "token",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "token": {
+                                        "description": "Token từ email đặt lại mật khẩu",
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minimum": 6
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Đặt lại mật khẩu thành công"
+                    },
+                    "422": {
+                        "description": "Token không hợp lệ hoặc hết hạn"
+                    }
+                }
+            }
+        },
+        "/api/auth/change-password": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Đổi mật khẩu khi đã đăng nhập",
+                "operationId": "58e67cdbde52513b62902b05abf9abcb",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "current_password",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "current_password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minimum": 6
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Đổi mật khẩu thành công"
+                    },
+                    "401": {
+                        "description": "Mật khẩu hiện tại không đúng"
+                    },
+                    "422": {
+                        "description": "Dữ liệu không hợp lệ"
                     }
                 },
                 "security": [
@@ -2085,6 +2531,53 @@
                 ]
             }
         },
+        "/api/brands": {
+            "get": {
+                "tags": [
+                    "Client - Brands"
+                ],
+                "summary": "Danh sách thương hiệu đang hoạt động",
+                "operationId": "93741264a8954944c573cfbeb31db93f",
+                "responses": {
+                    "200": {
+                        "description": "Thành công",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "slug": {
+                                                        "type": "string"
+                                                    },
+                                                    "logo": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "display_order": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/client/cart": {
             "get": {
                 "tags": [
@@ -2339,6 +2832,47 @@
                     },
                     "400": {
                         "description": "Thiếu định danh user/session"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/client/cart/merge": {
+            "post": {
+                "tags": [
+                    "Client - Cart"
+                ],
+                "summary": "Gộp giỏ hàng Guest vào tài khoản sau khi login",
+                "operationId": "311da3d74242c210a431c0efb3c9b0a6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "session_id"
+                                ],
+                                "properties": {
+                                    "session_id": {
+                                        "description": "Session ID của giỏ hàng Guest cần gộp",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Gộp giỏ hàng thành công"
+                    },
+                    "400": {
+                        "description": "Thiếu session_id"
                     }
                 },
                 "security": [
@@ -2630,6 +3164,148 @@
                 ]
             }
         },
+        "/api/client/orders": {
+            "get": {
+                "tags": [
+                    "Client - Orders"
+                ],
+                "summary": "Danh sách đơn hàng của user",
+                "operationId": "4cac89b786e9d512fe0c9a245f0d122d",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Lọc theo trạng thái: pending, confirmed, shipping, delivered, completed, cancelled",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "payment_status",
+                        "in": "query",
+                        "description": "Lọc theo thanh toán: unpaid, paid, refunded",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Số bản ghi/trang (mặc định 10)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "401": {
+                        "description": "Chưa xác thực"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/client/orders/{id}": {
+            "get": {
+                "tags": [
+                    "Client - Orders"
+                ],
+                "summary": "Chi tiết đơn hàng của user",
+                "operationId": "5b9ae48ef860b57886a94997fd2c36b1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID đơn hàng",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "403": {
+                        "description": "Không phải đơn hàng của bạn"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy đơn hàng"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/client/orders/{id}/cancel": {
+            "post": {
+                "tags": [
+                    "Client - Orders"
+                ],
+                "summary": "Hủy đơn hàng (chỉ khi đang ở trạng thái pending)",
+                "operationId": "b5196f13e1c92486712fd11da018f62b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "reason": {
+                                        "description": "Lý do hủy đơn (không bắt buộc)",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Hủy đơn thành công"
+                    },
+                    "403": {
+                        "description": "Không phải đơn của bạn hoặc không thể hủy"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy đơn hàng"
+                    },
+                    "422": {
+                        "description": "Đơn hàng không ở trạng thái có thể hủy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/products": {
             "get": {
                 "tags": [
@@ -2863,12 +3539,20 @@
             "description": "Admin - Users"
         },
         {
+            "name": "Admin - Vouchers",
+            "description": "Admin - Vouchers"
+        },
+        {
             "name": "Authentication",
             "description": "Authentication"
         },
         {
             "name": "Client - Address",
             "description": "Client - Address"
+        },
+        {
+            "name": "Client - Brands",
+            "description": "Client - Brands"
         },
         {
             "name": "Client - Cart",
@@ -2881,6 +3565,10 @@
         {
             "name": "Client - Checkout",
             "description": "Client - Checkout"
+        },
+        {
+            "name": "Client - Orders",
+            "description": "Client - Orders"
         },
         {
             "name": "Client - Products",
