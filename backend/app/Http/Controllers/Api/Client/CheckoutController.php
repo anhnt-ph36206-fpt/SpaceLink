@@ -93,11 +93,11 @@ class CheckoutController extends Controller
                     $variant = $lockedVariants->get($item->variant_id);
 
                     if (!$variant || !$variant->is_active) {
-                        throw new \Exception("Sản phẩm \"{$item->product->name}\" hiện không còn bán.");
+                        throw new \App\Exceptions\StockException("Sản phẩm \"{$item->product->name}\" hiện không còn bán.");
                     }
 
                     if ($variant->quantity < $item->quantity) {
-                        throw new \Exception(
+                        throw new \App\Exceptions\StockException(
                             "Sản phẩm \"{$item->product->name}\" chỉ còn {$variant->quantity} trong kho, không đủ số lượng yêu cầu ({$item->quantity})."
                         );
                     }
@@ -233,12 +233,18 @@ class CheckoutController extends Controller
                 ],
             ], 201);
 
-        } catch (\Exception $e) {
-            // Transaction tự động rollback khi exception được throw
+        } catch (\App\Exceptions\StockException $e) {
+            // 409 Conflict: lỗi tồn kho hoặc voucher không hợp lệ
             return response()->json([
                 'status'  => 'error',
                 'message' => $e->getMessage(),
             ], 409);
+        } catch (\Exception $e) {
+            // 500: lỗi hệ thống không xác định
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
+            ], 500);
         }
     }
 
@@ -295,24 +301,24 @@ class CheckoutController extends Controller
 
         // Voucher tồn tại và đang active
         if (!$voucher || !$voucher->is_active) {
-            throw new \Exception("Mã voucher \"{$code}\" không tồn tại hoặc đã bị vô hiệu.");
+            throw new \App\Exceptions\StockException("Mã voucher \"{$code}\" không tồn tại hoặc đã bị vô hiệu.");
         }
 
         // Kiểm tra thời hạn
         $now = now();
         if ($now->lt($voucher->start_date) || $now->gt($voucher->end_date)) {
-            throw new \Exception("Mã voucher \"{$code}\" đã hết hạn hoặc chưa đến ngày sử dụng.");
+            throw new \App\Exceptions\StockException("Mã voucher \"{$code}\" đã hết hạn hoặc chưa đến ngày sử dụng.");
         }
 
         // Kiểm tra số lượt dùng còn lại
         if ($voucher->quantity !== null && $voucher->used_count >= $voucher->quantity) {
-            throw new \Exception("Mã voucher \"{$code}\" đã hết lượt sử dụng.");
+            throw new \App\Exceptions\StockException("Mã voucher \"{$code}\" đã hết lượt sử dụng.");
         }
 
         // Kiểm tra đơn tối thiểu
         if ($subtotal < $voucher->min_order_amount) {
             $minFormatted = number_format($voucher->min_order_amount, 0, ',', '.');
-            throw new \Exception("Đơn hàng tối thiểu phải đạt {$minFormatted}₫ để dùng mã này.");
+            throw new \App\Exceptions\StockException("Đơn hàng tối thiểu phải đạt {$minFormatted}₫ để dùng mã này.");
         }
 
         // Kiểm tra giới hạn sử dụng per-user
@@ -321,7 +327,7 @@ class CheckoutController extends Controller
                 ->where('user_id', $userId)
                 ->count();
             if ($usedByUser >= $voucher->usage_limit_per_user) {
-                throw new \Exception("Bạn đã sử dụng mã voucher \"{$code}\" tối đa số lần cho phép.");
+                throw new \App\Exceptions\StockException("Bạn đã sử dụng mã voucher \"{$code}\" tối đa số lần cho phép.");
             }
         }
 

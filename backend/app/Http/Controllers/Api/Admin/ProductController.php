@@ -44,7 +44,7 @@ class ProductController extends Controller
 
         $query = $showTrashed
             ? Product::onlyTrashed()
-            : Product::withTrashed(false);
+            : Product::query();
 
         $query->with(['category:id,name,slug', 'brand:id,name,slug', 'images'])->latest();
 

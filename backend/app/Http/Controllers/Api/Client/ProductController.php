@@ -94,12 +94,16 @@ class ProductController extends Controller
             $query->where('name', 'like', "%{$keyword}%");
         }
 
-        // Lọc theo khoảng giá
+        // Lọc theo khoảng giá (dùng giá hiệu lực = COALESCE(sale_price, price))
         if ($request->filled('min_price')) {
-            $query->where('price', '>=', $request->min_price);
+            $query->where(function ($q) use ($request) {
+                $q->whereRaw('COALESCE(sale_price, price) >= ?', [$request->min_price]);
+            });
         }
         if ($request->filled('max_price')) {
-            $query->where('price', '<=', $request->max_price);
+            $query->where(function ($q) use ($request) {
+                $q->whereRaw('COALESCE(sale_price, price) <= ?', [$request->max_price]);
+            });
         }
 
         // Sắp xếp

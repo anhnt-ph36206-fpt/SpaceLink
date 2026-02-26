@@ -392,4 +392,83 @@ class CartController extends Controller
         }
         return false;
     }
+
+    // =========================================================================
+    // 6. POST /api/client/cart/merge — Gộp giỏ hàng Guest → User sau khi login
+    // =========================================================================
+    #[OA\Post(
+        path: '/api/client/cart/merge',
+        summary: 'Gộp giỏ hàng Guest vào tài khoản sau khi login',
+        tags: ['Client - Cart'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['session_id'],
+                properties: [
+                    new OA\Property(property: 'session_id', type: 'string', description: 'Session ID của giỏ hàng Guest cần gộp'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Gộp giỏ hàng thành công'),
+            new OA\Response(response: 400, description: 'Thiếu session_id'),
+        ]
+    )]
+    public function merge(Request $request)
+    {
+        $sessionId = $request->input('session_id');
+
+        if (!$sessionId) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Cần cung cấp session_id của giỏ hàng khách.',
+            ], 400);
+        }
+
+        $user = auth('sanctum')->user();
+
+        // Lấy toàn bộ cart items của guest session
+        $guestItems = Cart::where('session_id', $sessionId)->whereNull('user_id')->get();
+
+        if ($guestItems->isEmpty()) {
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Không có sản phẩm nào từ giỏ hàng khách để gộp.',
+            ]);
+        }
+
+        $merged    = 0;
+        $discarded = 0;
+
+        foreach ($guestItems as $guestItem) {
+            // Kiểm tra xem user đã có item này chưa
+            $existingUserItem = Cart::where('user_id', $user->id)
+                ->where('product_id', $guestItem->product_id)
+                ->where('variant_id', $guestItem->variant_id)
+                ->first();
+
+            if ($existingUserItem) {
+                // Cộng dồn số lượng — kiểm tra giới hạn tồn kho
+                $variant = $guestItem->variant;
+                $maxStock = $variant ? $variant->quantity : PHP_INT_MAX;
+                $newQty   = min($existingUserItem->quantity + $guestItem->quantity, $maxStock);
+                $existingUserItem->update(['quantity' => $newQty]);
+                $guestItem->delete();
+            } else {
+                // Chuyển quyền sở hữu sang user
+                $guestItem->update([
+                    'user_id'    => $user->id,
+                    'session_id' => null,
+                ]);
+                $merged++;
+            }
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => "Đã gộp giỏ hàng.",
+            'merged'  => $merged,
+        ]);
+    }
 }

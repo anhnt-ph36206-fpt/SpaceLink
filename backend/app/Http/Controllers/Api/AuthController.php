@@ -6,8 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Validator;
-use App\Http\Resources\UserResource; // Import Resource
+use App\Http\Resources\UserResource;
 use OpenApi\Attributes as OA;
 
 class AuthController extends Controller
@@ -59,31 +60,31 @@ class AuthController extends Controller
 
     if ($validator->fails()) {
         return response()->json([
-            'status' => false,
+            'status'  => 'error',
             'message' => 'Lỗi kiểm tra dữ liệu',
-            'errors' => $validator->errors()
+            'errors'  => $validator->errors()
         ], 422);
     }
 
     $user = User::create([
         'fullname' => $request->name,
-        'email' => $request->email,
+        'email'    => $request->email,
         'password' => Hash::make($request->password),
-        'phone' => $request->phone, // Nếu không gửi, DB sẽ tự lưu NULL
-        'status' => User::STATUS_ACTIVE,
-        'role_id' => User::ROLE_CUSTOMER, // Sẽ lấy giá trị 3 từ hằng số trong Model
+        'phone'    => $request->phone,
+        'status'   => User::STATUS_ACTIVE,
+        'role_id'  => User::ROLE_CUSTOMER,
     ]);
 
     $token = $user->createToken('auth_token')->plainTextToken;
 
     return response()->json([
-        'status' => true,
+        'status'  => 'success',
         'message' => 'Đăng ký thành công',
-        'data' => [
-            'user' => new UserResource($user), // Dùng Resource để tránh expose password hash
-            'token' => $token,
-            'token_type' => 'Bearer'
-        ]
+        'data'    => [
+            'user'       => new UserResource($user),
+            'token'      => $token,
+            'token_type' => 'Bearer',
+        ],
     ], 201);
 }
 
@@ -115,9 +116,9 @@ class AuthController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'status' => false, 
-                'message' => 'Dữ liệu không hợp lệ', 
-                'errors' => $validator->errors()
+                'status'  => 'error',
+                'message' => 'Dữ liệu không hợp lệ',
+                'errors'  => $validator->errors()
             ], 422);
         }
 
@@ -125,22 +126,22 @@ class AuthController extends Controller
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
-                'status' => false,
-                'message' => 'Email hoặc mật khẩu không chính xác.'
+                'status'  => 'error',
+                'message' => 'Email hoặc mật khẩu không chính xác.',
             ], 401);
         }
 
         // Kiểm tra trạng thái tài khoản
         if ($user->status === User::STATUS_BANNED) {
             return response()->json([
-                'status' => false,
+                'status'  => 'error',
                 'message' => 'Tài khoản của bạn đã bị cấm. Vui lòng liên hệ hỗ trợ.',
             ], 403);
         }
 
         if ($user->status === User::STATUS_INACTIVE) {
             return response()->json([
-                'status' => false,
+                'status'  => 'error',
                 'message' => 'Tài khoản chưa được kích hoạt.',
             ], 403);
         }
@@ -151,14 +152,14 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'status' => true,
+            'status'  => 'success',
             'message' => 'Đăng nhập thành công',
-            'data' => [
-                'user' => new UserResource($user),
-                'token' => $token,
-                'token_type' => 'Bearer'
-            ]
-        ], 200);
+            'data'    => [
+                'user'       => new UserResource($user),
+                'token'      => $token,
+                'token_type' => 'Bearer',
+            ],
+        ]);
     }
 
     #[OA\Get(
@@ -173,16 +174,15 @@ class AuthController extends Controller
     )]
     public function me(Request $request)
     {
-        // TỐI ƯU: Load thêm role và addresses để trả về đầy đủ info cho Frontend
         $user = $request->user()->load(['role', 'addresses']);
 
         return response()->json([
-            'status' => true,
+            'status'  => 'success',
             'message' => 'Lấy dữ liệu thành công',
-            'data' => [
-                'user' => new UserResource($user) // TỐI ƯU: Resource sẽ format cả addresses bên trong
-            ]
-        ], 200);
+            'data'    => [
+                'user' => new UserResource($user),
+            ],
+        ]);
     }
 
     #[OA\Post(
@@ -199,8 +199,180 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'status' => true,
-            'message' => 'Đăng xuất thành công'
-        ], 200);
+            'status'  => 'success',
+            'message' => 'Đăng xuất thành công',
+        ]);
+    }
+
+    // =========================================================================
+    // POST /api/auth/forgot-password — Gửi link đặt lại mật khẩu
+    // =========================================================================
+    #[OA\Post(
+        path: '/api/auth/forgot-password',
+        summary: 'Gửi email đặt lại mật khẩu',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['email'],
+                properties: [
+                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'user@example.com'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Link đặt lại mật khẩu đã được gửi'),
+            new OA\Response(response: 422, description: 'Email không hợp lệ hoặc không tồn tại'),
+        ]
+    )]
+    public function forgotPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email',
+        ], [
+            'email.exists' => 'Email này không tồn tại trong hệ thống.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Dữ liệu không hợp lệ.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $status = Password::sendResetLink(['email' => $request->email]);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Đã gửi link đặt lại mật khẩu về email của bạn.',
+            ]);
+        }
+
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Không thể gửi email. Vui lòng thử lại sau.',
+        ], 500);
+    }
+
+    // =========================================================================
+    // POST /api/auth/reset-password — Đặt lại mật khẩu với token
+    // =========================================================================
+    #[OA\Post(
+        path: '/api/auth/reset-password',
+        summary: 'Đặt lại mật khẩu (dùng token từ email)',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['token', 'email', 'password', 'password_confirmation'],
+                properties: [
+                    new OA\Property(property: 'token',                 type: 'string', description: 'Token từ email đặt lại mật khẩu'),
+                    new OA\Property(property: 'email',                 type: 'string', format: 'email'),
+                    new OA\Property(property: 'password',              type: 'string', format: 'password', minimum: 6),
+                    new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Đặt lại mật khẩu thành công'),
+            new OA\Response(response: 422, description: 'Token không hợp lệ hoặc hết hạn'),
+        ]
+    )]
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token'    => 'required|string',
+            'email'    => 'required|email|exists:users,email',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Dữ liệu không hợp lệ.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password) {
+                $user->forceFill(['password' => Hash::make($password)])->save();
+                $user->tokens()->delete(); // Revoke tất cả tokens cũ
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.',
+            ]);
+        }
+
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Token không hợp lệ hoặc đã hết hạn.',
+        ], 422);
+    }
+
+    // =========================================================================
+    // POST /api/auth/change-password — Đổi mật khẩu (khi đã login)
+    // =========================================================================
+    #[OA\Post(
+        path: '/api/auth/change-password',
+        summary: 'Đổi mật khẩu khi đã đăng nhập',
+        tags: ['Authentication'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['current_password', 'password', 'password_confirmation'],
+                properties: [
+                    new OA\Property(property: 'current_password',      type: 'string', format: 'password'),
+                    new OA\Property(property: 'password',              type: 'string', format: 'password', minimum: 6),
+                    new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Đổi mật khẩu thành công'),
+            new OA\Response(response: 401, description: 'Mật khẩu hiện tại không đúng'),
+            new OA\Response(response: 422, description: 'Dữ liệu không hợp lệ'),
+        ]
+    )]
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'password'         => 'required|string|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Dữ liệu không hợp lệ.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Mật khẩu hiện tại không chính xác.',
+            ], 401);
+        }
+
+        $user->update(['password' => Hash::make($request->password)]);
+        // Revoke tất cả tokens khác (ngoài token hiện tại)
+        $user->tokens()->where('id', '!=', $request->user()->currentAccessToken()->id)->delete();
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Đổi mật khẩu thành công.',
+        ]);
     }
 }
