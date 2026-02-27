@@ -15,7 +15,8 @@
         "doctrine/dbal": "^4.4",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
-        "laravel/tinker": "^2.10.1"
+        "laravel/tinker": "^2.10.1",
+        "symfony/mailer": "^7.3"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
