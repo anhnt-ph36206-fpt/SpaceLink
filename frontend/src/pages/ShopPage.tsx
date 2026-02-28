@@ -1,6 +1,6 @@
 import React from 'react';
 import ProductCard from '../components/common/ProductCard';
-import { Product } from '../types';
+import type {Product} from '../types';
 
 const ShopPage: React.FC = () => {
     // Sample products
@@ -8,7 +8,7 @@ const ShopPage: React.FC = () => {
         id: `${i + 1}`,
         name: 'Apple iPad Mini G2356',
         category: 'SmartPhone',
-        image: `/images/product-${(i % 8) + 3}.png`,
+        image: `/assets/client/img/product-${(i % 8) + 3}.png`,
         price: 1050,
         oldPrice: 1250,
         rating: 4,
