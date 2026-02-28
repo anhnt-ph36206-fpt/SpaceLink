@@ -7,7 +7,7 @@ use OpenApi\Attributes as OA;
 #[OA\Info(
     title: "SpaceLink API Documents",
     version: "1.0.0",
-    description: "Hệ thống API backend viết bằng Laravel 12"
+    description: "API Document for SpaceLink"
 )]
 #[OA\Server(
     url: "http://localhost:8000",
