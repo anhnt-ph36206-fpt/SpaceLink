@@ -95,7 +95,7 @@ const ProductDetailPage: React.FC = () => {
                 const imgData = await imgRes.json();
                 const reviewData = await reviewRes.json();
 
-                const foundProduct = prodData.find((p: any) => p.id === pId);
+                const foundProduct = prodData.find((p: any) => Number(p.id) === pId);
                 if (!foundProduct) { setIsLoading(false); return; }
                 setProduct(foundProduct);
 
