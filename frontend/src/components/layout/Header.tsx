@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const Header: React.FC = () => {
+    const { user, logout } = useAuth();
     return (
         <>
             {/* Topbar Start */}
@@ -45,16 +47,22 @@ const Header: React.FC = () => {
                             </div>
                             <div className="dropdown">
                                 <a href="#" className="dropdown-toggle text-muted ms-2" data-bs-toggle="dropdown">
-                                    <small><i className="fa fa-home me-2"></i> My Dashboard</small>
+                                    <small><i className="fa fa-home me-2"></i> {user ? `Hello, ${user.fullname}` : 'My Dashboard'}</small>
                                 </a>
                                 <div className="dropdown-menu rounded">
-                                    <a href="#" className="dropdown-item">Login</a>
-                                    <a href="#" className="dropdown-item">Wishlist</a>
-                                    <a href="#" className="dropdown-item">My Card</a>
-                                    <a href="#" className="dropdown-item">Notifications</a>
-                                    <a href="#" className="dropdown-item">Account Settings</a>
-                                    <a href="#" className="dropdown-item">My Account</a>
-                                    <a href="#" className="dropdown-item">Log Out</a>
+                                    {!user ? (
+                                        <>
+                                            <Link to="/login" className="dropdown-item">Login</Link>
+                                            <Link to="/register" className="dropdown-item">Register</Link>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Link to="/profile" className="dropdown-item">My Account</Link>
+                                            <button onClick={logout} className="dropdown-item">Log Out</button>
+                                        </>
+                                    )}
+                                    <Link to="/wishlist" className="dropdown-item">Wishlist</Link>
+                                    <Link to="/cart" className="dropdown-item">My Card</Link>
                                 </div>
                             </div>
                         </div>

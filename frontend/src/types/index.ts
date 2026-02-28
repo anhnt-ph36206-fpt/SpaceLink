@@ -31,3 +31,29 @@ export interface ServiceItem {
     title: string;
     description: string;
 }
+
+// Order Item Type
+export interface OrderItem {
+    productId: string;
+    productName: string;
+    quantity: number;
+    price: number;
+    image?: string;
+}
+
+// Order Type
+export interface Order {
+    id: string;
+    userId: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone?: string;
+    address?: string;
+    items: OrderItem[];
+    totalAmount: number;
+    status: 'pending' | 'confirmed' | 'shipping' | 'delivered' | 'cancelled';
+    paymentMethod?: string;
+    note?: string;
+    createdAt: string;
+    updatedAt?: string;
+}
