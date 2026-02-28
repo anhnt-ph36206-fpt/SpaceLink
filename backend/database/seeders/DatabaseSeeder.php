@@ -20,15 +20,16 @@ class DatabaseSeeder extends Seeder
         // ]);
 
         $this->call([
-            // RoleSeeder::class,
-            // PermissionSeeder::class,
-            // UserSeeder::class,
-            // UserAddressSeeder::class,
-            // CategorySeeder::class,
-            // BrandSeeder::class,
-            // ProductSeeder::class,
-            // AttributeGroupSeeder::class,
-            // AttributeSeeder::class,
+            RoleSeeder::class,
+            PermissionSeeder::class,
+            UserSeeder::class,
+            UserAddressSeeder::class,
+            CategorySeeder::class,
+            BrandSeeder::class,
+            AttributeGroupSeeder::class,
+            AttributeSeeder::class,
+            ProductSeeder::class,
+            ProductVariantSeeder::class,
             SettingSeeder::class,
             VoucherSeeder::class,
         ]);
