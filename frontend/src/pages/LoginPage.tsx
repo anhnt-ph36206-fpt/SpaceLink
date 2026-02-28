@@ -38,7 +38,7 @@ const LoginPage: React.FC = () => {
       <style>{`
         .auth-page { min-height: 100vh; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); }
         .auth-card { border: none; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); overflow: hidden; }
-        .auth-left { background: linear-gradient(160deg, #0d6efd 0%, #0a58ca 50%, #084298 100%); min-height: 500px; position: relative; }
+        .auth-left { background: linear-gradient(160deg, #ffb347 0%, #f28b00 50%, #c96f00 100%); min-height: 500px; position: relative; }
         .auth-left::after { content:''; position:absolute; bottom:0; left:0; right:0; height:6px; background: linear-gradient(90deg,#ffc107,#fd7e14,#ffc107); }
         .auth-brand-icon { width:70px; height:70px; background:rgba(255,255,255,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(10px); border:2px solid rgba(255,255,255,0.3); }
         .feature-item { background:rgba(255,255,255,0.1); border-radius:10px; padding:12px 16px; backdrop-filter:blur(5px); border:1px solid rgba(255,255,255,0.2); }
@@ -54,8 +54,8 @@ const LoginPage: React.FC = () => {
         .btn-social:hover { border-color:#0d6efd; color:#0d6efd; background:#f0f4ff; }
         .divider { display:flex; align-items:center; gap:12px; color:#adb5bd; font-size:13px; }
         .divider::before, .divider::after { content:''; flex:1; height:1px; background:#e9ecef; }
-        .auth-link { color:#0d6efd; text-decoration:none; font-weight:600; }
-        .auth-link:hover { color:#084298; text-decoration:underline; }
+        .auth-link { color:linear-gradient(160deg, #ffb347 0%, #f28b00 50%, #c96f00 100%); text-decoration:none; font-weight:600; }
+        .auth-link:hover { color:linear-gradient(160deg, #ff9f1c 0%, #d97700 50%, #a85d00 100%); text-decoration:underline; }
         .floating-shape { position:absolute; border-radius:50%; opacity:0.08; background:#fff; }
       `}</style>
 

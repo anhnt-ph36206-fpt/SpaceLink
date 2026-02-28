@@ -52,10 +52,10 @@ function App() {
             </Route>
             <Route path="/bestseller" element={<BestsellerPage />} />
             <Route path="/contact" element={<ContactPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
