@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "server": "json-server --watch db.json --port 3000 --middlewares ./node_modules/json-server-auth",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
