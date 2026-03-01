@@ -8,9 +8,10 @@ import {
     SearchOutlined, AppstoreOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { axiosInstance } from "../../api/axios.ts";
+import { axiosInstance } from "../../../api/axios.ts";
 import { toast } from "react-toastify";
 import type { UploadProps } from 'antd';
+import {categoryPrefix} from "../../../api/apiAdminPrefix.ts";
 
 const { Title, Text } = Typography;
 
@@ -27,9 +28,6 @@ interface Category {
     };
     children?: Category[];
 }
-
-const prefix = '/admin/categories';
-
 
 const AdminCategoryPage: React.FC = () => {
 
@@ -52,7 +50,7 @@ const AdminCategoryPage: React.FC = () => {
     }) => {
         setLoading(true);
         try {
-            const res = await axiosInstance.get(prefix, {
+            const res = await axiosInstance.get(categoryPrefix, {
                 params: {
                     search: params?.search,
                     is_active: params?.is_active,
@@ -193,12 +191,12 @@ const AdminCategoryPage: React.FC = () => {
 
             if (editingItem) {
                 formData.append('_method', 'PUT');
-                await axiosInstance.post(`${prefix}/${editingItem.id}`, formData, {
+                await axiosInstance.post(`${categoryPrefix}/${editingItem.id}`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                 });
                 toast.success('Cập nhật thành công');
             } else {
-                await axiosInstance.post(prefix, formData, {
+                await axiosInstance.post(categoryPrefix, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                 });
                 toast.success('Thêm thành công');
@@ -214,11 +212,11 @@ const AdminCategoryPage: React.FC = () => {
 
     const handleDelete = async (id: number) => {
         try {
-            await axiosInstance.delete(`${prefix}/${id}`);
+            await axiosInstance.delete(`${categoryPrefix}/${id}`);
             toast.success('Đã xóa');
             fetchCategories();
-        } catch {
-            toast.error('Xóa thất bại');
+        } catch (error: any) {
+            toast.error(error.message || "Xóa thất bại");
         }
     };
 
