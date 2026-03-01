@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   login: (token: string, user: User) => void;
   logout: () => void;
+  updateUser: (updatedUser: User) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -22,7 +23,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const storedUser = localStorage.getItem('user');
     if (token && storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsed: User = JSON.parse(storedUser);
+        // Fetch lại user mới nhất từ server để kiểm tra status
+        fetch(`http://localhost:3000/users/${parsed.id}`)
+          .then(res => res.json())
+          .then((freshUser: User) => {
+            if (freshUser.status === 'banned' || freshUser.status === 'inactive') {
+              // Tài khoản bị cấm/khóa → xóa session
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              setUser(null);
+            } else {
+              // Cập nhật thông tin mới nhất
+              localStorage.setItem('user', JSON.stringify(freshUser));
+              setUser(freshUser);
+            }
+          })
+          .catch(() => {
+            // Nếu fetch lỗi (offline), dùng data local
+            setUser(parsed);
+          })
+          .finally(() => setIsLoading(false));
+        return; // setIsLoading sẽ được gọi trong .finally()
       } catch (error) {
         console.error("Failed to parse user from local storage", error);
         localStorage.removeItem('token');
@@ -36,7 +58,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
-    // Redirect admin users to admin panel, others to home
     if (userData.role === 'admin') {
       navigate('/admin');
     } else {
@@ -51,8 +72,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     navigate('/login');
   };
 
+  const updateUser = (updatedUser: User) => {
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthenticated: !!user, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

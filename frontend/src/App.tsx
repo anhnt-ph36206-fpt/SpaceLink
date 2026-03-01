@@ -13,6 +13,7 @@ import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ProfilePage from './pages/ProfilePage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminCategoryPage from './pages/admin/AdminCategoryPage';
 import AdminProductPage from './pages/admin/AdminProductPage';
@@ -49,6 +50,7 @@ function App() {
             <Route path="/cart" element={<CartPage />} />
             <Route element={<PrivateRoute />}>
               <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
             </Route>
             <Route path="/bestseller" element={<BestsellerPage />} />
             <Route path="/contact" element={<ContactPage />} />
