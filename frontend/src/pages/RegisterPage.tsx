@@ -55,7 +55,7 @@ const RegisterPage: React.FC = () => {
       <style>{`
         .auth-page { min-height: 100vh; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); }
         .auth-card { border: none; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); overflow: hidden; }
-        .auth-right { background: linear-gradient(160deg, #0d6efd 0%, #0a58ca 50%, #084298 100%); min-height: 500px; position: relative; }
+        .auth-right { background: linear-gradient(160deg, #ffb347 0%, #f28b00 50%, #c96f00 100%); min-height: 500px; position: relative; }
         .auth-right::after { content:''; position:absolute; top:0; left:0; right:0; height:6px; background: linear-gradient(90deg,#ffc107,#fd7e14,#ffc107); }
         .auth-brand-icon { width:70px; height:70px; background:rgba(255,255,255,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(10px); border:2px solid rgba(255,255,255,0.3); }
         .step-badge { width:32px; height:32px; background:rgba(255,255,255,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; border:2px solid rgba(255,255,255,0.4); flex-shrink:0; }
@@ -68,8 +68,8 @@ const RegisterPage: React.FC = () => {
         .form-control-custom.with-icon { padding-left: 40px; }
         .btn-register { border-radius: 10px; padding: 13px; font-weight: 600; font-size: 15px; letter-spacing: 0.5px; transition: all 0.3s ease; background: linear-gradient(135deg,#0d6efd,#0a58ca); border:none; }
         .btn-register:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(13,110,253,0.4); background: linear-gradient(135deg,#0a58ca,#084298); }
-        .auth-link { color:#0d6efd; text-decoration:none; font-weight:600; }
-        .auth-link:hover { color:#084298; text-decoration:underline; }
+        .auth-link { color:linear-gradient(160deg, #ffb347 0%, #f28b00 50%, #c96f00 100%); text-decoration:none; font-weight:600; }
+        .auth-link:hover { color:linear-gradient(160deg, #ff9f1c 0%, #d97700 50%, #a85d00 100%); text-decoration:underline; }
         .floating-shape { position:absolute; border-radius:50%; opacity:0.08; background:#fff; }
         .password-strength { height: 4px; border-radius: 4px; transition: all 0.3s; }
       `}</style>

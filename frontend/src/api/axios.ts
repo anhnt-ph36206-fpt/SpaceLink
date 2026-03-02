@@ -4,7 +4,7 @@ const TOKEN_KEY = import.meta.env.TOKEN_KEY;
 const backEndUrl = import.meta.env.IS_DEVELOPMENT ? import.meta.env.VITE_APP_JSON_URL : import.meta.env.VITE_APP_API_URL;
 
 export const axiosInstance = axios.create({
-    baseURL: backEndUrl ?? "http://localhost:8000",
+    baseURL: backEndUrl ?? "http://localhost:8000/api",
     // withCredentials: true,
 });
 
@@ -25,5 +25,6 @@ axiosInstance.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem(TOKEN_KEY);
         }
+        return Promise.reject(error);
     }
 );

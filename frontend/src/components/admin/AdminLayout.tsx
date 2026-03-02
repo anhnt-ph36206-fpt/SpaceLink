@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import {ToastContainer} from "react-toastify";
 
 const { Header, Sider, Content } = Layout;
 
@@ -308,6 +309,18 @@ const AdminLayout: React.FC = () => {
             }}
           >
             <Outlet />
+            <ToastContainer
+                position="top-right"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick={false}
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+            />
           </div>
         </Content>
       </Layout>
