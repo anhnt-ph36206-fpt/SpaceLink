@@ -411,6 +411,15 @@
       "status": "active",
       "avatar": "",
       "id": 1
+    },
+    {
+      "email": "admin@gmail.com",
+      "password": "$2a$10$7hRyuaHfRQYQ66IO6X548ejfq/JMAFdKX8.mV.bMoj6w4ofZu9mAu",
+      "fullname": "Admin",
+      "role": "admin",
+      "status": "active",
+      "avatar": "",
+      "id": 2
     }
   ]
 }

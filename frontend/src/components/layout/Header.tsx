@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 interface Category {
     id: number;
@@ -15,7 +16,9 @@ interface ProductSuggestion {
 }
 
 const Header: React.FC = () => {
+    const { user, logout } = useAuth();
     const [categories, setCategories] = useState<Category[]>([]);
+  
 
     // --- STATE CHO TÌM KIẾM ---
     const [keyword, setKeyword] = useState("");
@@ -111,12 +114,23 @@ const Header: React.FC = () => {
                             {/* --- MENU TÀI KHOẢN (THÊM MỚI Ở ĐÂY) --- */}
                             <span className="text-muted mx-2">|</span>
                             <div className="dropdown">
-                                <Link to="#" className="dropdown-toggle text-muted text-decoration-none small" data-bs-toggle="dropdown">
-                                    <i className="fas fa-user text-primary me-1"></i> Tài khoản
-                                </Link>
-                                <div className="dropdown-menu dropdown-menu-end rounded-0 shadow-sm border-0 m-0">
-                                    <Link to="/login" className="dropdown-item">Đăng nhập</Link>
-                                    <Link to="/register" className="dropdown-item">Đăng ký</Link>
+                                <a href="#" className="dropdown-toggle text-muted ms-2" data-bs-toggle="dropdown">
+                                    <small><i className="fa fa-home me-2"></i> {user ? `Hello, ${user.fullname}` : 'My Dashboard'}</small>
+                                </a>
+                                <div className="dropdown-menu rounded">
+                                    {!user ? (
+                                        <>
+                                            <Link to="/login" className="dropdown-item">Login</Link>
+                                            <Link to="/register" className="dropdown-item">Register</Link>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Link to="/profile" className="dropdown-item">My Account</Link>
+                                            <button onClick={logout} className="dropdown-item">Log Out</button>
+                                        </>
+                                    )}
+                                    <Link to="/wishlist" className="dropdown-item">Wishlist</Link>
+                                    <Link to="/cart" className="dropdown-item">My Card</Link>
                                 </div>
                             </div>
                             {/* ------------------------------------- */}
