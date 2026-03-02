@@ -10,6 +10,9 @@ export interface Product {
     isNew?: boolean;
     isSale?: boolean;
     description?: string;
+    is_featured?: boolean;
+    is_active?: boolean;
+    sold_count?: number;
 }
 
 // Category Type

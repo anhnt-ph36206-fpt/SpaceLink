@@ -34,11 +34,16 @@ const RegisterPage: React.FC = () => {
         avatar: '',
       };
 
+      console.log(newUser);
+
       const res = await fetch('http://localhost:3000/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUser),
+
       });
+
+     
 
       if (!res.ok) throw new Error('Register failed');
 
@@ -50,6 +55,7 @@ const RegisterPage: React.FC = () => {
     }
   };
 
+  
   return (
     <>
       <style>{`
