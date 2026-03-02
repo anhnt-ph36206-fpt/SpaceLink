@@ -22,10 +22,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     if (token && storedUser) {
-      try {
+      try { 
         const parsed: User = JSON.parse(storedUser);
         // Fetch lại user mới nhất từ server để kiểm tra status
-        fetch(`http://localhost:3000/users/${parsed.id}`)
+        fetch(`http://localhost:3000/users/${parsed.id}`,{
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
           .then(res => res.json())
           .then((freshUser: User) => {
             if (freshUser.status === 'banned' || freshUser.status === 'inactive') {

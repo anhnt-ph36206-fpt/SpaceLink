@@ -15,23 +15,22 @@ const LoginPage: React.FC = () => {
 
   const onLogin = async (data: LoginForm) => {
     try {
-      // Fetch user by email only, then compare password manually
-      // (avoids issues when passwords in DB are bcrypt-hashed by json-server-auth)
-      const res = await fetch(`http://localhost:3000/users?email=${encodeURIComponent(data.email)}`);
-      const users: User[] = await res.json();
+      // json-server-auth's /login endpoint returns { accessToken, user }
+      const res = await fetch('http://localhost:3000/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password
+        })
+      });
 
-      if (users.length === 0) {
+      if (!res.ok) {
         alert('Email hoặc mật khẩu không đúng!');
         return;
       }
 
-      const user = users[0];
-
-      // So sánh password (plain text) – chỉ hợp lệ khi DB lưu plain text
-      if (user.password !== data.password) {
-        alert('Email hoặc mật khẩu không đúng!');
-        return;
-      }
+      const { accessToken, user }: { accessToken: string; user: User } = await res.json();
 
       // Kiểm tra trạng thái tài khoản
       if (user.status === 'banned') {
@@ -43,8 +42,7 @@ const LoginPage: React.FC = () => {
         return;
       }
 
-      const token = btoa(JSON.stringify({ email: user.email, password: user.password, role: user.role }));
-      login(token, user);
+      login(accessToken, user);
     } catch (error) {
       console.error(error);
       alert('Đã có lỗi xảy ra, vui lòng thử lại!');

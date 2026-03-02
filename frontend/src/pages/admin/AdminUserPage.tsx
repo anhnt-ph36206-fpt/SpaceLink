@@ -61,28 +61,61 @@ const AdminUserPage: React.FC = () => {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      if (!values.password) delete values.password;
-
+      const token = localStorage.getItem('token');
+  
       if (editingUser) {
-        await fetch(`${API}/${editingUser.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...editingUser, ...values }),
+        // Chỉ update các field cho phép, không đụng vào password nếu không nhập
+        const payload: Partial<User> = {
+          fullname: values.fullname,
+          email: values.email,
+          role: values.role,
+          status: values.status,
+          avatar: values.avatar,
+        };
+  
+        if (values.password) {
+          // Nếu admin nhập mật khẩu mới thì gửi kèm (json-server-auth sẽ tự hash)
+          payload.password = values.password;
+        }
+  
+        const res = await fetch(`${API}/${editingUser.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(payload),
         });
+  
+        if (!res.ok) throw new Error('Update failed');
         message.success('Cập nhật người dùng thành công!');
       } else {
-        await fetch(API, {
+        // Thêm mới user
+        const res = await fetch(API, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...values, id: Date.now().toString(), avatar: '' }),
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            fullname: values.fullname,
+            email: values.email,
+            password: values.password,
+            role: values.role || 'customer',
+            status: values.status || 'active',
+            avatar: values.avatar || '',
+          }),
         });
+  
+        if (!res.ok) throw new Error('Create failed');
         message.success('Thêm người dùng thành công!');
       }
-
+  
       setModalOpen(false);
       fetchUsers();
-    } catch {
-      // validation error
+    } catch (error) {
+      console.error('Error saving user:', error);
+      // lỗi validate thì antd đã hiển thị rồi, nên chỉ log thêm là đủ
     }
   };
 
@@ -95,28 +128,63 @@ const AdminUserPage: React.FC = () => {
   };
 
   const handleQuickRole = async (userId: string, newRole: string) => {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-    await fetch(`${API}/${userId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...user, role: newRole }),
-    });
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-    message.success('Đã cập nhật quyền!');
+    try {
+      const token = localStorage.getItem('token');
+  
+      const res = await fetch(`${API}/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ role: newRole }),
+      });
+  
+      if (!res.ok) {
+        message.error('Cập nhật quyền thất bại');
+        return;
+      }
+  
+      setUsers(prev =>
+        prev.map(u => (u.id === userId ? { ...u, role: newRole } : u))
+      );
+      message.success('Đã cập nhật quyền!');
+    } catch (error) {
+      console.error('Error updating role:', error);
+      message.error('Có lỗi xảy ra khi cập nhật quyền');
+    }
   };
+ 
 
-  const handleQuickStatus = async (userId: string, newStatus: string) => {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-    await fetch(`${API}/${userId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...user, status: newStatus }),
-    });
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
-    message.success('Đã cập nhật trạng thái!');
-  };
+    const handleQuickStatus = async (userId: string, newStatus: string) => {
+      try {
+        const token = localStorage.getItem('token');
+    
+        const res = await fetch(`${API}/${userId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
+    
+        if (!res.ok) {
+          message.error('Cập nhật trạng thái thất bại');
+          return;
+        }
+    
+        setUsers(prev =>
+          prev.map(u => (u.id === userId ? { ...u, status: newStatus } : u))
+        );
+        message.success('Đã cập nhật trạng thái!');
+      } catch (error) {
+        console.error('Error updating status:', error);
+        message.error('Có lỗi xảy ra khi cập nhật trạng thái');
+      }
+    };
+
+ 
 
   const filtered = users.filter(u => {
     const matchSearch =

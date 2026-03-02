@@ -98,20 +98,36 @@ const ProfilePage: React.FC = () => {
   const onSavePassword = async (data: PasswordForm) => {
     if (!user) return;
     try {
-      if (data.currentPassword !== user.password) {
-        showToast('Mật khẩu hiện tại không đúng!', 'error');
-        return;
-      }
-      const res = await fetch(`http://localhost:3000/users/${user.id}`, {
-        method: 'PATCH',
+
+      const verifiRes = await fetch('http://localhost:3000/login', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: data.newPassword }),
-      });
+        body: JSON.stringify({
+          email: user.email, // email của user đang đăng nhập
+          password: data.currentPassword // mật khẩu hiện tại
+        }),
+        })
+        if(!verifiRes.ok){
+          showToast('Mật khẩu hiện tại không đúng!', 'error');
+          return;
+        }
+
+        const {accessToken} = await verifiRes.json();
+        const token = accessToken || localStorage.getItem('token') || '';   // lấy token từ response hoặc từ local storage
+      
+         //gủi request đổi mật khẩu.
+         const res = await fetch(`http://localhost:3000/users/${user.id}`,{
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+          body: JSON.stringify({ password: data.newPassword }),
+        })
+        
       if (!res.ok) throw new Error('Update failed');
       updateUser({ ...user, password: data.newPassword });
       resetPwd();
       showToast('Đổi mật khẩu thành công!', 'success');
-    } catch {
+      }  
+     catch {
       showToast('Đã có lỗi xảy ra, vui lòng thử lại!', 'error');
     }
   };
