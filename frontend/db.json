@@ -408,7 +408,7 @@
       "password": "$2a$10$oofv6htIFMhlK8Hi.zRrTuT7Bcnk0pOP6lqUmmj5PsHbd9ZpVyhum",
       "fullname": "Anh Thanh Niên",
       "role": "customer",
-      "status": "active",
+      "status": "banned",
       "avatar": "",
       "id": 1
     },
