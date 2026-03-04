@@ -770,7 +770,54 @@ interface SwaggerDocumentationController
         )]
     public function api_admin_voucherController_destroy();
 
-    // --- Api/AuthControllerDocs.php ---
+    // --- authDocs.php ---
+    #[OA\Post(
+        path: '/api/auth/forgot-password',
+        summary: 'Gửi yêu cầu quên mật khẩu',
+        description: 'Nhận email và gửi link reset mật khẩu qua email (Mail log trong storage/logs/laravel.log)',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['email'],
+                properties: [
+                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'customer@example.com')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Đã gửi link reset thành công'),
+            new OA\Response(response: 422, description: 'Email không tồn tại hoặc dữ liệu không hợp lệ'),
+            new OA\Response(response: 500, description: 'Lỗi server khi gửi mail')
+        ]
+    )]
+    public function auth_forgotPassword();
+
+    #[OA\Post(
+        path: '/api/auth/reset-password',
+        summary: 'Đặt lại mật khẩu mới',
+        description: 'Sử dụng token nhận được từ email để đặt lại mật khẩu',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['email', 'token', 'password', 'password_confirmation'],
+                properties: [
+                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'customer@example.com'),
+                    new OA\Property(property: 'token', type: 'string', description: 'Token nhận được từ email'),
+                    new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 6),
+                    new OA\Property(property: 'password_confirmation', type: 'string', format: 'password')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Đặt lại mật khẩu thành công'),
+            new OA\Response(response: 400, description: 'Token không hợp lệ hoặc đã hết hạn'),
+            new OA\Response(response: 422, description: 'Lỗi validation (mật khẩu không khớp, min 6 ký tự...)')
+        ]
+    )]
+    public function auth_resetPassword();
+
     #[OA\Post(
             path: '/api/auth/register',
             summary: 'Đăng ký tài khoản mới',
@@ -852,49 +899,6 @@ interface SwaggerDocumentationController
             ]
         )]
     public function api_authController_logout();
-
-    #[OA\Post(
-            path: '/api/auth/forgot-password',
-            summary: 'Gửi email đặt lại mật khẩu',
-            tags: ['Authentication'],
-            requestBody: new OA\RequestBody(
-                required: true,
-                content: new OA\JsonContent(
-                    required: ['email'],
-                    properties: [
-                        new OA\Property(property: 'email', type: 'string', format: 'email', example: 'user@example.com'),
-                    ]
-                )
-            ),
-            responses: [
-                new OA\Response(response: 200, description: 'Link đặt lại mật khẩu đã được gửi'),
-                new OA\Response(response: 422, description: 'Email không hợp lệ hoặc không tồn tại'),
-            ]
-        )]
-    public function api_authController_forgotPassword();
-
-    #[OA\Post(
-            path: '/api/auth/reset-password',
-            summary: 'Đặt lại mật khẩu (dùng token từ email)',
-            tags: ['Authentication'],
-            requestBody: new OA\RequestBody(
-                required: true,
-                content: new OA\JsonContent(
-                    required: ['token', 'email', 'password', 'password_confirmation'],
-                    properties: [
-                        new OA\Property(property: 'token',                 type: 'string', description: 'Token từ email đặt lại mật khẩu'),
-                        new OA\Property(property: 'email',                 type: 'string', format: 'email'),
-                        new OA\Property(property: 'password',              type: 'string', format: 'password', minimum: 6),
-                        new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
-                    ]
-                )
-            ),
-            responses: [
-                new OA\Response(response: 200, description: 'Đặt lại mật khẩu thành công'),
-                new OA\Response(response: 422, description: 'Token không hợp lệ hoặc hết hạn'),
-            ]
-        )]
-    public function api_authController_resetPassword();
 
     #[OA\Post(
             path: '/api/auth/change-password',

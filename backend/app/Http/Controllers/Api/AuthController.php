@@ -130,7 +130,9 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|exists:users,email',
         ], [
-            'email.exists' => 'Email này không tồn tại trong hệ thống.',
+            'email.required' => 'Vui lòng nhập địa chỉ email.',
+            'email.email'    => 'Địa chỉ email không đúng định dạng.',
+            'email.exists'   => 'Email này không tồn tại trong hệ thống.',
         ]);
 
         if ($validator->fails()) {
@@ -141,19 +143,27 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $status = Password::sendResetLink(['email' => $request->email]);
+        try {
+            $status = Password::sendResetLink(['email' => $request->email]);
 
-        if ($status === Password::RESET_LINK_SENT) {
+            if ($status === Password::RESET_LINK_SENT) {
+                return response()->json([
+                    'status'  => 'success',
+                    'message' => 'Đã gửi link đặt lại mật khẩu về email của bạn. Vui lòng kiểm tra hộp thư.',
+                ], 200);
+            }
+
             return response()->json([
-                'status'  => 'success',
-                'message' => 'Đã gửi link đặt lại mật khẩu về email của bạn.',
-            ]);
-        }
+                'status'  => 'error',
+                'message' => 'Không thể gửi email lúc này. Vui lòng thử lại sau.',
+            ], 500);
 
-        return response()->json([
-            'status'  => 'error',
-            'message' => 'Không thể gửi email. Vui lòng thử lại sau.',
-        ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Đã xảy ra lỗi hệ thống: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     // =========================================================================
@@ -165,6 +175,13 @@ class AuthController extends Controller
             'token'    => 'required|string',
             'email'    => 'required|email|exists:users,email',
             'password' => 'required|string|min:6|confirmed',
+        ], [
+            'token.required'    => 'Token là bắt buộc.',
+            'email.required'    => 'Vui lòng nhập email.',
+            'email.exists'      => 'Email không tồn tại.',
+            'password.required' => 'Vui lòng nhập mật khẩu mới.',
+            'password.min'      => 'Mật khẩu phải có ít nhất 6 ký tự.',
+            'password.confirmed'=> 'Xác nhận mật khẩu không khớp.',
         ]);
 
         if ($validator->fails()) {
@@ -175,25 +192,34 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user, string $password) {
-                $user->forceFill(['password' => Hash::make($password)])->save();
-                $user->tokens()->delete(); // Revoke tất cả tokens cũ
+        try {
+            $status = Password::reset(
+                $request->only('email', 'password', 'password_confirmation', 'token'),
+                function (User $user, string $password) {
+                    $user->forceFill(['password' => Hash::make($password)])->save();
+                    // Revoke tất cả tokens cũ để đảm bảo bảo mật
+                    $user->tokens()->delete();
+                }
+            );
+
+            if ($status === Password::PASSWORD_RESET) {
+                return response()->json([
+                    'status'  => 'success',
+                    'message' => 'Đặt lại mật khẩu thành công. Bây giờ bạn có thể đăng nhập bằng mật khẩu mới.',
+                ], 200);
             }
-        );
 
-        if ($status === Password::PASSWORD_RESET) {
             return response()->json([
-                'status'  => 'success',
-                'message' => 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.',
-            ]);
-        }
+                'status'  => 'error',
+                'message' => 'Token không hợp lệ hoặc đã hết hạn.',
+            ], 400);
 
-        return response()->json([
-            'status'  => 'error',
-            'message' => 'Token không hợp lệ hoặc đã hết hạn.',
-        ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Đã xảy ra lỗi khi đặt lại mật khẩu: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     // =========================================================================

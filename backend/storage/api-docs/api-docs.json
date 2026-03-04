@@ -1904,6 +1904,104 @@
                 ]
             }
         },
+        "/api/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Gửi yêu cầu quên mật khẩu",
+                "description": "Nhận email và gửi link reset mật khẩu qua email (Mail log trong storage/logs/laravel.log)",
+                "operationId": "bf447c29538496a963293b02219414cf",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "customer@example.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Đã gửi link reset thành công"
+                    },
+                    "422": {
+                        "description": "Email không tồn tại hoặc dữ liệu không hợp lệ"
+                    },
+                    "500": {
+                        "description": "Lỗi server khi gửi mail"
+                    }
+                }
+            }
+        },
+        "/api/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Đặt lại mật khẩu mới",
+                "description": "Sử dụng token nhận được từ email để đặt lại mật khẩu",
+                "operationId": "2a96505801cefe070f21f06b7b753954",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "token",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "customer@example.com"
+                                    },
+                                    "token": {
+                                        "description": "Token nhận được từ email",
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 6
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Đặt lại mật khẩu thành công"
+                    },
+                    "400": {
+                        "description": "Token không hợp lệ hoặc đã hết hạn"
+                    },
+                    "422": {
+                        "description": "Lỗi validation (mật khẩu không khớp, min 6 ký tự...)"
+                    }
+                }
+            }
+        },
         "/api/auth/register": {
             "post": {
                 "tags": [
@@ -2075,95 +2173,6 @@
                         "sanctum": []
                     }
                 ]
-            }
-        },
-        "/api/auth/forgot-password": {
-            "post": {
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Gửi email đặt lại mật khẩu",
-                "operationId": "70c75661c3df9312cc0a001de728432b",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "email"
-                                ],
-                                "properties": {
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email",
-                                        "example": "user@example.com"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Link đặt lại mật khẩu đã được gửi"
-                    },
-                    "422": {
-                        "description": "Email không hợp lệ hoặc không tồn tại"
-                    }
-                }
-            }
-        },
-        "/api/auth/reset-password": {
-            "post": {
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Đặt lại mật khẩu (dùng token từ email)",
-                "operationId": "cba8c6bce3e3198ebafc604a29e551e2",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "token",
-                                    "email",
-                                    "password",
-                                    "password_confirmation"
-                                ],
-                                "properties": {
-                                    "token": {
-                                        "description": "Token từ email đặt lại mật khẩu",
-                                        "type": "string"
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password",
-                                        "minimum": 6
-                                    },
-                                    "password_confirmation": {
-                                        "type": "string",
-                                        "format": "password"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Đặt lại mật khẩu thành công"
-                    },
-                    "422": {
-                        "description": "Token không hợp lệ hoặc hết hạn"
-                    }
-                }
             }
         },
         "/api/auth/change-password": {
