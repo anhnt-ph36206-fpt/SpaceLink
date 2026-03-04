@@ -8,7 +8,6 @@ use App\Http\Requests\UpdateCartRequest;
 use App\Models\Cart;
 use App\Models\ProductVariant;
 use Illuminate\Http\Request;
-use OpenApi\Attributes as OA;
 
 class CartController extends Controller
 {
@@ -40,35 +39,6 @@ class CartController extends Controller
     // =========================================================================
     // 1. GET /api/client/cart — Lấy giỏ hàng hiện tại
     // =========================================================================
-    #[OA\Get(
-        path: '/api/client/cart',
-        summary: 'Lấy danh sách giỏ hàng của user/session',
-        tags: ['Client - Cart'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(
-                name: 'X-Session-ID',
-                in: 'header',
-                description: 'Session ID cho khách vãng lai (nếu chưa login)',
-                required: false,
-                schema: new OA\Schema(type: 'string')
-            )
-        ],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Thành công',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'status', type: 'string', example: 'success'),
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
-                        new OA\Property(property: 'total_items', type: 'integer', example: 3),
-                        new OA\Property(property: 'total_price', type: 'number', example: 599000),
-                    ]
-                )
-            )
-        ]
-    )]
     public function index(Request $request)
     {
         $ctx = $this->getContext($request);
@@ -135,37 +105,6 @@ class CartController extends Controller
     // =========================================================================
     // 2. POST /api/client/cart/add — Thêm sản phẩm vào giỏ
     // =========================================================================
-    #[OA\Post(
-        path: '/api/client/cart/add',
-        summary: 'Thêm sản phẩm vào giỏ hàng',
-        tags: ['Client - Cart'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(
-                name: 'X-Session-ID',
-                in: 'header',
-                description: 'Session ID cho khách vãng lai',
-                required: false,
-                schema: new OA\Schema(type: 'string')
-            )
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['variant_id', 'quantity'],
-                properties: [
-                    new OA\Property(property: 'variant_id', type: 'integer', description: 'ID của biến thể sản phẩm'),
-                    new OA\Property(property: 'quantity', type: 'integer', description: 'Số lượng muốn thêm', minimum: 1),
-                    new OA\Property(property: 'session_id', type: 'string', description: 'Session ID (dự phòng nếu không gửi qua header)', nullable: true),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Thêm / cộng dồn số lượng thành công'),
-            new OA\Response(response: 400, description: 'Thiếu User ID hoặc Session ID'),
-            new OA\Response(response: 422, description: 'Dữ liệu không hợp lệ'),
-        ]
-    )]
     public function addToCart(AddToCartRequest $request)
     {
         $ctx = $this->getContext($request);
@@ -248,29 +187,6 @@ class CartController extends Controller
     // =========================================================================
     // 3. PUT /api/client/cart/update/{cart_item_id} — Cập nhật số lượng
     // =========================================================================
-    #[OA\Put(
-        path: '/api/client/cart/update/{cart_item_id}',
-        summary: 'Cập nhật số lượng sản phẩm trong giỏ',
-        tags: ['Client - Cart'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'cart_item_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'X-Session-ID', in: 'header', required: false, schema: new OA\Schema(type: 'string')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['quantity'],
-                properties: [new OA\Property(property: 'quantity', type: 'integer', minimum: 1)]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Cập nhật thành công'),
-            new OA\Response(response: 403, description: 'Không có quyền'),
-            new OA\Response(response: 404, description: 'Không tìm thấy cart item'),
-            new OA\Response(response: 409, description: 'Số lượng vượt tồn kho'),
-        ]
-    )]
     public function updateQuantity(UpdateCartRequest $request, int $cart_item_id)
     {
         $cartItem = Cart::find($cart_item_id);
@@ -304,21 +220,6 @@ class CartController extends Controller
     // =========================================================================
     // 4. DELETE /api/client/cart/remove/{cart_item_id} — Xóa 1 item
     // =========================================================================
-    #[OA\Delete(
-        path: '/api/client/cart/remove/{cart_item_id}',
-        summary: 'Xóa 1 sản phẩm khỏi giỏ hàng',
-        tags: ['Client - Cart'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'cart_item_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'X-Session-ID', in: 'header', required: false, schema: new OA\Schema(type: 'string')),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Đã xóa khỏi giỏ'),
-            new OA\Response(response: 403, description: 'Không có quyền'),
-            new OA\Response(response: 404, description: 'Không tìm thấy'),
-        ]
-    )]
     public function remove(Request $request, int $cart_item_id)
     {
         $cartItem = Cart::find($cart_item_id);
@@ -339,19 +240,6 @@ class CartController extends Controller
     // =========================================================================
     // 5. DELETE /api/client/cart/clear — Xóa toàn bộ giỏ hàng
     // =========================================================================
-    #[OA\Delete(
-        path: '/api/client/cart/clear',
-        summary: 'Xóa toàn bộ giỏ hàng',
-        tags: ['Client - Cart'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'X-Session-ID', in: 'header', required: false, schema: new OA\Schema(type: 'string')),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Đã xóa toàn bộ giỏ hàng'),
-            new OA\Response(response: 400, description: 'Thiếu định danh user/session'),
-        ]
-    )]
     public function clear(Request $request)
     {
         $ctx = $this->getContext($request);
@@ -396,25 +284,6 @@ class CartController extends Controller
     // =========================================================================
     // 6. POST /api/client/cart/merge — Gộp giỏ hàng Guest → User sau khi login
     // =========================================================================
-    #[OA\Post(
-        path: '/api/client/cart/merge',
-        summary: 'Gộp giỏ hàng Guest vào tài khoản sau khi login',
-        tags: ['Client - Cart'],
-        security: [['sanctum' => []]],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['session_id'],
-                properties: [
-                    new OA\Property(property: 'session_id', type: 'string', description: 'Session ID của giỏ hàng Guest cần gộp'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Gộp giỏ hàng thành công'),
-            new OA\Response(response: 400, description: 'Thiếu session_id'),
-        ]
-    )]
     public function merge(Request $request)
     {
         $sessionId = $request->input('session_id');

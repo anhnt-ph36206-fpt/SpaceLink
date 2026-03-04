@@ -9,50 +9,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Resources\UserResource;
-use OpenApi\Attributes as OA;
 
 class AuthController extends Controller
-{
-    #[OA\Post(
-        path: '/api/auth/register',
-        summary: 'Đăng ký tài khoản mới',
-        tags: ['Authentication'],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['name', 'email', 'password', 'password_confirmation'],
-                properties: [
-                    new OA\Property(property: 'name', type: 'string', example: 'Nguyen Van A'),
-                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'user@example.com'),
-                    new OA\Property(property: 'password', type: 'string', format: 'password', example: '123456'),
-                    new OA\Property(property: 'password_confirmation', type: 'string', format: 'password', example: '123456'),
-                    new OA\Property(property: 'phone', type: 'string', example: '0912345678'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(
-                response: 201,
-                description: 'Đăng ký thành công',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'status', type: 'boolean', example: true),
-                        new OA\Property(property: 'message', type: 'string', example: 'Đăng ký thành công'),
-                        new OA\Property(property: 'data', type: 'object', properties: [
-                            new OA\Property(property: 'user', type: 'object'),
-                            new OA\Property(property: 'token', type: 'string', example: '1|abcde...'),
-                            new OA\Property(property: 'token_type', type: 'string', example: 'Bearer'),
-                        ])
-                    ]
-                )
-            ),
-            new OA\Response(response: 422, description: 'Lỗi kiểm tra dữ liệu')
-        ]
-    )]
-    public function register(Request $request)
+{    public function register(Request $request)
 {
     $validator = Validator::make($request->all(), [
-        'name' => 'required|string|max:150',
+        'fullname' => 'required|string|max:150',
         'email' => 'required|string|email|max:255|unique:users',
         'password' => 'required|string|min:6|confirmed',
         'phone' => 'nullable|string|max:20', // Không bắt buộc (nullable)
@@ -67,7 +29,7 @@ class AuthController extends Controller
     }
 
     $user = User::create([
-        'fullname' => $request->name,
+        'fullname' => $request->fullname,
         'email'    => $request->email,
         'password' => Hash::make($request->password),
         'phone'    => $request->phone,
@@ -86,28 +48,7 @@ class AuthController extends Controller
             'token_type' => 'Bearer',
         ],
     ], 201);
-}
-
-    #[OA\Post(
-        path: '/api/auth/login',
-        summary: 'Đăng nhập hệ thống',
-        tags: ['Authentication'],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['email', 'password'],
-                properties: [
-                    new OA\Property(property: 'email', type: 'string', example: 'user@example.com'),
-                    new OA\Property(property: 'password', type: 'string', example: '123456'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Đăng nhập thành công'),
-            new OA\Response(response: 401, description: 'Thông tin đăng nhập không chính xác')
-        ]
-    )]
-    public function login(Request $request)
+}    public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required|string|email',
@@ -160,19 +101,7 @@ class AuthController extends Controller
                 'token_type' => 'Bearer',
             ],
         ]);
-    }
-
-    #[OA\Get(
-        path: '/api/auth/me',
-        summary: 'Lấy thông tin người dùng hiện tại',
-        tags: ['Authentication'],
-        security: [['sanctum' => []]],
-        responses: [
-            new OA\Response(response: 200, description: 'Thành công'),
-            new OA\Response(response: 401, description: 'Chưa xác thực')
-        ]
-    )]
-    public function me(Request $request)
+    }    public function me(Request $request)
     {
         $user = $request->user()->load(['role', 'addresses']);
 
@@ -183,18 +112,7 @@ class AuthController extends Controller
                 'user' => new UserResource($user),
             ],
         ]);
-    }
-
-    #[OA\Post(
-        path: '/api/auth/logout',
-        summary: 'Đăng xuất tài khoản',
-        tags: ['Authentication'],
-        security: [['sanctum' => []]],
-        responses: [
-            new OA\Response(response: 200, description: 'Đăng xuất thành công')
-        ]
-    )]
-    public function logout(Request $request)
+    }    public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
 
@@ -207,24 +125,6 @@ class AuthController extends Controller
     // =========================================================================
     // POST /api/auth/forgot-password — Gửi link đặt lại mật khẩu
     // =========================================================================
-    #[OA\Post(
-        path: '/api/auth/forgot-password',
-        summary: 'Gửi email đặt lại mật khẩu',
-        tags: ['Authentication'],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['email'],
-                properties: [
-                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'user@example.com'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Link đặt lại mật khẩu đã được gửi'),
-            new OA\Response(response: 422, description: 'Email không hợp lệ hoặc không tồn tại'),
-        ]
-    )]
     public function forgotPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -259,27 +159,6 @@ class AuthController extends Controller
     // =========================================================================
     // POST /api/auth/reset-password — Đặt lại mật khẩu với token
     // =========================================================================
-    #[OA\Post(
-        path: '/api/auth/reset-password',
-        summary: 'Đặt lại mật khẩu (dùng token từ email)',
-        tags: ['Authentication'],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['token', 'email', 'password', 'password_confirmation'],
-                properties: [
-                    new OA\Property(property: 'token',                 type: 'string', description: 'Token từ email đặt lại mật khẩu'),
-                    new OA\Property(property: 'email',                 type: 'string', format: 'email'),
-                    new OA\Property(property: 'password',              type: 'string', format: 'password', minimum: 6),
-                    new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Đặt lại mật khẩu thành công'),
-            new OA\Response(response: 422, description: 'Token không hợp lệ hoặc hết hạn'),
-        ]
-    )]
     public function resetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -320,28 +199,6 @@ class AuthController extends Controller
     // =========================================================================
     // POST /api/auth/change-password — Đổi mật khẩu (khi đã login)
     // =========================================================================
-    #[OA\Post(
-        path: '/api/auth/change-password',
-        summary: 'Đổi mật khẩu khi đã đăng nhập',
-        tags: ['Authentication'],
-        security: [['sanctum' => []]],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['current_password', 'password', 'password_confirmation'],
-                properties: [
-                    new OA\Property(property: 'current_password',      type: 'string', format: 'password'),
-                    new OA\Property(property: 'password',              type: 'string', format: 'password', minimum: 6),
-                    new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Đổi mật khẩu thành công'),
-            new OA\Response(response: 401, description: 'Mật khẩu hiện tại không đúng'),
-            new OA\Response(response: 422, description: 'Dữ liệu không hợp lệ'),
-        ]
-    )]
     public function changePassword(Request $request)
     {
         $validator = Validator::make($request->all(), [

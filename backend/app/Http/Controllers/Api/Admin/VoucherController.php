@@ -9,29 +9,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Validator;
-use OpenApi\Attributes as OA;
 
 class VoucherController extends Controller
 {
     // =========================================================================
     // GET /api/admin/vouchers — Danh sách voucher (filter + paginate)
     // =========================================================================
-    #[OA\Get(
-        path: '/api/admin/vouchers',
-        summary: '[Admin] Danh sách voucher',
-        tags: ['Admin - Vouchers'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'search',    in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Tìm theo code hoặc tên'),
-            new OA\Parameter(name: 'is_active', in: 'query', required: false, schema: new OA\Schema(type: 'boolean'), description: 'Lọc theo trạng thái'),
-            new OA\Parameter(name: 'per_page',  in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'Số bản ghi/trang (mặc định 15)'),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Thành công'),
-            new OA\Response(response: 401, description: 'Chưa xác thực'),
-            new OA\Response(response: 403, description: 'Không phải Admin'),
-        ]
-    )]
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = Voucher::withCount('usages')->latest();
@@ -56,19 +39,6 @@ class VoucherController extends Controller
     // =========================================================================
     // GET /api/admin/vouchers/{id} — Chi tiết voucher
     // =========================================================================
-    #[OA\Get(
-        path: '/api/admin/vouchers/{id}',
-        summary: '[Admin] Chi tiết voucher',
-        tags: ['Admin - Vouchers'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Thành công'),
-            new OA\Response(response: 404, description: 'Không tìm thấy'),
-        ]
-    )]
     public function show(string $id): JsonResponse
     {
         $voucher = Voucher::withCount('usages')->findOrFail($id);
@@ -82,36 +52,6 @@ class VoucherController extends Controller
     // =========================================================================
     // POST /api/admin/vouchers — Tạo voucher mới
     // =========================================================================
-    #[OA\Post(
-        path: '/api/admin/vouchers',
-        summary: '[Admin] Tạo voucher mới',
-        tags: ['Admin - Vouchers'],
-        security: [['sanctum' => []]],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['code', 'name', 'discount_type', 'discount_value', 'start_date', 'end_date'],
-                properties: [
-                    new OA\Property(property: 'code',                 type: 'string',  description: 'Mã voucher (viết hoa, unique)'),
-                    new OA\Property(property: 'name',                 type: 'string',  description: 'Tên voucher'),
-                    new OA\Property(property: 'description',          type: 'string',  nullable: true),
-                    new OA\Property(property: 'discount_type',        type: 'string',  enum: ['percent', 'fixed'], description: 'Loại giảm giá'),
-                    new OA\Property(property: 'discount_value',       type: 'number',  description: 'Giá trị giảm (% hoặc VNĐ)'),
-                    new OA\Property(property: 'max_discount',         type: 'number',  nullable: true, description: 'Giảm tối đa (VNĐ, áp dụng cho percent)'),
-                    new OA\Property(property: 'min_order_amount',     type: 'number',  description: 'Giá trị đơn tối thiểu để dùng'),
-                    new OA\Property(property: 'quantity',             type: 'integer', nullable: true, description: 'Số lượt sử dụng (null = không giới hạn)'),
-                    new OA\Property(property: 'usage_limit_per_user', type: 'integer', description: 'Giới hạn dùng per-user (0 = không giới hạn)'),
-                    new OA\Property(property: 'start_date',           type: 'string',  format: 'date-time', description: 'Ngày bắt đầu'),
-                    new OA\Property(property: 'end_date',             type: 'string',  format: 'date-time', description: 'Ngày kết thúc'),
-                    new OA\Property(property: 'is_active',            type: 'boolean', description: 'Kích hoạt ngay'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 201, description: 'Tạo thành công'),
-            new OA\Response(response: 422, description: 'Validation thất bại'),
-        ]
-    )]
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -155,38 +95,6 @@ class VoucherController extends Controller
     // =========================================================================
     // PUT /api/admin/vouchers/{id} — Cập nhật voucher
     // =========================================================================
-    #[OA\Put(
-        path: '/api/admin/vouchers/{id}',
-        summary: '[Admin] Cập nhật voucher',
-        tags: ['Admin - Vouchers'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'name',                 type: 'string'),
-                    new OA\Property(property: 'description',          type: 'string',  nullable: true),
-                    new OA\Property(property: 'discount_type',        type: 'string',  enum: ['percent', 'fixed']),
-                    new OA\Property(property: 'discount_value',       type: 'number'),
-                    new OA\Property(property: 'max_discount',         type: 'number',  nullable: true),
-                    new OA\Property(property: 'min_order_amount',     type: 'number'),
-                    new OA\Property(property: 'quantity',             type: 'integer', nullable: true),
-                    new OA\Property(property: 'usage_limit_per_user', type: 'integer'),
-                    new OA\Property(property: 'start_date',           type: 'string',  format: 'date-time'),
-                    new OA\Property(property: 'end_date',             type: 'string',  format: 'date-time'),
-                    new OA\Property(property: 'is_active',            type: 'boolean'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Cập nhật thành công'),
-            new OA\Response(response: 404, description: 'Không tìm thấy'),
-            new OA\Response(response: 422, description: 'Validation thất bại'),
-        ]
-    )]
     public function update(Request $request, string $id): JsonResponse
     {
         $voucher = Voucher::findOrFail($id);
@@ -225,20 +133,6 @@ class VoucherController extends Controller
     // =========================================================================
     // DELETE /api/admin/vouchers/{id} — Xóa voucher
     // =========================================================================
-    #[OA\Delete(
-        path: '/api/admin/vouchers/{id}',
-        summary: '[Admin] Xóa voucher',
-        tags: ['Admin - Vouchers'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Đã xóa'),
-            new OA\Response(response: 400, description: 'Voucher đang được sử dụng, không thể xóa'),
-            new OA\Response(response: 404, description: 'Không tìm thấy'),
-        ]
-    )]
     public function destroy(string $id): JsonResponse
     {
         $voucher = Voucher::withCount('usages')->findOrFail($id);

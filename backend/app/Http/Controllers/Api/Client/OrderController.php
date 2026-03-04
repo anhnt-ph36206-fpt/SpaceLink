@@ -7,28 +7,12 @@ use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use Illuminate\Http\Request;
-use OpenApi\Attributes as OA;
 
 class OrderController extends Controller
 {
     // =========================================================================
     // GET /api/client/orders — Danh sách đơn hàng của user hiện tại
     // =========================================================================
-    #[OA\Get(
-        path: '/api/client/orders',
-        summary: 'Danh sách đơn hàng của user',
-        tags: ['Client - Orders'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'status',         in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Lọc theo trạng thái: pending, confirmed, shipping, delivered, completed, cancelled'),
-            new OA\Parameter(name: 'payment_status', in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Lọc theo thanh toán: unpaid, paid, refunded'),
-            new OA\Parameter(name: 'per_page',       in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'Số bản ghi/trang (mặc định 10)'),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Thành công'),
-            new OA\Response(response: 401, description: 'Chưa xác thực'),
-        ]
-    )]
     public function index(Request $request)
     {
         $user  = $request->user();
@@ -51,20 +35,6 @@ class OrderController extends Controller
     // =========================================================================
     // GET /api/client/orders/{id} — Chi tiết 1 đơn hàng
     // =========================================================================
-    #[OA\Get(
-        path: '/api/client/orders/{id}',
-        summary: 'Chi tiết đơn hàng của user',
-        tags: ['Client - Orders'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID đơn hàng'),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Thành công'),
-            new OA\Response(response: 403, description: 'Không phải đơn hàng của bạn'),
-            new OA\Response(response: 404, description: 'Không tìm thấy đơn hàng'),
-        ]
-    )]
     public function show(Request $request, string $id)
     {
         $user  = $request->user();
@@ -90,29 +60,6 @@ class OrderController extends Controller
     // =========================================================================
     // POST /api/client/orders/{id}/cancel — Hủy đơn hàng (chỉ khi pending)
     // =========================================================================
-    #[OA\Post(
-        path: '/api/client/orders/{id}/cancel',
-        summary: 'Hủy đơn hàng (chỉ khi đang ở trạng thái pending)',
-        tags: ['Client - Orders'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: false,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'reason', type: 'string', nullable: true, description: 'Lý do hủy đơn (không bắt buộc)'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Hủy đơn thành công'),
-            new OA\Response(response: 403, description: 'Không phải đơn của bạn hoặc không thể hủy'),
-            new OA\Response(response: 404, description: 'Không tìm thấy đơn hàng'),
-            new OA\Response(response: 422, description: 'Đơn hàng không ở trạng thái có thể hủy'),
-        ]
-    )]
     public function cancel(Request $request, string $id)
     {
         $user  = $request->user();

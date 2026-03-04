@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "SpaceLink API Documents",
-        "description": "Hệ thống API backend viết bằng Laravel 12",
+        "description": "API Document for SpaceLink",
         "version": "1.0.0"
     },
     "servers": [
@@ -19,7 +19,7 @@
                 ],
                 "summary": "Danh sách tất cả danh mục (Admin)",
                 "description": "Lấy danh sách toàn bộ danh mục kể cả inactive. Hỗ trợ filter theo `search`, `is_active`, `parent_id`.",
-                "operationId": "71fce704423c89eab31adce4a23df70b",
+                "operationId": "d8c7c4b3f3d3b60353f8e7002addda84",
                 "parameters": [
                     {
                         "name": "search",
@@ -92,7 +92,7 @@
                     "Admin - Categories"
                 ],
                 "summary": "Tạo danh mục mới (Admin)",
-                "operationId": "810e8b9fee1619d4229208cb942c486a",
+                "operationId": "47cf1fbea9e7f3dcce02822e58cb9046",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -190,7 +190,7 @@
                 ],
                 "summary": "Chi tiết danh mục (Admin)",
                 "description": "Lấy thông tin chi tiết một danh mục theo ID, kể cả inactive.",
-                "operationId": "dd1a3fd24575b2b12b6c8235fd29de4e",
+                "operationId": "a3ce517598c03dd5d215cea53d685c9e",
                 "parameters": [
                     {
                         "name": "id",
@@ -237,7 +237,7 @@
                     "Admin - Categories"
                 ],
                 "summary": "Cập nhật danh mục (Admin)",
-                "operationId": "6b267ce72356fa2805c1484f48318133",
+                "operationId": "f8e730fbe865b8813112911d75e054d3",
                 "parameters": [
                     {
                         "name": "id",
@@ -347,7 +347,7 @@
                 ],
                 "summary": "Xóa mềm danh mục (Admin)",
                 "description": "Soft delete — dữ liệu vẫn còn trong DB, chỉ đặt `deleted_at`. Có thể khôi phục sau.",
-                "operationId": "6ee6ff59b8676a6da057579bba1331ad",
+                "operationId": "c14cf500f3902f774e930a09b6d4f3fb",
                 "parameters": [
                     {
                         "name": "id",
@@ -400,7 +400,7 @@
                     "Admin - Orders"
                 ],
                 "summary": "[Admin] Danh sách đơn hàng",
-                "operationId": "d75d385d3719d4db92df549d42f08cff",
+                "operationId": "4dfcd80479e69fa8631bbcbd71145a3f",
                 "parameters": [
                     {
                         "name": "search",
@@ -492,7 +492,7 @@
                     "Admin - Orders"
                 ],
                 "summary": "[Admin] Chi tiết đơn hàng",
-                "operationId": "a88c5c24d757abd104b8fd2a66cf89b7",
+                "operationId": "7e83d3495269fa6cb0eb972f93dc367e",
                 "parameters": [
                     {
                         "name": "id",
@@ -525,7 +525,7 @@
                     "Admin - Orders"
                 ],
                 "summary": "[Admin] Cập nhật trạng thái đơn hàng",
-                "operationId": "5df4d011fb2613db2ceac1cf8af67a82",
+                "operationId": "b33ec2000b9ac544f9a515751abb1fbf",
                 "parameters": [
                     {
                         "name": "id",
@@ -611,7 +611,7 @@
                     "Admin - Orders"
                 ],
                 "summary": "[Admin] Cập nhật trạng thái thanh toán",
-                "operationId": "a7336f55687b306bfd78df1d01bdb8e4",
+                "operationId": "f814970a7b769c76adc670eeedfd9548",
                 "parameters": [
                     {
                         "name": "id",
@@ -674,7 +674,7 @@
                     "Admin - Products"
                 ],
                 "summary": "[Admin] Danh sách sản phẩm",
-                "operationId": "9058305dfe0377e6cf7c5253ed664401",
+                "operationId": "5222d8e76c2e530fda16935939c03de7",
                 "parameters": [
                     {
                         "name": "search",
@@ -762,7 +762,7 @@
                     "Admin - Products"
                 ],
                 "summary": "[Admin] Tạo sản phẩm mới",
-                "operationId": "e78a4cd5a8e47d96daa7a5a7a13d3e30",
+                "operationId": "0a0bef864d05ed7b80ffb58c88b8f3d2",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -854,7 +854,7 @@
                     "Admin - Products"
                 ],
                 "summary": "[Admin] Chi tiết sản phẩm",
-                "operationId": "e645351e64571486935b1fbb5743d6b8",
+                "operationId": "a6e96c49414b6eca30210b8c2be2296c",
                 "parameters": [
                     {
                         "name": "id",
@@ -885,7 +885,7 @@
                     "Admin - Products"
                 ],
                 "summary": "[Admin] Cập nhật sản phẩm",
-                "operationId": "78c34d6552e97335a6594ceaf054d60f",
+                "operationId": "eec72beb2a4ebd02c7b9505fe7e4e0ec",
                 "parameters": [
                     {
                         "name": "id",
@@ -988,7 +988,7 @@
                     "Admin - Products"
                 ],
                 "summary": "[Admin] Xóa mềm sản phẩm",
-                "operationId": "14131d6e77dc1537765eaa35848d3941",
+                "operationId": "87a133d1018046016466b5b22beeabef",
                 "parameters": [
                     {
                         "name": "id",
@@ -1020,7 +1020,7 @@
                     "Admin - Products"
                 ],
                 "summary": "[Admin] Khôi phục sản phẩm đã xóa mềm",
-                "operationId": "5c6ed5a2b24e4f7fc47857fb0f60cb97",
+                "operationId": "908df0109b0ac48836c0c12829dbf057",
                 "parameters": [
                     {
                         "name": "id",
@@ -1053,7 +1053,7 @@
                     "Admin - Product Images"
                 ],
                 "summary": "[Admin] Thêm ảnh sản phẩm",
-                "operationId": "498b5618b77b89e2152e0217d347c9c2",
+                "operationId": "9e22a4d6654320a7c88542043b671d84",
                 "parameters": [
                     {
                         "name": "product",
@@ -1118,7 +1118,7 @@
                     "Admin - Product Images"
                 ],
                 "summary": "[Admin] Xóa ảnh sản phẩm",
-                "operationId": "c90c82bb1af89a448e693d66d1e610f0",
+                "operationId": "0074585b45afc3ee054edf8d5b6838bc",
                 "parameters": [
                     {
                         "name": "product",
@@ -1159,7 +1159,7 @@
                     "Admin - Product Variants"
                 ],
                 "summary": "[Admin] Thêm biến thể cho sản phẩm",
-                "operationId": "fffee78e2ad7b08a26028fc4b0c98d27",
+                "operationId": "a2279c5db8f8868a8a7d4c36f931f51f",
                 "parameters": [
                     {
                         "name": "product",
@@ -1234,7 +1234,7 @@
                     "Admin - Product Variants"
                 ],
                 "summary": "[Admin] Cập nhật biến thể sản phẩm",
-                "operationId": "4300b3a09a9ae3c9a6ec66c324059925",
+                "operationId": "0b349182143532f5384f825318cb1bcd",
                 "parameters": [
                     {
                         "name": "product",
@@ -1315,7 +1315,7 @@
                     "Admin - Product Variants"
                 ],
                 "summary": "[Admin] Xóa biến thể sản phẩm",
-                "operationId": "7c64f36cbadbf84b2ed38b5d2a736ca4",
+                "operationId": "72bc1f69a3faf776b1226901dc991b3f",
                 "parameters": [
                     {
                         "name": "product",
@@ -1355,7 +1355,7 @@
                     "Admin - Users"
                 ],
                 "summary": "[Admin] Danh sách người dùng",
-                "operationId": "9ded17315e13756cd593b5840cd39a26",
+                "operationId": "50fcf940ecf35c6d1ddbbb5c9281d264",
                 "parameters": [
                     {
                         "name": "search",
@@ -1427,7 +1427,7 @@
                     "Admin - Users"
                 ],
                 "summary": "[Admin] Chi tiết người dùng",
-                "operationId": "c6ac2250cb22823f621026268b66f471",
+                "operationId": "0db19ef89cdb62205d36576277199775",
                 "parameters": [
                     {
                         "name": "id",
@@ -1458,7 +1458,7 @@
                     "Admin - Users"
                 ],
                 "summary": "[Admin] Cập nhật thông tin người dùng",
-                "operationId": "22692373e5a35c609175c1e6441b58ca",
+                "operationId": "15fd090a9bde4642eeb886c5535df116",
                 "parameters": [
                     {
                         "name": "id",
@@ -1537,7 +1537,7 @@
                     "Admin - Users"
                 ],
                 "summary": "[Admin] Xóa mềm người dùng",
-                "operationId": "fdbad6312957544572f3b379b96abad0",
+                "operationId": "51aa694511f7e6fa468dfff589a1d544",
                 "parameters": [
                     {
                         "name": "id",
@@ -1572,7 +1572,7 @@
                     "Admin - Users"
                 ],
                 "summary": "[Admin] Khôi phục người dùng đã xóa mềm",
-                "operationId": "a82e87f11a5976b6379ec8c01c0a1129",
+                "operationId": "a30d755b08a4c380db103f8bb02c4149",
                 "parameters": [
                     {
                         "name": "id",
@@ -1608,7 +1608,7 @@
                     "Admin - Vouchers"
                 ],
                 "summary": "[Admin] Danh sách voucher",
-                "operationId": "abee94fdceadc392fa35a91c004151e9",
+                "operationId": "589296d0eb5675cce303c67757dae179",
                 "parameters": [
                     {
                         "name": "search",
@@ -1660,7 +1660,7 @@
                     "Admin - Vouchers"
                 ],
                 "summary": "[Admin] Tạo voucher mới",
-                "operationId": "f79dd1a2145c81d0a067b1214350d154",
+                "operationId": "f203da94526e2e65b075adf5a9a61930",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -1758,7 +1758,7 @@
                     "Admin - Vouchers"
                 ],
                 "summary": "[Admin] Chi tiết voucher",
-                "operationId": "79570f2210349ecc006f87d698b81115",
+                "operationId": "8e7d8e15938847e579d573a1e022bb06",
                 "parameters": [
                     {
                         "name": "id",
@@ -1788,7 +1788,7 @@
                     "Admin - Vouchers"
                 ],
                 "summary": "[Admin] Cập nhật voucher",
-                "operationId": "941e5e152c29fd85697cc796b61dd1ce",
+                "operationId": "bae68ca3bbb76c6c76556bd4c12514b5",
                 "parameters": [
                     {
                         "name": "id",
@@ -1875,7 +1875,7 @@
                     "Admin - Vouchers"
                 ],
                 "summary": "[Admin] Xóa voucher",
-                "operationId": "648956ca7181a64e063156cf2dfb3564",
+                "operationId": "f6dd7d97837ef602ce027581c66a647a",
                 "parameters": [
                     {
                         "name": "id",
@@ -1910,20 +1910,20 @@
                     "Authentication"
                 ],
                 "summary": "Đăng ký tài khoản mới",
-                "operationId": "c7bb21a0d87049e161b8e4c9b0d909f2",
+                "operationId": "e9f35abbd0fa2a6f35aa146196667b46",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "name",
+                                    "fullname",
                                     "email",
                                     "password",
                                     "password_confirmation"
                                 ],
                                 "properties": {
-                                    "name": {
+                                    "fullname": {
                                         "type": "string",
                                         "example": "Nguyen Van A"
                                     },
@@ -2001,7 +2001,7 @@
                     "Authentication"
                 ],
                 "summary": "Đăng nhập hệ thống",
-                "operationId": "dd51a484b7fa0f97c7680fdbde14cf5f",
+                "operationId": "5345da0b2aea7945d5bed6ac8bf5436d",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2042,7 +2042,7 @@
                     "Authentication"
                 ],
                 "summary": "Lấy thông tin người dùng hiện tại",
-                "operationId": "b5de204f5e452ef51327c691aa99e77c",
+                "operationId": "47865ca2adbc8f34971166ea99f173c5",
                 "responses": {
                     "200": {
                         "description": "Thành công"
@@ -2064,7 +2064,7 @@
                     "Authentication"
                 ],
                 "summary": "Đăng xuất tài khoản",
-                "operationId": "df9bdc6c7a6d9f20b983526b2ec0f698",
+                "operationId": "b5f42f0f9d02440bf1c9c40b6188a6f2",
                 "responses": {
                     "200": {
                         "description": "Đăng xuất thành công"
@@ -2083,7 +2083,7 @@
                     "Authentication"
                 ],
                 "summary": "Gửi email đặt lại mật khẩu",
-                "operationId": "f51c7074de53475eab87e336cc4e06a6",
+                "operationId": "70c75661c3df9312cc0a001de728432b",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2120,7 +2120,7 @@
                     "Authentication"
                 ],
                 "summary": "Đặt lại mật khẩu (dùng token từ email)",
-                "operationId": "96e44e1ebcd811418fd95ee4c56162f0",
+                "operationId": "cba8c6bce3e3198ebafc604a29e551e2",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2172,7 +2172,7 @@
                     "Authentication"
                 ],
                 "summary": "Đổi mật khẩu khi đã đăng nhập",
-                "operationId": "58e67cdbde52513b62902b05abf9abcb",
+                "operationId": "5eb9a71363a32ddff22b12d8927f2f2b",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2227,7 +2227,7 @@
                     "Client - Address"
                 ],
                 "summary": "Danh sách địa chỉ của user hiện tại",
-                "operationId": "318812347cf447a4b8ecbc48f4ca4caf",
+                "operationId": "2eb6a623d4eb579ed7e8030cc99dc2a8",
                 "responses": {
                     "200": {
                         "description": "Danh sách địa chỉ",
@@ -2300,7 +2300,7 @@
                     "Client - Address"
                 ],
                 "summary": "Thêm địa chỉ mới",
-                "operationId": "9355e526e726ca040170c129e099103c",
+                "operationId": "5477ed47c29bf78e62a7b71b5e891841",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2382,7 +2382,7 @@
                     "Client - Address"
                 ],
                 "summary": "Chi tiết 1 địa chỉ",
-                "operationId": "9dda9707a5b1c229b5190ba40137d081",
+                "operationId": "ddea0d70545f10f79575cb5d0b5e714f",
                 "parameters": [
                     {
                         "name": "id",
@@ -2415,7 +2415,7 @@
                     "Client - Address"
                 ],
                 "summary": "Cập nhật địa chỉ",
-                "operationId": "9b285b282eed11f227fd2963ba3c6c60",
+                "operationId": "ade9e9ad4cdeff2caaed716ffc9a79f0",
                 "parameters": [
                     {
                         "name": "id",
@@ -2505,7 +2505,7 @@
                     "Client - Address"
                 ],
                 "summary": "Xóa địa chỉ",
-                "operationId": "beab95657bbd097cfb53372ff3d78e66",
+                "operationId": "a5842e6b1e8d8b8d6a51d84aa178ce79",
                 "parameters": [
                     {
                         "name": "id",
@@ -2537,7 +2537,7 @@
                     "Client - Brands"
                 ],
                 "summary": "Danh sách thương hiệu đang hoạt động",
-                "operationId": "93741264a8954944c573cfbeb31db93f",
+                "operationId": "97365edbcf74e81052b96cf40e2b19ac",
                 "responses": {
                     "200": {
                         "description": "Thành công",
@@ -2584,7 +2584,7 @@
                     "Client - Cart"
                 ],
                 "summary": "Lấy danh sách giỏ hàng của user/session",
-                "operationId": "e5e373a13ee799e1a429de231feee8de",
+                "operationId": "ec0d8b8355ee37906f10fc0bcea4dc3e",
                 "parameters": [
                     {
                         "name": "X-Session-ID",
@@ -2641,7 +2641,7 @@
                     "Client - Cart"
                 ],
                 "summary": "Thêm sản phẩm vào giỏ hàng",
-                "operationId": "e9c2f60d7d53c98d20ca4bc539913d49",
+                "operationId": "147c11a8b47e5168b16199f24b64cca1",
                 "parameters": [
                     {
                         "name": "X-Session-ID",
@@ -2707,7 +2707,7 @@
                     "Client - Cart"
                 ],
                 "summary": "Cập nhật số lượng sản phẩm trong giỏ",
-                "operationId": "f1ad536f86cdb22c8b58178fd98e4a96",
+                "operationId": "2d0ee59b9c476a4bbe6d5ee4686f1724",
                 "parameters": [
                     {
                         "name": "cart_item_id",
@@ -2772,7 +2772,7 @@
                     "Client - Cart"
                 ],
                 "summary": "Xóa 1 sản phẩm khỏi giỏ hàng",
-                "operationId": "1a5b99dbb33241130467fc28b2cf83a0",
+                "operationId": "9671b122a3c34cb6d292e3619279450d",
                 "parameters": [
                     {
                         "name": "cart_item_id",
@@ -2815,7 +2815,7 @@
                     "Client - Cart"
                 ],
                 "summary": "Xóa toàn bộ giỏ hàng",
-                "operationId": "8797f1b48a8c10f2fd1a77c5eb950b8a",
+                "operationId": "65ceda1d6a3825ce4cdbfbd33bd38308",
                 "parameters": [
                     {
                         "name": "X-Session-ID",
@@ -2847,7 +2847,7 @@
                     "Client - Cart"
                 ],
                 "summary": "Gộp giỏ hàng Guest vào tài khoản sau khi login",
-                "operationId": "311da3d74242c210a431c0efb3c9b0a6",
+                "operationId": "2917b7b9f347420ab0c5f7d1a23614a0",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2889,7 +2889,7 @@
                 ],
                 "summary": "Lấy danh sách danh mục (Client)",
                 "description": "Trả về danh sách danh mục đang hoạt động. Truyền `?type=tree` để lấy dạng cây phân cấp (root + children). Mặc định trả về flat list.",
-                "operationId": "7aed168fba5342fdc6fd7a2a3cf6f4ab",
+                "operationId": "dc40da925594cdfc646e86deaa08bd80",
                 "parameters": [
                     {
                         "name": "type",
@@ -2984,7 +2984,7 @@
                 ],
                 "summary": "Xem chi tiết danh mục theo slug (Client)",
                 "description": "Trả về thông tin chi tiết của một danh mục đang hoạt động. Tự động load thông tin danh mục cha (parent) nếu có.",
-                "operationId": "54bdedfeaa31e1afe8345f079d70a1ab",
+                "operationId": "e28801e04b49b593d33db2ea1fc45e6a",
                 "parameters": [
                     {
                         "name": "slug",
@@ -3100,7 +3100,7 @@
                     "Client - Checkout"
                 ],
                 "summary": "Đặt hàng từ giỏ hàng hiện tại",
-                "operationId": "9e36954b0d32c4ea4535e013a5a2dcbd",
+                "operationId": "ccbe499807a55880ac4b38d7b271c3fb",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -3170,7 +3170,7 @@
                     "Client - Orders"
                 ],
                 "summary": "Danh sách đơn hàng của user",
-                "operationId": "4cac89b786e9d512fe0c9a245f0d122d",
+                "operationId": "19ed9521298990f81cc8a5084f93d4b5",
                 "parameters": [
                     {
                         "name": "status",
@@ -3221,7 +3221,7 @@
                     "Client - Orders"
                 ],
                 "summary": "Chi tiết đơn hàng của user",
-                "operationId": "5b9ae48ef860b57886a94997fd2c36b1",
+                "operationId": "5b956f3d7c7fd495cb0e301509e50861",
                 "parameters": [
                     {
                         "name": "id",
@@ -3257,7 +3257,7 @@
                     "Client - Orders"
                 ],
                 "summary": "Hủy đơn hàng (chỉ khi đang ở trạng thái pending)",
-                "operationId": "b5196f13e1c92486712fd11da018f62b",
+                "operationId": "622c3d16db70bbf9c971bdce03a77064",
                 "parameters": [
                     {
                         "name": "id",
@@ -3312,7 +3312,7 @@
                     "Client - Products"
                 ],
                 "summary": "Lấy danh sách sản phẩm",
-                "operationId": "c7d1e59317d45e7d5b8ff7fea0ed7373",
+                "operationId": "c1847c71cfdb117a0be09437d7fa9092",
                 "parameters": [
                     {
                         "name": "category_id",
@@ -3403,7 +3403,7 @@
                     "Client - Products"
                 ],
                 "summary": "Xem chi tiết sản phẩm",
-                "operationId": "b2a137b7ac793ab16f6333a0cd7e11be",
+                "operationId": "06c673b23cf4dfcc6e226b3d3ce5548f",
                 "parameters": [
                     {
                         "name": "id",
@@ -3443,7 +3443,7 @@
                     "Client - Profile"
                 ],
                 "summary": "Lấy thông tin profile và danh sách địa chỉ",
-                "operationId": "8338b76e12049fef19ca4cadaf0bd9c2",
+                "operationId": "a43050335e562a455543105e08dc4825",
                 "responses": {
                     "200": {
                         "description": "Thành công"
@@ -3460,7 +3460,7 @@
                     "Client - Profile"
                 ],
                 "summary": "Cập nhật thông tin cá nhân",
-                "operationId": "809146d0b0d2c0318e06a583cd9323c2",
+                "operationId": "5a7929662d4ce0f37c454d900f170023",
                 "requestBody": {
                     "content": {
                         "application/json": {

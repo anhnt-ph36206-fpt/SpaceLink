@@ -14,38 +14,12 @@ use App\Models\Voucher;
 use App\Models\VoucherUsage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use OpenApi\Attributes as OA;
 
 class CheckoutController extends Controller
 {
     // =========================================================================
     // POST /api/client/checkout — Đặt hàng
     // =========================================================================
-    #[OA\Post(
-        path: '/api/client/checkout',
-        summary: 'Đặt hàng từ giỏ hàng hiện tại',
-        tags: ['Client - Checkout'],
-        security: [['sanctum' => []]],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['shipping_address_id', 'payment_method'],
-                properties: [
-                    new OA\Property(property: 'shipping_address_id', type: 'integer', description: 'ID địa chỉ giao hàng của user'),
-                    new OA\Property(property: 'payment_method', type: 'string', enum: ['cod', 'vnpay', 'momo', 'bank_transfer']),
-                    new OA\Property(property: 'voucher_code', type: 'string', nullable: true, description: 'Mã voucher (không bắt buộc)'),
-                    new OA\Property(property: 'note', type: 'string', nullable: true, description: 'Ghi chú đơn hàng'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 201, description: 'Đặt hàng thành công'),
-            new OA\Response(response: 400, description: 'Giỏ hàng rỗng hoặc lỗi nghiệp vụ'),
-            new OA\Response(response: 403, description: 'Địa chỉ không thuộc về user này'),
-            new OA\Response(response: 409, description: 'Tồn kho không đủ'),
-            new OA\Response(response: 422, description: 'Dữ liệu không hợp lệ'),
-        ]
-    )]
     public function checkout(CheckoutRequest $request)
     {
         $user = auth('sanctum')->user();
