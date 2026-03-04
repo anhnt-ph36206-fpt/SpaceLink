@@ -11,7 +11,6 @@ use App\Models\OrderStatusHistory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use OpenApi\Attributes as OA;
 
 class OrderController extends Controller
 {
@@ -28,26 +27,6 @@ class OrderController extends Controller
     // =========================================================================
     // GET /api/admin/orders — Danh sách đơn hàng (filter + paginate)
     // =========================================================================
-    #[OA\Get(
-        path: '/api/admin/orders',
-        summary: '[Admin] Danh sách đơn hàng',
-        tags: ['Admin - Orders'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'search',         in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Tìm theo order_code, tên KH, SĐT'),
-            new OA\Parameter(name: 'status',          in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Lọc theo trạng thái đơn'),
-            new OA\Parameter(name: 'payment_status',  in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Lọc theo trạng thái thanh toán'),
-            new OA\Parameter(name: 'payment_method',  in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Lọc theo phương thức thanh toán'),
-            new OA\Parameter(name: 'date_from',       in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date'), description: 'Từ ngày (Y-m-d)'),
-            new OA\Parameter(name: 'date_to',         in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date'), description: 'Đến ngày (Y-m-d)'),
-            new OA\Parameter(name: 'per_page',        in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'Số bản ghi/trang (mặc định 15)'),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Thành công'),
-            new OA\Response(response: 401, description: 'Chưa xác thực'),
-            new OA\Response(response: 403, description: 'Không phải Admin'),
-        ]
-    )]
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = Order::with(['user:id,fullname,email,phone'])
@@ -93,19 +72,6 @@ class OrderController extends Controller
     // =========================================================================
     // GET /api/admin/orders/{id} — Chi tiết đơn hàng
     // =========================================================================
-    #[OA\Get(
-        path: '/api/admin/orders/{id}',
-        summary: '[Admin] Chi tiết đơn hàng',
-        tags: ['Admin - Orders'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID đơn hàng'),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Thành công'),
-            new OA\Response(response: 404, description: 'Không tìm thấy đơn hàng'),
-        ]
-    )]
     public function show(string $id): OrderResource
     {
         $order = Order::with([
@@ -120,34 +86,6 @@ class OrderController extends Controller
     // =========================================================================
     // PATCH /api/admin/orders/{id}/status — Cập nhật trạng thái
     // =========================================================================
-    #[OA\Patch(
-        path: '/api/admin/orders/{id}/status',
-        summary: '[Admin] Cập nhật trạng thái đơn hàng',
-        tags: ['Admin - Orders'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['status'],
-                properties: [
-                    new OA\Property(property: 'status',             type: 'string', enum: ['pending', 'confirmed', 'processing', 'shipping', 'delivered', 'completed', 'cancelled', 'returned']),
-                    new OA\Property(property: 'note',               type: 'string', nullable: true, description: 'Ghi chú nội bộ'),
-                    new OA\Property(property: 'cancelled_reason',   type: 'string', nullable: true, description: 'Lý do hủy (bắt buộc khi status=cancelled)'),
-                    new OA\Property(property: 'tracking_code',      type: 'string', nullable: true),
-                    new OA\Property(property: 'shipping_partner',   type: 'string', nullable: true),
-                    new OA\Property(property: 'estimated_delivery', type: 'string', format: 'date', nullable: true),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Cập nhật thành công'),
-            new OA\Response(response: 404, description: 'Không tìm thấy đơn hàng'),
-            new OA\Response(response: 422, description: 'Validation thất bại'),
-        ]
-    )]
     public function updateStatus(UpdateOrderStatusRequest $request, string $id): JsonResponse
     {
         $order      = Order::findOrFail($id);
@@ -203,30 +141,6 @@ class OrderController extends Controller
     // =========================================================================
     // PATCH /api/admin/orders/{id}/payment-status — Cập nhật thanh toán
     // =========================================================================
-    #[OA\Patch(
-        path: '/api/admin/orders/{id}/payment-status',
-        summary: '[Admin] Cập nhật trạng thái thanh toán',
-        tags: ['Admin - Orders'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['payment_status'],
-                properties: [
-                    new OA\Property(property: 'payment_status', type: 'string', enum: ['unpaid', 'paid', 'refunded', 'partial_refund']),
-                    new OA\Property(property: 'note',           type: 'string', nullable: true),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Cập nhật thành công'),
-            new OA\Response(response: 404, description: 'Không tìm thấy đơn hàng'),
-            new OA\Response(response: 422, description: 'Validation thất bại'),
-        ]
-    )]
     public function updatePaymentStatus(UpdatePaymentStatusRequest $request, string $id): JsonResponse
     {
         $order = Order::findOrFail($id);

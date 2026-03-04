@@ -7,38 +7,12 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use OpenApi\Attributes as OA;
 
 class ProductImageController extends Controller
 {
     // =========================================================================
     // POST /api/admin/products/{product}/images — Thêm ảnh cho sản phẩm
     // =========================================================================
-    #[OA\Post(
-        path: '/api/admin/products/{product}/images',
-        summary: '[Admin] Thêm ảnh sản phẩm',
-        tags: ['Admin - Product Images'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm'),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['image_path'],
-                properties: [
-                    new OA\Property(property: 'image_path',    type: 'string',  description: 'Đường dẫn ảnh (relative: products/...)'),
-                    new OA\Property(property: 'is_primary',    type: 'boolean', nullable: true, description: 'Có phải ảnh đại diện không?'),
-                    new OA\Property(property: 'display_order', type: 'integer', nullable: true, description: 'Thứ tự hiển thị'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 201, description: 'Thêm ảnh thành công'),
-            new OA\Response(response: 404, description: 'Không tìm thấy sản phẩm'),
-            new OA\Response(response: 422, description: 'Validation thất bại'),
-        ]
-    )]
     public function store(Request $request, string $product): JsonResponse
     {
         // Validate inline vì ProductImage đơn giản
@@ -77,20 +51,6 @@ class ProductImageController extends Controller
     // =========================================================================
     // DELETE /api/admin/products/{product}/images/{image} — Xóa ảnh
     // =========================================================================
-    #[OA\Delete(
-        path: '/api/admin/products/{product}/images/{image}',
-        summary: '[Admin] Xóa ảnh sản phẩm',
-        tags: ['Admin - Product Images'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'image',   in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID ảnh'),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Đã xóa ảnh'),
-            new OA\Response(response: 404, description: 'Không tìm thấy ảnh'),
-        ]
-    )]
     public function destroy(string $product, string $image): JsonResponse
     {
         // Kiểm tra ảnh thuộc đúng product này (tránh IDOR)

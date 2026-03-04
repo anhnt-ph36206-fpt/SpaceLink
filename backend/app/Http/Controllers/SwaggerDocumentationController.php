@@ -1,0 +1,1981 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use OpenApi\Attributes as OA;
+
+#[OA\Info(
+    title: "SpaceLink API Documents",
+    version: "1.0.0",
+    description: "API Document for SpaceLink"
+)]
+#[OA\Server(
+    url: "http://localhost:8000",
+    description: "Local Server"
+)]
+#[OA\SecurityScheme(
+    securityScheme: "sanctum",
+    type: "http",
+    scheme: "bearer",
+    bearerFormat: "JWT",
+    description: "Nhập Token theo định dạng: Bearer {token}"
+)]
+#[OA\Tag(name: "Authentication", description: "Authentication")]
+#[OA\Tag(name: "Password Reset", description: "Password Reset")]
+#[OA\Tag(name: "Admin - Attributes", description: "Admin - Attributes")]
+#[OA\Tag(name: "Admin - Categories", description: "Admin - Categories")]
+#[OA\Tag(name: "Admin - Contacts", description: "Admin - Contacts")]
+#[OA\Tag(name: "Admin - Dashboard", description: "Admin - Dashboard")]
+#[OA\Tag(name: "Admin - News", description: "Admin - News")]
+#[OA\Tag(name: "Admin - Orders", description: "Admin - Orders")]
+#[OA\Tag(name: "Admin - Product Images", description: "Admin - Product Images")]
+#[OA\Tag(name: "Admin - Product Variants", description: "Admin - Product Variants")]
+#[OA\Tag(name: "Admin - Products", description: "Admin - Products")]
+#[OA\Tag(name: "Admin - Reviews", description: "Admin - Reviews")]
+#[OA\Tag(name: "Admin - Users", description: "Admin - Users")]
+#[OA\Tag(name: "Admin - Vouchers", description: "Admin - Vouchers")]
+#[OA\Tag(name: "Client - Address", description: "Client - Address")]
+#[OA\Tag(name: "Client - Brands", description: "Client - Brands")]
+#[OA\Tag(name: "Client - Cart", description: "Client - Cart")]
+#[OA\Tag(name: "Client - Categories", description: "Client - Categories")]
+#[OA\Tag(name: "Client - Checkout", description: "Client - Checkout")]
+#[OA\Tag(name: "Client - Orders", description: "Client - Orders")]
+#[OA\Tag(name: "Client - Products", description: "Client - Products")]
+#[OA\Tag(name: "Client - Profile", description: "Client - Profile")]
+#[OA\Tag(name: "Client - Reviews", description: "Client - Reviews")]
+#[OA\Tag(name: "Client - Wishlist", description: "Client - Wishlist")]
+#[OA\Tag(name: "Public - Contacts", description: "Public - Contacts")]
+#[OA\Tag(name: "Public - News", description: "Public - News")]
+#[OA\Tag(name: "Public - Reviews", description: "Public - Reviews")]
+interface SwaggerDocumentationController
+{
+    // --- Api/Admin/CategoryControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/admin/categories',
+            summary: 'Danh sách tất cả danh mục (Admin)',
+            description: 'Lấy danh sách toàn bộ danh mục kể cả inactive. Hỗ trợ filter theo `search`, `is_active`, `parent_id`.',
+            tags: ['Admin - Categories'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(
+                    name: 'search',
+                    in: 'query',
+                    description: 'Tìm kiếm theo tên danh mục',
+                    required: false,
+                    schema: new OA\Schema(type: 'string', example: 'Điện thoại')
+                ),
+                new OA\Parameter(
+                    name: 'is_active',
+                    in: 'query',
+                    description: 'Lọc theo trạng thái: 1 = đang hiện, 0 = đã ẩn',
+                    required: false,
+                    schema: new OA\Schema(type: 'integer', enum: [0, 1])
+                ),
+                new OA\Parameter(
+                    name: 'parent_id',
+                    in: 'query',
+                    description: 'Lọc theo danh mục cha (0 = chỉ lấy root)',
+                    required: false,
+                    schema: new OA\Schema(type: 'integer', example: 1)
+                ),
+            ],
+            responses: [
+                new OA\Response(
+                    response: 200,
+                    description: 'Danh sách danh mục',
+                    content: new OA\JsonContent(
+                        properties: [
+                            new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
+                        ]
+                    )
+                ),
+                new OA\Response(response: 401, description: 'Chưa xác thực'),
+                new OA\Response(response: 403, description: 'Không có quyền Admin'),
+            ]
+        )]
+    public function api_admin_categoryController_index();
+
+    #[OA\Get(
+            path: '/api/admin/categories/{id}',
+            summary: 'Chi tiết danh mục (Admin)',
+            description: 'Lấy thông tin chi tiết một danh mục theo ID, kể cả inactive.',
+            tags: ['Admin - Categories'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(
+                    name: 'id',
+                    in: 'path',
+                    description: 'ID của danh mục',
+                    required: true,
+                    schema: new OA\Schema(type: 'integer', example: 1)
+                ),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Chi tiết danh mục',
+                    content: new OA\JsonContent(properties: [
+                        new OA\Property(property: 'data', type: 'object'),
+                    ])
+                ),
+                new OA\Response(response: 404, description: 'Không tìm thấy danh mục'),
+                new OA\Response(response: 403, description: 'Không có quyền Admin'),
+            ]
+        )]
+    public function api_admin_categoryController_show();
+
+    #[OA\Post(
+            path: '/api/admin/categories',
+            summary: 'Tạo danh mục mới (Admin)',
+            tags: ['Admin - Categories'],
+            security: [['sanctum' => []]],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['name', 'slug'],
+                    properties: [
+                        new OA\Property(property: 'name',          type: 'string',  example: 'Điện thoại'),
+                        new OA\Property(property: 'slug',          type: 'string',  example: 'dien-thoai'),
+                        new OA\Property(property: 'parent_id',     type: 'integer', nullable: true, example: null),
+                        new OA\Property(property: 'image',         type: 'string',  nullable: true, example: 'categories/phone.jpg'),
+                        new OA\Property(property: 'icon',          type: 'string',  nullable: true, example: 'icons/phone.svg'),
+                        new OA\Property(property: 'description',   type: 'string',  nullable: true, example: 'Danh mục điện thoại thông minh'),
+                        new OA\Property(property: 'display_order', type: 'integer', example: 1),
+                        new OA\Property(property: 'is_active',     type: 'boolean', example: true),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 201, description: 'Tạo thành công',
+                    content: new OA\JsonContent(properties: [
+                        new OA\Property(property: 'status',  type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string',  example: 'Tạo danh mục thành công'),
+                        new OA\Property(property: 'data',    type: 'object'),
+                    ])
+                ),
+                new OA\Response(response: 422, description: 'Lỗi validation'),
+                new OA\Response(response: 403, description: 'Không có quyền Admin'),
+            ]
+        )]
+    public function api_admin_categoryController_store();
+
+    #[OA\Put(
+            path: '/api/admin/categories/{id}',
+            summary: 'Cập nhật danh mục (Admin)',
+            tags: ['Admin - Categories'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(
+                    name: 'id',
+                    in: 'path',
+                    required: true,
+                    schema: new OA\Schema(type: 'integer', example: 1)
+                ),
+            ],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['name', 'slug'],
+                    properties: [
+                        new OA\Property(property: 'name',          type: 'string',  example: 'Điện thoại'),
+                        new OA\Property(property: 'slug',          type: 'string',  example: 'dien-thoai'),
+                        new OA\Property(property: 'parent_id',     type: 'integer', nullable: true, example: null),
+                        new OA\Property(property: 'image',         type: 'string',  nullable: true, example: 'categories/phone.jpg'),
+                        new OA\Property(property: 'icon',          type: 'string',  nullable: true, example: null),
+                        new OA\Property(property: 'description',   type: 'string',  nullable: true, example: 'Mô tả mới'),
+                        new OA\Property(property: 'display_order', type: 'integer', example: 2),
+                        new OA\Property(property: 'is_active',     type: 'boolean', example: false),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công',
+                    content: new OA\JsonContent(properties: [
+                        new OA\Property(property: 'status',  type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string',  example: 'Cập nhật danh mục thành công'),
+                        new OA\Property(property: 'data',    type: 'object'),
+                    ])
+                ),
+                new OA\Response(response: 404, description: 'Không tìm thấy danh mục'),
+                new OA\Response(response: 422, description: 'Lỗi validation'),
+                new OA\Response(response: 403, description: 'Không có quyền Admin'),
+            ]
+        )]
+    public function api_admin_categoryController_update();
+
+    #[OA\Delete(
+            path: '/api/admin/categories/{id}',
+            summary: 'Xóa mềm danh mục (Admin)',
+            description: 'Soft delete — dữ liệu vẫn còn trong DB, chỉ đặt `deleted_at`. Có thể khôi phục sau.',
+            tags: ['Admin - Categories'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(
+                    name: 'id',
+                    in: 'path',
+                    required: true,
+                    schema: new OA\Schema(type: 'integer', example: 1)
+                ),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Xóa thành công',
+                    content: new OA\JsonContent(properties: [
+                        new OA\Property(property: 'status',  type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string',  example: 'Xóa danh mục thành công'),
+                    ])
+                ),
+                new OA\Response(response: 404, description: 'Không tìm thấy danh mục'),
+                new OA\Response(response: 403, description: 'Không có quyền Admin'),
+            ]
+        )]
+    public function api_admin_categoryController_destroy();
+
+    // --- Api/Admin/OrderControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/admin/orders',
+            summary: '[Admin] Danh sách đơn hàng',
+            tags: ['Admin - Orders'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'search',         in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Tìm theo order_code, tên KH, SĐT'),
+                new OA\Parameter(name: 'status',          in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Lọc theo trạng thái đơn'),
+                new OA\Parameter(name: 'payment_status',  in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Lọc theo trạng thái thanh toán'),
+                new OA\Parameter(name: 'payment_method',  in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Lọc theo phương thức thanh toán'),
+                new OA\Parameter(name: 'date_from',       in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date'), description: 'Từ ngày (Y-m-d)'),
+                new OA\Parameter(name: 'date_to',         in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date'), description: 'Đến ngày (Y-m-d)'),
+                new OA\Parameter(name: 'per_page',        in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'Số bản ghi/trang (mặc định 15)'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Thành công'),
+                new OA\Response(response: 401, description: 'Chưa xác thực'),
+                new OA\Response(response: 403, description: 'Không phải Admin'),
+            ]
+        )]
+    public function api_admin_orderController_index();
+
+    #[OA\Get(
+            path: '/api/admin/orders/{id}',
+            summary: '[Admin] Chi tiết đơn hàng',
+            tags: ['Admin - Orders'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID đơn hàng'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy đơn hàng'),
+            ]
+        )]
+    public function api_admin_orderController_show();
+
+    #[OA\Patch(
+            path: '/api/admin/orders/{id}/status',
+            summary: '[Admin] Cập nhật trạng thái đơn hàng',
+            tags: ['Admin - Orders'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['status'],
+                    properties: [
+                        new OA\Property(property: 'status',             type: 'string', enum: ['pending', 'confirmed', 'processing', 'shipping', 'delivered', 'completed', 'cancelled', 'returned']),
+                        new OA\Property(property: 'note',               type: 'string', nullable: true, description: 'Ghi chú nội bộ'),
+                        new OA\Property(property: 'cancelled_reason',   type: 'string', nullable: true, description: 'Lý do hủy (bắt buộc khi status=cancelled)'),
+                        new OA\Property(property: 'tracking_code',      type: 'string', nullable: true),
+                        new OA\Property(property: 'shipping_partner',   type: 'string', nullable: true),
+                        new OA\Property(property: 'estimated_delivery', type: 'string', format: 'date', nullable: true),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy đơn hàng'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_orderController_updateStatus();
+
+    #[OA\Patch(
+            path: '/api/admin/orders/{id}/payment-status',
+            summary: '[Admin] Cập nhật trạng thái thanh toán',
+            tags: ['Admin - Orders'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['payment_status'],
+                    properties: [
+                        new OA\Property(property: 'payment_status', type: 'string', enum: ['unpaid', 'paid', 'refunded', 'partial_refund']),
+                        new OA\Property(property: 'note',           type: 'string', nullable: true),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy đơn hàng'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_orderController_updatePaymentStatus();
+
+    // --- Api/Admin/ProductControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/admin/products',
+            summary: '[Admin] Danh sách sản phẩm',
+            tags: ['Admin - Products'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'search',      in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Tìm theo tên, slug, SKU'),
+                new OA\Parameter(name: 'category_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'Lọc theo danh mục'),
+                new OA\Parameter(name: 'brand_id',    in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'Lọc theo thương hiệu'),
+                new OA\Parameter(name: 'is_active',   in: 'query', required: false, schema: new OA\Schema(type: 'boolean'), description: 'Lọc theo trạng thái'),
+                new OA\Parameter(name: 'is_featured',  in: 'query', required: false, schema: new OA\Schema(type: 'boolean'), description: 'Lọc sản phẩm nổi bật'),
+                new OA\Parameter(name: 'trashed',     in: 'query', required: false, schema: new OA\Schema(type: 'boolean'), description: 'true = chỉ lấy sản phẩm đã xóa mềm'),
+                new OA\Parameter(name: 'per_page',    in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'Số bản ghi mỗi trang (mặc định 15)'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Thành công'),
+                new OA\Response(response: 401, description: 'Chưa xác thực'),
+                new OA\Response(response: 403, description: 'Không có quyền Admin'),
+            ]
+        )]
+    public function api_admin_productController_index();
+
+    #[OA\Get(
+            path: '/api/admin/products/{id}',
+            summary: '[Admin] Chi tiết sản phẩm',
+            tags: ['Admin - Products'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy sản phẩm'),
+            ]
+        )]
+    public function api_admin_productController_show();
+
+    #[OA\Post(
+            path: '/api/admin/products',
+            summary: '[Admin] Tạo sản phẩm mới',
+            tags: ['Admin - Products'],
+            security: [['sanctum' => []]],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['category_id', 'name', 'slug', 'price'],
+                    properties: [
+                        new OA\Property(property: 'category_id',      type: 'integer'),
+                        new OA\Property(property: 'brand_id',         type: 'integer',  nullable: true),
+                        new OA\Property(property: 'name',             type: 'string'),
+                        new OA\Property(property: 'slug',             type: 'string'),
+                        new OA\Property(property: 'sku',              type: 'string',   nullable: true),
+                        new OA\Property(property: 'price',            type: 'number'),
+                        new OA\Property(property: 'sale_price',       type: 'number',   nullable: true),
+                        new OA\Property(property: 'quantity',         type: 'integer',  nullable: true),
+                        new OA\Property(property: 'description',      type: 'string',   nullable: true),
+                        new OA\Property(property: 'content',          type: 'string',   nullable: true),
+                        new OA\Property(property: 'is_featured',       type: 'boolean',  nullable: true),
+                        new OA\Property(property: 'is_active',        type: 'boolean',  nullable: true),
+                        new OA\Property(property: 'meta_title',       type: 'string',   nullable: true),
+                        new OA\Property(property: 'meta_description', type: 'string',   nullable: true),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 201, description: 'Tạo thành công'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_productController_store();
+
+    #[OA\Put(
+            path: '/api/admin/products/{id}',
+            summary: '[Admin] Cập nhật sản phẩm',
+            tags: ['Admin - Products'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['category_id', 'name', 'slug', 'price'],
+                    properties: [
+                        new OA\Property(property: 'category_id',      type: 'integer'),
+                        new OA\Property(property: 'brand_id',         type: 'integer',  nullable: true),
+                        new OA\Property(property: 'name',             type: 'string'),
+                        new OA\Property(property: 'slug',             type: 'string'),
+                        new OA\Property(property: 'sku',              type: 'string',   nullable: true),
+                        new OA\Property(property: 'price',            type: 'number'),
+                        new OA\Property(property: 'sale_price',       type: 'number',   nullable: true),
+                        new OA\Property(property: 'quantity',         type: 'integer',  nullable: true),
+                        new OA\Property(property: 'description',      type: 'string',   nullable: true),
+                        new OA\Property(property: 'content',          type: 'string',   nullable: true),
+                        new OA\Property(property: 'is_featured',       type: 'boolean',  nullable: true),
+                        new OA\Property(property: 'is_active',        type: 'boolean',  nullable: true),
+                        new OA\Property(property: 'meta_title',       type: 'string',   nullable: true),
+                        new OA\Property(property: 'meta_description', type: 'string',   nullable: true),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy sản phẩm'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_productController_update();
+
+    #[OA\Delete(
+            path: '/api/admin/products/{id}',
+            summary: '[Admin] Xóa mềm sản phẩm',
+            tags: ['Admin - Products'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Đã xóa'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+            ]
+        )]
+    public function api_admin_productController_destroy();
+
+    #[OA\Post(
+            path: '/api/admin/products/{id}/restore',
+            summary: '[Admin] Khôi phục sản phẩm đã xóa mềm',
+            tags: ['Admin - Products'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm đã bị xóa mềm'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Khôi phục thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy sản phẩm đã xóa'),
+            ]
+        )]
+    public function api_admin_productController_restore();
+
+    // --- Api/Admin/ProductImageControllerDocs.php ---
+    #[OA\Post(
+            path: '/api/admin/products/{product}/images',
+            summary: '[Admin] Thêm ảnh sản phẩm',
+            tags: ['Admin - Product Images'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm'),
+            ],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['image_path'],
+                    properties: [
+                        new OA\Property(property: 'image_path',    type: 'string',  description: 'Đường dẫn ảnh (relative: products/...)'),
+                        new OA\Property(property: 'is_primary',    type: 'boolean', nullable: true, description: 'Có phải ảnh đại diện không?'),
+                        new OA\Property(property: 'display_order', type: 'integer', nullable: true, description: 'Thứ tự hiển thị'),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 201, description: 'Thêm ảnh thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy sản phẩm'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_productImageController_store();
+
+    #[OA\Delete(
+            path: '/api/admin/products/{product}/images/{image}',
+            summary: '[Admin] Xóa ảnh sản phẩm',
+            tags: ['Admin - Product Images'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+                new OA\Parameter(name: 'image',   in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID ảnh'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Đã xóa ảnh'),
+                new OA\Response(response: 404, description: 'Không tìm thấy ảnh'),
+            ]
+        )]
+    public function api_admin_productImageController_destroy();
+
+    // --- Api/Admin/ProductVariantControllerDocs.php ---
+    #[OA\Post(
+            path: '/api/admin/products/{product}/variants',
+            summary: '[Admin] Thêm biến thể cho sản phẩm',
+            tags: ['Admin - Product Variants'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm'),
+            ],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['price'],
+                    properties: [
+                        new OA\Property(property: 'sku',        type: 'string',  nullable: true),
+                        new OA\Property(property: 'price',      type: 'number'),
+                        new OA\Property(property: 'sale_price', type: 'number',  nullable: true),
+                        new OA\Property(property: 'quantity',   type: 'integer', nullable: true),
+                        new OA\Property(property: 'image',      type: 'string',  nullable: true, description: 'Đường dẫn ảnh variant'),
+                        new OA\Property(property: 'is_active',  type: 'boolean', nullable: true),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 201, description: 'Tạo variant thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy sản phẩm'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_productVariantController_store();
+
+    #[OA\Put(
+            path: '/api/admin/products/{product}/variants/{variant}',
+            summary: '[Admin] Cập nhật biến thể sản phẩm',
+            tags: ['Admin - Product Variants'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm'),
+                new OA\Parameter(name: 'variant', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID biến thể'),
+            ],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['price'],
+                    properties: [
+                        new OA\Property(property: 'sku',        type: 'string',  nullable: true),
+                        new OA\Property(property: 'price',      type: 'number'),
+                        new OA\Property(property: 'sale_price', type: 'number',  nullable: true),
+                        new OA\Property(property: 'quantity',   type: 'integer', nullable: true),
+                        new OA\Property(property: 'image',      type: 'string',  nullable: true),
+                        new OA\Property(property: 'is_active',  type: 'boolean', nullable: true),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy variant'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_productVariantController_update();
+
+    #[OA\Delete(
+            path: '/api/admin/products/{product}/variants/{variant}',
+            summary: '[Admin] Xóa biến thể sản phẩm',
+            tags: ['Admin - Product Variants'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+                new OA\Parameter(name: 'variant', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Đã xóa variant'),
+                new OA\Response(response: 404, description: 'Không tìm thấy variant'),
+            ]
+        )]
+    public function api_admin_productVariantController_destroy();
+
+    // --- Api/Admin/UserControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/admin/users',
+            summary: '[Admin] Danh sách người dùng',
+            tags: ['Admin - Users'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'search',   in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Tìm theo fullname, email, phone'),
+                new OA\Parameter(name: 'role_id',  in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: '1=Admin, 2=Staff, 3=Customer'),
+                new OA\Parameter(name: 'status',   in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'active | inactive | banned'),
+                new OA\Parameter(name: 'trashed',  in: 'query', required: false, schema: new OA\Schema(type: 'boolean'), description: 'true = chỉ lấy user đã xóa mềm'),
+                new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'Số bản ghi/trang (mặc định 15)'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Thành công'),
+                new OA\Response(response: 401, description: 'Chưa xác thực'),
+                new OA\Response(response: 403, description: 'Không phải Admin'),
+            ]
+        )]
+    public function api_admin_userController_index();
+
+    #[OA\Get(
+            path: '/api/admin/users/{id}',
+            summary: '[Admin] Chi tiết người dùng',
+            tags: ['Admin - Users'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID người dùng'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+            ]
+        )]
+    public function api_admin_userController_show();
+
+    #[OA\Put(
+            path: '/api/admin/users/{id}',
+            summary: '[Admin] Cập nhật thông tin người dùng',
+            tags: ['Admin - Users'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'fullname',      type: 'string',  nullable: true),
+                        new OA\Property(property: 'phone',         type: 'string',  nullable: true),
+                        new OA\Property(property: 'role_id',       type: 'integer', description: '1=Admin 2=Staff 3=Customer'),
+                        new OA\Property(property: 'status',        type: 'string',  enum: ['active', 'inactive', 'banned']),
+                        new OA\Property(property: 'gender',        type: 'string',  enum: ['male', 'female', 'other'], nullable: true),
+                        new OA\Property(property: 'date_of_birth', type: 'string',  format: 'date', nullable: true),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_userController_update();
+
+    #[OA\Delete(
+            path: '/api/admin/users/{id}',
+            summary: '[Admin] Xóa mềm người dùng',
+            tags: ['Admin - Users'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Đã xóa'),
+                new OA\Response(response: 400, description: 'Không thể tự xóa chính mình'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+            ]
+        )]
+    public function api_admin_userController_destroy();
+
+    #[OA\Post(
+            path: '/api/admin/users/{id}/restore',
+            summary: '[Admin] Khôi phục người dùng đã xóa mềm',
+            tags: ['Admin - Users'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID user đã bị xóa mềm'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Khôi phục thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy user đã xóa'),
+                new OA\Response(response: 422, description: 'User chưa bị xóa'),
+            ]
+        )]
+    public function api_admin_userController_restore();
+
+    // --- Api/Admin/VoucherControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/admin/vouchers',
+            summary: '[Admin] Danh sách voucher',
+            tags: ['Admin - Vouchers'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'search',    in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Tìm theo code hoặc tên'),
+                new OA\Parameter(name: 'is_active', in: 'query', required: false, schema: new OA\Schema(type: 'boolean'), description: 'Lọc theo trạng thái'),
+                new OA\Parameter(name: 'per_page',  in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'Số bản ghi/trang (mặc định 15)'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Thành công'),
+                new OA\Response(response: 401, description: 'Chưa xác thực'),
+                new OA\Response(response: 403, description: 'Không phải Admin'),
+            ]
+        )]
+    public function api_admin_voucherController_index();
+
+    #[OA\Get(
+            path: '/api/admin/vouchers/{id}',
+            summary: '[Admin] Chi tiết voucher',
+            tags: ['Admin - Vouchers'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+            ]
+        )]
+    public function api_admin_voucherController_show();
+
+    #[OA\Post(
+            path: '/api/admin/vouchers',
+            summary: '[Admin] Tạo voucher mới',
+            tags: ['Admin - Vouchers'],
+            security: [['sanctum' => []]],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['code', 'name', 'discount_type', 'discount_value', 'start_date', 'end_date'],
+                    properties: [
+                        new OA\Property(property: 'code',                 type: 'string',  description: 'Mã voucher (viết hoa, unique)'),
+                        new OA\Property(property: 'name',                 type: 'string',  description: 'Tên voucher'),
+                        new OA\Property(property: 'description',          type: 'string',  nullable: true),
+                        new OA\Property(property: 'discount_type',        type: 'string',  enum: ['percent', 'fixed'], description: 'Loại giảm giá'),
+                        new OA\Property(property: 'discount_value',       type: 'number',  description: 'Giá trị giảm (% hoặc VNĐ)'),
+                        new OA\Property(property: 'max_discount',         type: 'number',  nullable: true, description: 'Giảm tối đa (VNĐ, áp dụng cho percent)'),
+                        new OA\Property(property: 'min_order_amount',     type: 'number',  description: 'Giá trị đơn tối thiểu để dùng'),
+                        new OA\Property(property: 'quantity',             type: 'integer', nullable: true, description: 'Số lượt sử dụng (null = không giới hạn)'),
+                        new OA\Property(property: 'usage_limit_per_user', type: 'integer', description: 'Giới hạn dùng per-user (0 = không giới hạn)'),
+                        new OA\Property(property: 'start_date',           type: 'string',  format: 'date-time', description: 'Ngày bắt đầu'),
+                        new OA\Property(property: 'end_date',             type: 'string',  format: 'date-time', description: 'Ngày kết thúc'),
+                        new OA\Property(property: 'is_active',            type: 'boolean', description: 'Kích hoạt ngay'),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 201, description: 'Tạo thành công'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_voucherController_store();
+
+    #[OA\Put(
+            path: '/api/admin/vouchers/{id}',
+            summary: '[Admin] Cập nhật voucher',
+            tags: ['Admin - Vouchers'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'name',                 type: 'string'),
+                        new OA\Property(property: 'description',          type: 'string',  nullable: true),
+                        new OA\Property(property: 'discount_type',        type: 'string',  enum: ['percent', 'fixed']),
+                        new OA\Property(property: 'discount_value',       type: 'number'),
+                        new OA\Property(property: 'max_discount',         type: 'number',  nullable: true),
+                        new OA\Property(property: 'min_order_amount',     type: 'number'),
+                        new OA\Property(property: 'quantity',             type: 'integer', nullable: true),
+                        new OA\Property(property: 'usage_limit_per_user', type: 'integer'),
+                        new OA\Property(property: 'start_date',           type: 'string',  format: 'date-time'),
+                        new OA\Property(property: 'end_date',             type: 'string',  format: 'date-time'),
+                        new OA\Property(property: 'is_active',            type: 'boolean'),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_voucherController_update();
+
+    #[OA\Delete(
+            path: '/api/admin/vouchers/{id}',
+            summary: '[Admin] Xóa voucher',
+            tags: ['Admin - Vouchers'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Đã xóa'),
+                new OA\Response(response: 400, description: 'Voucher đang được sử dụng, không thể xóa'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+            ]
+        )]
+    public function api_admin_voucherController_destroy();
+
+    // --- authDocs.php ---
+    #[OA\Post(
+        path: '/api/auth/forgot-password',
+        summary: 'Gửi yêu cầu quên mật khẩu',
+        description: 'Nhận email và gửi link reset mật khẩu qua email (Mail log trong storage/logs/laravel.log)',
+        tags: ['Password Reset'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['email'],
+                properties: [
+                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'customer@example.com')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Đã gửi link reset thành công'),
+            new OA\Response(response: 422, description: 'Email không tồn tại hoặc dữ liệu không hợp lệ'),
+            new OA\Response(response: 500, description: 'Lỗi server khi gửi mail')
+        ]
+    )]
+    public function auth_forgotPassword();
+
+    #[OA\Post(
+        path: '/api/auth/reset-password',
+        summary: 'Đặt lại mật khẩu mới',
+        description: 'Sử dụng token nhận được từ email để đặt lại mật khẩu',
+        tags: ['Password Reset'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['email', 'token', 'password', 'password_confirmation'],
+                properties: [
+                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'customer@example.com'),
+                    new OA\Property(property: 'token', type: 'string', description: 'Token nhận được từ email'),
+                    new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 6),
+                    new OA\Property(property: 'password_confirmation', type: 'string', format: 'password')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Đặt lại mật khẩu thành công'),
+            new OA\Response(response: 400, description: 'Token không hợp lệ hoặc đã hết hạn'),
+            new OA\Response(response: 422, description: 'Lỗi validation (mật khẩu không khớp, min 6 ký tự...)')
+        ]
+    )]
+    public function auth_resetPassword();
+
+    #[OA\Post(
+            path: '/api/auth/register',
+            summary: 'Đăng ký tài khoản mới',
+            tags: ['Authentication'],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['fullname', 'email', 'password', 'password_confirmation'],
+                    properties: [
+                        new OA\Property(property: 'fullname', type: 'string', example: 'Nguyen Van A'),
+                        new OA\Property(property: 'email', type: 'string', format: 'email', example: 'user@example.com'),
+                        new OA\Property(property: 'password', type: 'string', format: 'password', example: '123456'),
+                        new OA\Property(property: 'password_confirmation', type: 'string', format: 'password', example: '123456'),
+                        new OA\Property(property: 'phone', type: 'string', example: '0912345678'),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(
+                    response: 201,
+                    description: 'Đăng ký thành công',
+                    content: new OA\JsonContent(
+                        properties: [
+                            new OA\Property(property: 'status', type: 'boolean', example: true),
+                            new OA\Property(property: 'message', type: 'string', example: 'Đăng ký thành công'),
+                            new OA\Property(property: 'data', type: 'object', properties: [
+                                new OA\Property(property: 'user', type: 'object'),
+                                new OA\Property(property: 'token', type: 'string', example: '1|abcde...'),
+                                new OA\Property(property: 'token_type', type: 'string', example: 'Bearer'),
+                            ])
+                        ]
+                    )
+                ),
+                new OA\Response(response: 422, description: 'Lỗi kiểm tra dữ liệu')
+            ]
+        )]
+    public function api_authController_register();
+
+    #[OA\Post(
+            path: '/api/auth/login',
+            summary: 'Đăng nhập hệ thống',
+            tags: ['Authentication'],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['email', 'password'],
+                    properties: [
+                        new OA\Property(property: 'email', type: 'string', example: 'user@example.com'),
+                        new OA\Property(property: 'password', type: 'string', example: '123456'),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Đăng nhập thành công'),
+                new OA\Response(response: 401, description: 'Thông tin đăng nhập không chính xác')
+            ]
+        )]
+    public function api_authController_login();
+
+    #[OA\Get(
+            path: '/api/auth/me',
+            summary: 'Lấy thông tin người dùng hiện tại',
+            tags: ['Authentication'],
+            security: [['sanctum' => []]],
+            responses: [
+                new OA\Response(response: 200, description: 'Thành công'),
+                new OA\Response(response: 401, description: 'Chưa xác thực')
+            ]
+        )]
+    public function api_authController_me();
+
+    #[OA\Post(
+            path: '/api/auth/logout',
+            summary: 'Đăng xuất tài khoản',
+            tags: ['Authentication'],
+            security: [['sanctum' => []]],
+            responses: [
+                new OA\Response(response: 200, description: 'Đăng xuất thành công')
+            ]
+        )]
+    public function api_authController_logout();
+
+    #[OA\Post(
+            path: '/api/auth/change-password',
+            summary: 'Đổi mật khẩu khi đã đăng nhập',
+            tags: ['Authentication'],
+            security: [['sanctum' => []]],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['current_password', 'password', 'password_confirmation'],
+                    properties: [
+                        new OA\Property(property: 'current_password',      type: 'string', format: 'password'),
+                        new OA\Property(property: 'password',              type: 'string', format: 'password', minimum: 6),
+                        new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Đổi mật khẩu thành công'),
+                new OA\Response(response: 401, description: 'Mật khẩu hiện tại không đúng'),
+                new OA\Response(response: 422, description: 'Dữ liệu không hợp lệ'),
+            ]
+        )]
+    public function api_authController_changePassword();
+
+    // --- Api/Client/AddressControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/addresses',
+            summary: 'Danh sách địa chỉ của user hiện tại',
+            tags: ['Client - Address'],
+            security: [['sanctum' => []]],
+            responses: [
+                new OA\Response(
+                    response: 200,
+                    description: 'Danh sách địa chỉ',
+                    content: new OA\JsonContent(
+                        properties: [
+                            new OA\Property(property: 'status', type: 'boolean', example: true),
+                            new OA\Property(property: 'data', type: 'array', items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'id', type: 'integer'),
+                                    new OA\Property(property: 'fullname', type: 'string'),
+                                    new OA\Property(property: 'phone', type: 'string'),
+                                    new OA\Property(property: 'province', type: 'string'),
+                                    new OA\Property(property: 'district', type: 'string'),
+                                    new OA\Property(property: 'ward', type: 'string'),
+                                    new OA\Property(property: 'address_detail', type: 'string'),
+                                    new OA\Property(property: 'is_default', type: 'boolean'),
+                                    new OA\Property(property: 'address_type', type: 'string', enum: ['home', 'office', 'other']),
+                                ]
+                            )),
+                        ]
+                    )
+                ),
+                new OA\Response(response: 401, description: 'Chưa xác thực'),
+            ]
+        )]
+    public function api_client_addressController_index();
+
+    #[OA\Post(
+            path: '/api/addresses',
+            summary: 'Thêm địa chỉ mới',
+            tags: ['Client - Address'],
+            security: [['sanctum' => []]],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['fullname', 'phone', 'province', 'district', 'ward', 'address_detail'],
+                    properties: [
+                        new OA\Property(property: 'fullname',       type: 'string',  example: 'Nguyen Van A'),
+                        new OA\Property(property: 'phone',          type: 'string',  example: '0912345678'),
+                        new OA\Property(property: 'province',       type: 'string',  example: 'Hồ Chí Minh'),
+                        new OA\Property(property: 'district',       type: 'string',  example: 'Quận 1'),
+                        new OA\Property(property: 'ward',           type: 'string',  example: 'Phường Bến Nghé'),
+                        new OA\Property(property: 'address_detail', type: 'string',  example: '123 Nguyễn Huệ'),
+                        new OA\Property(property: 'is_default',     type: 'boolean', example: true),
+                        new OA\Property(property: 'address_type',   type: 'string',  enum: ['home', 'office', 'other'], example: 'home'),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 201, description: 'Thêm thành công'),
+                new OA\Response(response: 422, description: 'Lỗi validation'),
+                new OA\Response(response: 401, description: 'Chưa xác thực'),
+            ]
+        )]
+    public function api_client_addressController_store();
+
+    #[OA\Get(
+            path: '/api/addresses/{id}',
+            summary: 'Chi tiết 1 địa chỉ',
+            tags: ['Client - Address'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'OK'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+                new OA\Response(response: 401, description: 'Chưa xác thực'),
+            ]
+        )]
+    public function api_client_addressController_show();
+
+    #[OA\Put(
+            path: '/api/addresses/{id}',
+            summary: 'Cập nhật địa chỉ',
+            tags: ['Client - Address'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['fullname', 'phone', 'province', 'district', 'ward', 'address_detail'],
+                    properties: [
+                        new OA\Property(property: 'fullname',       type: 'string',  example: 'Nguyen Van B'),
+                        new OA\Property(property: 'phone',          type: 'string',  example: '0987654321'),
+                        new OA\Property(property: 'province',       type: 'string',  example: 'Hà Nội'),
+                        new OA\Property(property: 'district',       type: 'string',  example: 'Quận Hoàn Kiếm'),
+                        new OA\Property(property: 'ward',           type: 'string',  example: 'Phường Hàng Bạc'),
+                        new OA\Property(property: 'address_detail', type: 'string',  example: '45 Hàng Ngang'),
+                        new OA\Property(property: 'is_default',     type: 'boolean', example: false),
+                        new OA\Property(property: 'address_type',   type: 'string',  enum: ['home', 'office', 'other'], example: 'office'),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+                new OA\Response(response: 422, description: 'Lỗi validation'),
+            ]
+        )]
+    public function api_client_addressController_update();
+
+    #[OA\Delete(
+            path: '/api/addresses/{id}',
+            summary: 'Xóa địa chỉ',
+            tags: ['Client - Address'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Xóa thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+            ]
+        )]
+    public function api_client_addressController_destroy();
+
+    // --- Api/Client/BrandControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/brands',
+            summary: 'Danh sách thương hiệu đang hoạt động',
+            tags: ['Client - Brands'],
+            responses: [
+                new OA\Response(
+                    response: 200,
+                    description: 'Thành công',
+                    content: new OA\JsonContent(
+                        properties: [
+                            new OA\Property(property: 'data', type: 'array', items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'id',            type: 'integer'),
+                                    new OA\Property(property: 'name',          type: 'string'),
+                                    new OA\Property(property: 'slug',          type: 'string'),
+                                    new OA\Property(property: 'logo',          type: 'string', nullable: true),
+                                    new OA\Property(property: 'display_order', type: 'integer'),
+                                ]
+                            )),
+                        ]
+                    )
+                ),
+            ]
+        )]
+    public function api_client_brandController_index();
+
+    // --- Api/Client/CartControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/client/cart',
+            summary: 'Lấy danh sách giỏ hàng của user/session',
+            tags: ['Client - Cart'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(
+                    name: 'X-Session-ID',
+                    in: 'header',
+                    description: 'Session ID cho khách vãng lai (nếu chưa login)',
+                    required: false,
+                    schema: new OA\Schema(type: 'string')
+                )
+            ],
+            responses: [
+                new OA\Response(
+                    response: 200,
+                    description: 'Thành công',
+                    content: new OA\JsonContent(
+                        properties: [
+                            new OA\Property(property: 'status', type: 'string', example: 'success'),
+                            new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
+                            new OA\Property(property: 'total_items', type: 'integer', example: 3),
+                            new OA\Property(property: 'total_price', type: 'number', example: 599000),
+                        ]
+                    )
+                )
+            ]
+        )]
+    public function api_client_cartController_index();
+
+    #[OA\Post(
+            path: '/api/client/cart/add',
+            summary: 'Thêm sản phẩm vào giỏ hàng',
+            tags: ['Client - Cart'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(
+                    name: 'X-Session-ID',
+                    in: 'header',
+                    description: 'Session ID cho khách vãng lai',
+                    required: false,
+                    schema: new OA\Schema(type: 'string')
+                )
+            ],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['variant_id', 'quantity'],
+                    properties: [
+                        new OA\Property(property: 'variant_id', type: 'integer', description: 'ID của biến thể sản phẩm'),
+                        new OA\Property(property: 'quantity', type: 'integer', description: 'Số lượng muốn thêm', minimum: 1),
+                        new OA\Property(property: 'session_id', type: 'string', description: 'Session ID (dự phòng nếu không gửi qua header)', nullable: true),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Thêm / cộng dồn số lượng thành công'),
+                new OA\Response(response: 400, description: 'Thiếu User ID hoặc Session ID'),
+                new OA\Response(response: 422, description: 'Dữ liệu không hợp lệ'),
+            ]
+        )]
+    public function api_client_cartController_addToCart();
+
+    #[OA\Put(
+            path: '/api/client/cart/update/{cart_item_id}',
+            summary: 'Cập nhật số lượng sản phẩm trong giỏ',
+            tags: ['Client - Cart'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'cart_item_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+                new OA\Parameter(name: 'X-Session-ID', in: 'header', required: false, schema: new OA\Schema(type: 'string')),
+            ],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['quantity'],
+                    properties: [new OA\Property(property: 'quantity', type: 'integer', minimum: 1)]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công'),
+                new OA\Response(response: 403, description: 'Không có quyền'),
+                new OA\Response(response: 404, description: 'Không tìm thấy cart item'),
+                new OA\Response(response: 409, description: 'Số lượng vượt tồn kho'),
+            ]
+        )]
+    public function api_client_cartController_updateQuantity();
+
+    #[OA\Delete(
+            path: '/api/client/cart/remove/{cart_item_id}',
+            summary: 'Xóa 1 sản phẩm khỏi giỏ hàng',
+            tags: ['Client - Cart'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'cart_item_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+                new OA\Parameter(name: 'X-Session-ID', in: 'header', required: false, schema: new OA\Schema(type: 'string')),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Đã xóa khỏi giỏ'),
+                new OA\Response(response: 403, description: 'Không có quyền'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+            ]
+        )]
+    public function api_client_cartController_remove();
+
+    #[OA\Delete(
+            path: '/api/client/cart/clear',
+            summary: 'Xóa toàn bộ giỏ hàng',
+            tags: ['Client - Cart'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'X-Session-ID', in: 'header', required: false, schema: new OA\Schema(type: 'string')),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Đã xóa toàn bộ giỏ hàng'),
+                new OA\Response(response: 400, description: 'Thiếu định danh user/session'),
+            ]
+        )]
+    public function api_client_cartController_clear();
+
+    #[OA\Post(
+            path: '/api/client/cart/merge',
+            summary: 'Gộp giỏ hàng Guest vào tài khoản sau khi login',
+            tags: ['Client - Cart'],
+            security: [['sanctum' => []]],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['session_id'],
+                    properties: [
+                        new OA\Property(property: 'session_id', type: 'string', description: 'Session ID của giỏ hàng Guest cần gộp'),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Gộp giỏ hàng thành công'),
+                new OA\Response(response: 400, description: 'Thiếu session_id'),
+            ]
+        )]
+    public function api_client_cartController_merge();
+
+    // --- Api/Client/CategoryControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/client/categories',
+            summary: 'Lấy danh sách danh mục (Client)',
+            description: 'Trả về danh sách danh mục đang hoạt động. Truyền `?type=tree` để lấy dạng cây phân cấp (root + children). Mặc định trả về flat list.',
+            tags: ['Client - Categories'],
+            parameters: [
+                new OA\Parameter(
+                    name: 'type',
+                    in: 'query',
+                    description: 'Kiểu dữ liệu: `tree` = danh mục cha và con riêng biệt, flat list = tất cả danh mục lồng nhau',
+                    required: false,
+                    schema: new OA\Schema(
+                        type: 'string',
+                        enum: ['tree'],
+                        example: 'tree'
+                    )
+                ),
+            ],
+            responses: [
+                new OA\Response(
+                    response: 200,
+                    description: 'Danh sách danh mục thành công',
+                    content: new OA\JsonContent(
+                        properties: [
+                            new OA\Property(
+                                property: 'data',
+                                type: 'array',
+                                items: new OA\Items(
+                                    properties: [
+                                        new OA\Property(property: 'id',          type: 'integer', example: 1),
+                                        new OA\Property(property: 'name',        type: 'string',  example: 'Điện thoại'),
+                                        new OA\Property(property: 'slug',        type: 'string',  example: 'dien-thoai'),
+                                        new OA\Property(property: 'image',       type: 'string',  nullable: true, example: 'http://localhost/storage/categories/phone.jpg'),
+                                        new OA\Property(property: 'icon',        type: 'string',  nullable: true, example: 'http://localhost/storage/icons/phone.svg'),
+                                        new OA\Property(property: 'description', type: 'string',  nullable: true, example: 'Danh mục điện thoại thông minh'),
+                                        new OA\Property(property: 'parent_id',   type: 'integer', nullable: true, example: null),
+                                        new OA\Property(
+                                            property: 'children',
+                                            type: 'array',
+                                            description: 'Danh sách con (chỉ có khi ?type=tree)',
+                                            items: new OA\Items(type: 'object')
+                                        ),
+                                        new OA\Property(
+                                            property: 'meta',
+                                            type: 'object',
+                                            properties: [
+                                                new OA\Property(property: 'display_order', type: 'integer', example: 1),
+                                            ]
+                                        ),
+                                    ]
+                                )
+                            ),
+                        ]
+                    )
+                ),
+            ]
+        )]
+    public function api_client_categoryController_index();
+
+    #[OA\Get(
+            path: '/api/client/categories/{slug}',
+            summary: 'Xem chi tiết danh mục theo slug (Client)',
+            description: 'Trả về thông tin chi tiết của một danh mục đang hoạt động. Tự động load thông tin danh mục cha (parent) nếu có.',
+            tags: ['Client - Categories'],
+            parameters: [
+                new OA\Parameter(
+                    name: 'slug',
+                    in: 'path',
+                    description: 'Slug của danh mục (VD: dien-thoai)',
+                    required: true,
+                    schema: new OA\Schema(type: 'string', example: 'dien-thoai')
+                ),
+            ],
+            responses: [
+                new OA\Response(
+                    response: 200,
+                    description: 'Chi tiết danh mục thành công',
+                    content: new OA\JsonContent(
+                        properties: [
+                            new OA\Property(
+                                property: 'data',
+                                type: 'object',
+                                properties: [
+                                    new OA\Property(property: 'id',          type: 'integer', example: 2),
+                                    new OA\Property(property: 'name',        type: 'string',  example: 'iPhone'),
+                                    new OA\Property(property: 'slug',        type: 'string',  example: 'iphone'),
+                                    new OA\Property(property: 'image',       type: 'string',  nullable: true, example: 'http://localhost/storage/categories/iphone.jpg'),
+                                    new OA\Property(property: 'icon',        type: 'string',  nullable: true, example: null),
+                                    new OA\Property(property: 'description', type: 'string',  nullable: true, example: 'Danh mục iPhone chính hãng'),
+                                    new OA\Property(property: 'parent_id',   type: 'integer', nullable: true, example: 1),
+                                    new OA\Property(
+                                        property: 'parent',
+                                        type: 'object',
+                                        nullable: true,
+                                        description: 'Thông tin danh mục cha',
+                                        properties: [
+                                            new OA\Property(property: 'id',   type: 'integer', example: 1),
+                                            new OA\Property(property: 'name', type: 'string',  example: 'Điện thoại'),
+                                            new OA\Property(property: 'slug', type: 'string',  example: 'dien-thoai'),
+                                        ]
+                                    ),
+                                    new OA\Property(
+                                        property: 'meta',
+                                        type: 'object',
+                                        properties: [
+                                            new OA\Property(property: 'display_order', type: 'integer', example: 1),
+                                        ]
+                                    ),
+                                ]
+                            ),
+                        ]
+                    )
+                ),
+                new OA\Response(
+                    response: 404,
+                    description: 'Không tìm thấy danh mục hoặc danh mục đã bị ẩn',
+                    content: new OA\JsonContent(
+                        properties: [
+                            new OA\Property(property: 'message', type: 'string', example: 'No query results for model [App\\Models\\Category].'),
+                        ]
+                    )
+                ),
+            ]
+        )]
+    public function api_client_categoryController_show();
+
+    // --- Api/Client/CheckoutControllerDocs.php ---
+    #[OA\Post(
+            path: '/api/client/checkout',
+            summary: 'Đặt hàng từ giỏ hàng hiện tại',
+            tags: ['Client - Checkout'],
+            security: [['sanctum' => []]],
+            requestBody: new OA\RequestBody(
+                required: true,
+                content: new OA\JsonContent(
+                    required: ['shipping_address_id', 'payment_method'],
+                    properties: [
+                        new OA\Property(property: 'shipping_address_id', type: 'integer', description: 'ID địa chỉ giao hàng của user'),
+                        new OA\Property(property: 'payment_method', type: 'string', enum: ['cod', 'vnpay', 'momo', 'bank_transfer']),
+                        new OA\Property(property: 'voucher_code', type: 'string', nullable: true, description: 'Mã voucher (không bắt buộc)'),
+                        new OA\Property(property: 'note', type: 'string', nullable: true, description: 'Ghi chú đơn hàng'),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 201, description: 'Đặt hàng thành công'),
+                new OA\Response(response: 400, description: 'Giỏ hàng rỗng hoặc lỗi nghiệp vụ'),
+                new OA\Response(response: 403, description: 'Địa chỉ không thuộc về user này'),
+                new OA\Response(response: 409, description: 'Tồn kho không đủ'),
+                new OA\Response(response: 422, description: 'Dữ liệu không hợp lệ'),
+            ]
+        )]
+    public function api_client_checkoutController_checkout();
+
+    // --- Api/Client/OrderControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/client/orders',
+            summary: 'Danh sách đơn hàng của user',
+            tags: ['Client - Orders'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'status',         in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Lọc theo trạng thái: pending, confirmed, shipping, delivered, completed, cancelled'),
+                new OA\Parameter(name: 'payment_status', in: 'query', required: false, schema: new OA\Schema(type: 'string'),  description: 'Lọc theo thanh toán: unpaid, paid, refunded'),
+                new OA\Parameter(name: 'per_page',       in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'Số bản ghi/trang (mặc định 10)'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Thành công'),
+                new OA\Response(response: 401, description: 'Chưa xác thực'),
+            ]
+        )]
+    public function api_client_orderController_index();
+
+    #[OA\Get(
+            path: '/api/client/orders/{id}',
+            summary: 'Chi tiết đơn hàng của user',
+            tags: ['Client - Orders'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID đơn hàng'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Thành công'),
+                new OA\Response(response: 403, description: 'Không phải đơn hàng của bạn'),
+                new OA\Response(response: 404, description: 'Không tìm thấy đơn hàng'),
+            ]
+        )]
+    public function api_client_orderController_show();
+
+    #[OA\Post(
+            path: '/api/client/orders/{id}/cancel',
+            summary: 'Hủy đơn hàng (chỉ khi đang ở trạng thái pending)',
+            tags: ['Client - Orders'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            requestBody: new OA\RequestBody(
+                required: false,
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'reason', type: 'string', nullable: true, description: 'Lý do hủy đơn (không bắt buộc)'),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Hủy đơn thành công'),
+                new OA\Response(response: 403, description: 'Không phải đơn của bạn hoặc không thể hủy'),
+                new OA\Response(response: 404, description: 'Không tìm thấy đơn hàng'),
+                new OA\Response(response: 422, description: 'Đơn hàng không ở trạng thái có thể hủy'),
+            ]
+        )]
+    public function api_client_orderController_cancel();
+
+    // --- Api/Client/ProductControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/products',
+            summary: 'Lấy danh sách sản phẩm',
+            tags: ['Client - Products'],
+            parameters: [
+                new OA\Parameter(
+                    name: 'category_id',
+                    in: 'query',
+                    description: 'Lọc theo ID danh mục',
+                    required: false,
+                    schema: new OA\Schema(type: 'integer')
+                ),
+                new OA\Parameter(
+                    name: 'keyword',
+                    in: 'query',
+                    description: 'Tìm kiếm theo tên sản phẩm',
+                    required: false,
+                    schema: new OA\Schema(type: 'string')
+                ),
+                new OA\Parameter(
+                    name: 'min_price',
+                    in: 'query',
+                    description: 'Lọc sản phẩm có giá từ mức này trở lên',
+                    required: false,
+                    schema: new OA\Schema(type: 'number')
+                ),
+                 new OA\Parameter(
+                    name: 'max_price',
+                    in: 'query',
+                    description: 'Lọc sản phẩm có giá đến mức này',
+                    required: false,
+                    schema: new OA\Schema(type: 'number')
+                ),
+                new OA\Parameter(
+                    name: 'sort_by',
+                    in: 'query',
+                    description: 'Sắp xếp theo: price_asc, price_desc, latest, oldest, view_count',
+                    required: false,
+                    schema: new OA\Schema(type: 'string')
+                ),
+                 new OA\Parameter(
+                    name: 'page',
+                    in: 'query',
+                    description: 'Số trang (phân trang)',
+                    required: false,
+                    schema: new OA\Schema(type: 'integer')
+                ),
+            ],
+            responses: [
+                new OA\Response(
+                    response: 200,
+                    description: 'Danh sách sản phẩm thành công',
+                    content: new OA\JsonContent(
+                        properties: [
+                            new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
+                            new OA\Property(property: 'links', type: 'object'),
+                            new OA\Property(property: 'meta', type: 'object'),
+                        ]
+                    )
+                )
+            ]
+        )]
+    public function api_client_productController_index();
+
+    #[OA\Get(
+            path: '/api/products/{id}',
+            summary: 'Xem chi tiết sản phẩm',
+            tags: ['Client - Products'],
+            parameters: [
+                new OA\Parameter(
+                    name: 'id',
+                    in: 'path',
+                    description: 'ID của sản phẩm',
+                    required: true,
+                    schema: new OA\Schema(type: 'integer')
+                )
+            ],
+            responses: [
+                new OA\Response(
+                    response: 200,
+                    description: 'Chi tiết sản phẩm',
+                    content: new OA\JsonContent(
+                        properties: [
+                            new OA\Property(property: 'data', type: 'object')
+                        ]
+                    )
+                ),
+                new OA\Response(
+                    response: 404,
+                    description: 'Không tìm thấy sản phẩm'
+                )
+            ]
+        )]
+    public function api_client_productController_show();
+
+    // --- Api/Client/ProfileControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/profile',
+            summary: 'Lấy thông tin profile và danh sách địa chỉ',
+            tags: ['Client - Profile'],
+            security: [['sanctum' => []]],
+            responses: [
+                new OA\Response(response: 200, description: 'Thành công')
+            ]
+        )]
+    public function api_client_profileController_show();
+
+    #[OA\Put(
+            path: '/api/profile',
+            summary: 'Cập nhật thông tin cá nhân',
+            tags: ['Client - Profile'],
+            security: [['sanctum' => []]],
+            requestBody: new OA\RequestBody(
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'fullname', type: 'string'),
+                        new OA\Property(property: 'phone', type: 'string'),
+                        new OA\Property(property: 'gender', type: 'string', enum: ['male', 'female', 'other']),
+                        new OA\Property(property: 'date_of_birth', type: 'string', format: 'date'),
+                    ]
+                )
+            ),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công')
+            ]
+        )]
+    public function api_client_profileController_update();
+
+    // --- Reviews API ---
+    #[OA\Get(
+        path: '/api/products/{id}/reviews',
+        summary: 'Danh sách đánh giá của sản phẩm (Public)',
+        tags: ['Public - Reviews'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_reviews_productReviews();
+
+    #[OA\Post(
+        path: '/api/client/reviews',
+        summary: 'Gửi đánh giá sản phẩm (Client)',
+        tags: ['Client - Reviews'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['order_item_id', 'rating', 'content'],
+                properties: [
+                    new OA\Property(property: 'order_item_id', type: 'integer'),
+                    new OA\Property(property: 'rating', type: 'integer', minimum: 1, maximum: 5),
+                    new OA\Property(property: 'content', type: 'string'),
+                    new OA\Property(property: 'images', type: 'array', items: new OA\Items(type: 'string'), nullable: true)
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Gửi thành công'),
+            new OA\Response(response: 422, description: 'Dữ liệu không hợp lệ')
+        ]
+    )]
+    public function api_client_reviews_store();
+
+    #[OA\Get(
+        path: '/api/admin/reviews',
+        summary: 'Danh sách đánh giá (Admin)',
+        tags: ['Admin - Reviews'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_reviews_index();
+
+    #[OA\Patch(
+        path: '/api/admin/reviews/{id}/reply',
+        summary: 'Trả lời đánh giá (Admin)',
+        tags: ['Admin - Reviews'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['reply_content'],
+                properties: [
+                    new OA\Property(property: 'reply_content', type: 'string')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_reviews_reply();
+
+    #[OA\Patch(
+        path: '/api/admin/reviews/{id}/toggle-visibility',
+        summary: 'Ẩn/Hiện đánh giá (Admin)',
+        tags: ['Admin - Reviews'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_reviews_toggleVisibility();
+
+    #[OA\Delete(
+        path: '/api/admin/reviews/{id}',
+        summary: 'Xóa đánh giá (Admin)',
+        tags: ['Admin - Reviews'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_reviews_destroy();
+
+    // --- Wishlist API ---
+    #[OA\Get(
+        path: '/api/client/wishlist',
+        summary: 'Danh sách yêu thích (Client)',
+        tags: ['Client - Wishlist'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_client_wishlist_index();
+
+    #[OA\Post(
+        path: '/api/client/wishlist',
+        summary: 'Thêm vào danh sách yêu thích (Client)',
+        tags: ['Client - Wishlist'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['product_id'],
+                properties: [
+                    new OA\Property(property: 'product_id', type: 'integer')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Thành công')
+        ]
+    )]
+    public function api_client_wishlist_store();
+
+    #[OA\Delete(
+        path: '/api/client/wishlist/{id}',
+        summary: 'Xóa khỏi danh sách yêu thích (Client)',
+        tags: ['Client - Wishlist'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'Product ID')
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_client_wishlist_destroy();
+
+    // --- News API ---
+    #[OA\Get(
+        path: '/api/news',
+        summary: 'Danh sách tin tức (Public)',
+        tags: ['Public - News'],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_news_index();
+
+    #[OA\Get(
+        path: '/api/news/{slug}',
+        summary: 'Chi tiết tin tức (Public)',
+        tags: ['Public - News'],
+        parameters: [
+            new OA\Parameter(name: 'slug', in: 'path', required: true, schema: new OA\Schema(type: 'string'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_news_show();
+
+    #[OA\Get(
+        path: '/api/admin/news',
+        summary: 'Quản lý tin tức (Admin)',
+        tags: ['Admin - News'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_news_index();
+
+    #[OA\Post(
+        path: '/api/admin/news',
+        summary: 'Tạo tin tức mới (Admin)',
+        tags: ['Admin - News'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['title', 'content'],
+                properties: [
+                    new OA\Property(property: 'title', type: 'string'),
+                    new OA\Property(property: 'summary', type: 'string'),
+                    new OA\Property(property: 'content', type: 'string'),
+                    new OA\Property(property: 'thumbnail', type: 'string'),
+                    new OA\Property(property: 'is_featured', type: 'boolean'),
+                    new OA\Property(property: 'is_active', type: 'boolean'),
+                    new OA\Property(property: 'published_at', type: 'string', format: 'date-time')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_news_store();
+
+    #[OA\Put(
+        path: '/api/admin/news/{id}',
+        summary: 'Cập nhật tin tức (Admin)',
+        tags: ['Admin - News'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'title', type: 'string'),
+                    new OA\Property(property: 'content', type: 'string'),
+                    new OA\Property(property: 'is_active', type: 'boolean')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_news_update();
+
+    #[OA\Delete(
+        path: '/api/admin/news/{id}',
+        summary: 'Xóa tin tức (Admin)',
+        tags: ['Admin - News'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_news_destroy();
+
+    // --- Contacts API ---
+    #[OA\Post(
+        path: '/api/contacts',
+        summary: 'Gửi liên hệ (Public)',
+        tags: ['Public - Contacts'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['fullname', 'email', 'subject', 'message'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'email', type: 'string', format: 'email'),
+                    new OA\Property(property: 'phone', type: 'string'),
+                    new OA\Property(property: 'subject', type: 'string'),
+                    new OA\Property(property: 'message', type: 'string')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Gửi thành công')
+        ]
+    )]
+    public function api_contacts_store();
+
+    #[OA\Get(
+        path: '/api/admin/contacts',
+        summary: 'Danh sách liên hệ (Admin)',
+        tags: ['Admin - Contacts'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_contacts_index();
+
+    #[OA\Patch(
+        path: '/api/admin/contacts/{id}/reply',
+        summary: 'Phản hồi liên hệ (Admin)',
+        tags: ['Admin - Contacts'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['reply_content'],
+                properties: [
+                    new OA\Property(property: 'reply_content', type: 'string')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_contacts_reply();
+
+    // --- Attributes API ---
+    #[OA\Get(
+        path: '/api/admin/attribute-groups',
+        summary: 'Nhóm thuộc tính (Admin)',
+        tags: ['Admin - Attributes'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_attributeGroups_index();
+
+    #[OA\Post(
+        path: '/api/admin/attribute-groups',
+        summary: 'Tạo nhóm thuộc tính (Admin)',
+        tags: ['Admin - Attributes'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'display_name'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'display_name', type: 'string'),
+                    new OA\Property(property: 'display_order', type: 'integer')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_attributeGroups_store();
+
+    #[OA\Get(
+        path: '/api/admin/attributes',
+        summary: 'Giá trị thuộc tính (Admin)',
+        tags: ['Admin - Attributes'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'attribute_group_id', in: 'query', schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_attributes_index();
+
+    #[OA\Post(
+        path: '/api/admin/attributes',
+        summary: 'Tạo giá trị thuộc tính (Admin)',
+        tags: ['Admin - Attributes'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['attribute_group_id', 'value'],
+                properties: [
+                    new OA\Property(property: 'attribute_group_id', type: 'integer'),
+                    new OA\Property(property: 'value', type: 'string'),
+                    new OA\Property(property: 'color_code', type: 'string'),
+                    new OA\Property(property: 'display_order', type: 'integer')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_attributes_store();
+
+    // --- Dashboard API ---
+    #[OA\Get(
+        path: '/api/admin/dashboard/stats',
+        summary: 'Thống kê tổng quan (Admin)',
+        tags: ['Admin - Dashboard'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_dashboard_stats();
+
+    #[OA\Get(
+        path: '/api/admin/dashboard/revenue',
+        summary: 'Thống kê doanh thu (Admin)',
+        tags: ['Admin - Dashboard'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'year', in: 'query', schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_dashboard_revenue();
+
+}
