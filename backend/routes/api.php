@@ -21,6 +21,16 @@ use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 
 // New Controllers
 use App\Http\Controllers\Api\Client\OrderController as ClientOrderController;
+use App\Http\Controllers\Api\Client\ReviewController as ClientReviewController;
+use App\Http\Controllers\Api\Admin\ReviewController as AdminReviewController;
+use App\Http\Controllers\Api\Client\WishlistController as ClientWishlistController;
+use App\Http\Controllers\Api\Client\NewsController as ClientNewsController;
+use App\Http\Controllers\Api\Admin\NewsController as AdminNewsController;
+use App\Http\Controllers\Api\Client\ContactController as ClientContactController;
+use App\Http\Controllers\Api\Admin\ContactController as AdminContactController;
+use App\Http\Controllers\Api\Admin\AttributeGroupController;
+use App\Http\Controllers\Api\Admin\AttributeController;
+use App\Http\Controllers\Api\Admin\DashboardController;
 
 
 
@@ -54,6 +64,14 @@ Route::get('/cart',                  [CartController::class, 'index']);
 Route::post('/cart/add',             [CartController::class, 'addToCart']);
 Route::put('/cart/update/{id}',      [CartController::class, 'updateQuantity']);
 Route::delete('/cart/remove/{id}',   [CartController::class, 'remove']);
+
+// --- Reviews & News (Public) ---
+Route::get('/products/{id}/reviews', [ClientReviewController::class, 'productReviews']);
+Route::get('/news',                  [ClientNewsController::class, 'index']);
+Route::get('/news/{slug}',           [ClientNewsController::class, 'show']);
+
+// --- Contacts (Public) ---
+Route::post('/contacts',             [ClientContactController::class, 'store']);
 
 
 // ========================================================================
@@ -89,6 +107,14 @@ Route::prefix('client')->name('client.')->group(function () {
         Route::get('/orders',              [ClientOrderController::class, 'index']);
         Route::get('/orders/{id}',         [ClientOrderController::class, 'show']);
         Route::post('/orders/{id}/cancel', [ClientOrderController::class, 'cancel']);
+
+        // Review sản phẩm
+        Route::post('/reviews',            [ClientReviewController::class, 'store']);
+
+        // Wishlist (Yêu thích)
+        Route::get('/wishlist',            [ClientWishlistController::class, 'index']);
+        Route::post('/wishlist',           [ClientWishlistController::class, 'store']);
+        Route::delete('/wishlist/{id}',    [ClientWishlistController::class, 'destroy']);
     });
 });
 
@@ -148,4 +174,27 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     // --- Admin Users ---
     Route::apiResource('users', AdminUserController::class)->except(['store']);
     Route::post('users/{user}/restore', [AdminUserController::class, 'restore']);
+
+    // --- Admin Reviews ---
+    Route::get('reviews',                         [AdminReviewController::class, 'index']);
+    // Dùng patch vì update từng phần
+    Route::patch('reviews/{id}/reply',            [AdminReviewController::class, 'reply']);
+    Route::patch('reviews/{id}/toggle-visibility', [AdminReviewController::class, 'toggleVisibility']);
+    Route::delete('reviews/{id}',                 [AdminReviewController::class, 'destroy']);
+
+    // --- Admin News ---
+    Route::apiResource('news', AdminNewsController::class);
+
+    // --- Admin Contacts ---
+    Route::get('contacts',               [AdminContactController::class, 'index']);
+    Route::patch('contacts/{id}/reply',  [AdminContactController::class, 'reply']);
+    Route::delete('contacts/{id}',       [AdminContactController::class, 'destroy']);
+
+    // --- Admin Attributes ---
+    Route::apiResource('attribute-groups', AttributeGroupController::class);
+    Route::apiResource('attributes',       AttributeController::class);
+
+    // --- Admin Dashboard ---
+    Route::get('dashboard/stats',   [DashboardController::class, 'stats']);
+    Route::get('dashboard/revenue', [DashboardController::class, 'revenue']);
 });

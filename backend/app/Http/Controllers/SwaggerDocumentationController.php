@@ -775,7 +775,7 @@ interface SwaggerDocumentationController
         path: '/api/auth/forgot-password',
         summary: 'Gửi yêu cầu quên mật khẩu',
         description: 'Nhận email và gửi link reset mật khẩu qua email (Mail log trong storage/logs/laravel.log)',
-        tags: ['Authentication'],
+        tags: ['Password Reset'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -797,7 +797,7 @@ interface SwaggerDocumentationController
         path: '/api/auth/reset-password',
         summary: 'Đặt lại mật khẩu mới',
         description: 'Sử dụng token nhận được từ email để đặt lại mật khẩu',
-        tags: ['Authentication'],
+        tags: ['Password Reset'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -1563,5 +1563,392 @@ interface SwaggerDocumentationController
         )]
     public function api_client_profileController_update();
 
+    // --- Reviews API ---
+    #[OA\Get(
+        path: '/api/products/{id}/reviews',
+        summary: 'Danh sách đánh giá của sản phẩm (Public)',
+        tags: ['Public - Reviews'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_reviews_productReviews();
+
+    #[OA\Post(
+        path: '/api/client/reviews',
+        summary: 'Gửi đánh giá sản phẩm (Client)',
+        tags: ['Client - Reviews'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['order_item_id', 'rating', 'content'],
+                properties: [
+                    new OA\Property(property: 'order_item_id', type: 'integer'),
+                    new OA\Property(property: 'rating', type: 'integer', minimum: 1, maximum: 5),
+                    new OA\Property(property: 'content', type: 'string'),
+                    new OA\Property(property: 'images', type: 'array', items: new OA\Items(type: 'string'), nullable: true)
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Gửi thành công'),
+            new OA\Response(response: 422, description: 'Dữ liệu không hợp lệ')
+        ]
+    )]
+    public function api_client_reviews_store();
+
+    #[OA\Get(
+        path: '/api/admin/reviews',
+        summary: 'Danh sách đánh giá (Admin)',
+        tags: ['Admin - Reviews'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_reviews_index();
+
+    #[OA\Patch(
+        path: '/api/admin/reviews/{id}/reply',
+        summary: 'Trả lời đánh giá (Admin)',
+        tags: ['Admin - Reviews'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['reply_content'],
+                properties: [
+                    new OA\Property(property: 'reply_content', type: 'string')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_reviews_reply();
+
+    #[OA\Patch(
+        path: '/api/admin/reviews/{id}/toggle-visibility',
+        summary: 'Ẩn/Hiện đánh giá (Admin)',
+        tags: ['Admin - Reviews'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_reviews_toggleVisibility();
+
+    #[OA\Delete(
+        path: '/api/admin/reviews/{id}',
+        summary: 'Xóa đánh giá (Admin)',
+        tags: ['Admin - Reviews'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_reviews_destroy();
+
+    // --- Wishlist API ---
+    #[OA\Get(
+        path: '/api/client/wishlist',
+        summary: 'Danh sách yêu thích (Client)',
+        tags: ['Client - Wishlist'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_client_wishlist_index();
+
+    #[OA\Post(
+        path: '/api/client/wishlist',
+        summary: 'Thêm vào danh sách yêu thích (Client)',
+        tags: ['Client - Wishlist'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['product_id'],
+                properties: [
+                    new OA\Property(property: 'product_id', type: 'integer')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Thành công')
+        ]
+    )]
+    public function api_client_wishlist_store();
+
+    #[OA\Delete(
+        path: '/api/client/wishlist/{id}',
+        summary: 'Xóa khỏi danh sách yêu thích (Client)',
+        tags: ['Client - Wishlist'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'Product ID')
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_client_wishlist_destroy();
+
+    // --- News API ---
+    #[OA\Get(
+        path: '/api/news',
+        summary: 'Danh sách tin tức (Public)',
+        tags: ['Public - News'],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_news_index();
+
+    #[OA\Get(
+        path: '/api/news/{slug}',
+        summary: 'Chi tiết tin tức (Public)',
+        tags: ['Public - News'],
+        parameters: [
+            new OA\Parameter(name: 'slug', in: 'path', required: true, schema: new OA\Schema(type: 'string'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_news_show();
+
+    #[OA\Get(
+        path: '/api/admin/news',
+        summary: 'Quản lý tin tức (Admin)',
+        tags: ['Admin - News'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_news_index();
+
+    #[OA\Post(
+        path: '/api/admin/news',
+        summary: 'Tạo tin tức mới (Admin)',
+        tags: ['Admin - News'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['title', 'content'],
+                properties: [
+                    new OA\Property(property: 'title', type: 'string'),
+                    new OA\Property(property: 'summary', type: 'string'),
+                    new OA\Property(property: 'content', type: 'string'),
+                    new OA\Property(property: 'thumbnail', type: 'string'),
+                    new OA\Property(property: 'is_featured', type: 'boolean'),
+                    new OA\Property(property: 'is_active', type: 'boolean'),
+                    new OA\Property(property: 'published_at', type: 'string', format: 'date-time')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_news_store();
+
+    #[OA\Put(
+        path: '/api/admin/news/{id}',
+        summary: 'Cập nhật tin tức (Admin)',
+        tags: ['Admin - News'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'title', type: 'string'),
+                    new OA\Property(property: 'content', type: 'string'),
+                    new OA\Property(property: 'is_active', type: 'boolean')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_news_update();
+
+    #[OA\Delete(
+        path: '/api/admin/news/{id}',
+        summary: 'Xóa tin tức (Admin)',
+        tags: ['Admin - News'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_news_destroy();
+
+    // --- Contacts API ---
+    #[OA\Post(
+        path: '/api/contacts',
+        summary: 'Gửi liên hệ (Public)',
+        tags: ['Public - Contacts'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['fullname', 'email', 'subject', 'message'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'email', type: 'string', format: 'email'),
+                    new OA\Property(property: 'phone', type: 'string'),
+                    new OA\Property(property: 'subject', type: 'string'),
+                    new OA\Property(property: 'message', type: 'string')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Gửi thành công')
+        ]
+    )]
+    public function api_contacts_store();
+
+    #[OA\Get(
+        path: '/api/admin/contacts',
+        summary: 'Danh sách liên hệ (Admin)',
+        tags: ['Admin - Contacts'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_contacts_index();
+
+    #[OA\Patch(
+        path: '/api/admin/contacts/{id}/reply',
+        summary: 'Phản hồi liên hệ (Admin)',
+        tags: ['Admin - Contacts'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['reply_content'],
+                properties: [
+                    new OA\Property(property: 'reply_content', type: 'string')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_contacts_reply();
+
+    // --- Attributes API ---
+    #[OA\Get(
+        path: '/api/admin/attribute-groups',
+        summary: 'Nhóm thuộc tính (Admin)',
+        tags: ['Admin - Attributes'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_attributeGroups_index();
+
+    #[OA\Post(
+        path: '/api/admin/attribute-groups',
+        summary: 'Tạo nhóm thuộc tính (Admin)',
+        tags: ['Admin - Attributes'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'display_name'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'display_name', type: 'string'),
+                    new OA\Property(property: 'display_order', type: 'integer')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_attributeGroups_store();
+
+    #[OA\Get(
+        path: '/api/admin/attributes',
+        summary: 'Giá trị thuộc tính (Admin)',
+        tags: ['Admin - Attributes'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'attribute_group_id', in: 'query', schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_attributes_index();
+
+    #[OA\Post(
+        path: '/api/admin/attributes',
+        summary: 'Tạo giá trị thuộc tính (Admin)',
+        tags: ['Admin - Attributes'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['attribute_group_id', 'value'],
+                properties: [
+                    new OA\Property(property: 'attribute_group_id', type: 'integer'),
+                    new OA\Property(property: 'value', type: 'string'),
+                    new OA\Property(property: 'color_code', type: 'string'),
+                    new OA\Property(property: 'display_order', type: 'integer')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_attributes_store();
+
+    // --- Dashboard API ---
+    #[OA\Get(
+        path: '/api/admin/dashboard/stats',
+        summary: 'Thống kê tổng quan (Admin)',
+        tags: ['Admin - Dashboard'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_dashboard_stats();
+
+    #[OA\Get(
+        path: '/api/admin/dashboard/revenue',
+        summary: 'Thống kê doanh thu (Admin)',
+        tags: ['Admin - Dashboard'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'year', in: 'query', schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_dashboard_revenue();
 
 }

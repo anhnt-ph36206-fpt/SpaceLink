@@ -1907,7 +1907,7 @@
         "/api/auth/forgot-password": {
             "post": {
                 "tags": [
-                    "Authentication"
+                    "Password Reset"
                 ],
                 "summary": "Gửi yêu cầu quên mật khẩu",
                 "description": "Nhận email và gửi link reset mật khẩu qua email (Mail log trong storage/logs/laravel.log)",
@@ -1948,7 +1948,7 @@
         "/api/auth/reset-password": {
             "post": {
                 "tags": [
-                    "Authentication"
+                    "Password Reset"
                 ],
                 "summary": "Đặt lại mật khẩu mới",
                 "description": "Sử dụng token nhận được từ email để đặt lại mật khẩu",
@@ -3550,6 +3550,10 @@
         {
             "name": "Admin - Vouchers",
             "description": "Admin - Vouchers"
+        },
+        {
+            "name": "Password Reset",
+            "description": "Password Reset"
         },
         {
             "name": "Authentication",

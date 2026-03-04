@@ -128,11 +128,11 @@ class AuthController extends Controller
     public function forgotPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email|exists:users,email,deleted_at,NULL',
         ], [
             'email.required' => 'Vui lòng nhập địa chỉ email.',
             'email.email'    => 'Địa chỉ email không đúng định dạng.',
-            'email.exists'   => 'Email này không tồn tại trong hệ thống.',
+            'email.exists'   => 'Email này không tồn tại hoặc tài khoản đã bị vô hiệu hóa.',
         ]);
 
         if ($validator->fails()) {
