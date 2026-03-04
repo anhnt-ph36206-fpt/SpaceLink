@@ -20,6 +20,33 @@ use OpenApi\Attributes as OA;
     bearerFormat: "JWT",
     description: "Nhập Token theo định dạng: Bearer {token}"
 )]
+#[OA\Tag(name: "Authentication", description: "Authentication")]
+#[OA\Tag(name: "Password Reset", description: "Password Reset")]
+#[OA\Tag(name: "Admin - Attributes", description: "Admin - Attributes")]
+#[OA\Tag(name: "Admin - Categories", description: "Admin - Categories")]
+#[OA\Tag(name: "Admin - Contacts", description: "Admin - Contacts")]
+#[OA\Tag(name: "Admin - Dashboard", description: "Admin - Dashboard")]
+#[OA\Tag(name: "Admin - News", description: "Admin - News")]
+#[OA\Tag(name: "Admin - Orders", description: "Admin - Orders")]
+#[OA\Tag(name: "Admin - Product Images", description: "Admin - Product Images")]
+#[OA\Tag(name: "Admin - Product Variants", description: "Admin - Product Variants")]
+#[OA\Tag(name: "Admin - Products", description: "Admin - Products")]
+#[OA\Tag(name: "Admin - Reviews", description: "Admin - Reviews")]
+#[OA\Tag(name: "Admin - Users", description: "Admin - Users")]
+#[OA\Tag(name: "Admin - Vouchers", description: "Admin - Vouchers")]
+#[OA\Tag(name: "Client - Address", description: "Client - Address")]
+#[OA\Tag(name: "Client - Brands", description: "Client - Brands")]
+#[OA\Tag(name: "Client - Cart", description: "Client - Cart")]
+#[OA\Tag(name: "Client - Categories", description: "Client - Categories")]
+#[OA\Tag(name: "Client - Checkout", description: "Client - Checkout")]
+#[OA\Tag(name: "Client - Orders", description: "Client - Orders")]
+#[OA\Tag(name: "Client - Products", description: "Client - Products")]
+#[OA\Tag(name: "Client - Profile", description: "Client - Profile")]
+#[OA\Tag(name: "Client - Reviews", description: "Client - Reviews")]
+#[OA\Tag(name: "Client - Wishlist", description: "Client - Wishlist")]
+#[OA\Tag(name: "Public - Contacts", description: "Public - Contacts")]
+#[OA\Tag(name: "Public - News", description: "Public - News")]
+#[OA\Tag(name: "Public - Reviews", description: "Public - Reviews")]
 interface SwaggerDocumentationController
 {
     // --- Api/Admin/CategoryControllerDocs.php ---

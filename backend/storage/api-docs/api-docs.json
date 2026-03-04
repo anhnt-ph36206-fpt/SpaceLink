@@ -3510,6 +3510,739 @@
                     }
                 ]
             }
+        },
+        "/api/products/{id}/reviews": {
+            "get": {
+                "tags": [
+                    "Public - Reviews"
+                ],
+                "summary": "Danh sách đánh giá của sản phẩm (Public)",
+                "operationId": "48e6e56d69d9ec8e5f429e0f00a87e30",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                }
+            }
+        },
+        "/api/client/reviews": {
+            "post": {
+                "tags": [
+                    "Client - Reviews"
+                ],
+                "summary": "Gửi đánh giá sản phẩm (Client)",
+                "operationId": "662a26bbea806fb5f1130e134c3d952d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "order_item_id",
+                                    "rating",
+                                    "content"
+                                ],
+                                "properties": {
+                                    "order_item_id": {
+                                        "type": "integer"
+                                    },
+                                    "rating": {
+                                        "type": "integer",
+                                        "maximum": 5,
+                                        "minimum": 1
+                                    },
+                                    "content": {
+                                        "type": "string"
+                                    },
+                                    "images": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Gửi thành công"
+                    },
+                    "422": {
+                        "description": "Dữ liệu không hợp lệ"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reviews": {
+            "get": {
+                "tags": [
+                    "Admin - Reviews"
+                ],
+                "summary": "Danh sách đánh giá (Admin)",
+                "operationId": "988a1dd9bb10f37e7696338b263b0608",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reviews/{id}/reply": {
+            "patch": {
+                "tags": [
+                    "Admin - Reviews"
+                ],
+                "summary": "Trả lời đánh giá (Admin)",
+                "operationId": "172d504bed112823ebab8ca51ed59e5f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reply_content"
+                                ],
+                                "properties": {
+                                    "reply_content": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reviews/{id}/toggle-visibility": {
+            "patch": {
+                "tags": [
+                    "Admin - Reviews"
+                ],
+                "summary": "Ẩn/Hiện đánh giá (Admin)",
+                "operationId": "28110c75ab3cf2bc3c704942ea52dcee",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reviews/{id}": {
+            "delete": {
+                "tags": [
+                    "Admin - Reviews"
+                ],
+                "summary": "Xóa đánh giá (Admin)",
+                "operationId": "824ecc0fb5e3f722c7773eeff913ca0a",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/client/wishlist": {
+            "get": {
+                "tags": [
+                    "Client - Wishlist"
+                ],
+                "summary": "Danh sách yêu thích (Client)",
+                "operationId": "53052473c85cc3ef76d778b447588f0c",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Client - Wishlist"
+                ],
+                "summary": "Thêm vào danh sách yêu thích (Client)",
+                "operationId": "776a41ff7cac8c0dd50753ae29dd1711",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "product_id"
+                                ],
+                                "properties": {
+                                    "product_id": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/client/wishlist/{id}": {
+            "delete": {
+                "tags": [
+                    "Client - Wishlist"
+                ],
+                "summary": "Xóa khỏi danh sách yêu thích (Client)",
+                "operationId": "373df0dec060007500432a85a6a3b0e2",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Product ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/news": {
+            "get": {
+                "tags": [
+                    "Public - News"
+                ],
+                "summary": "Danh sách tin tức (Public)",
+                "operationId": "be72276c73a2b793f43a7ecd1c87c498",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                }
+            }
+        },
+        "/api/news/{slug}": {
+            "get": {
+                "tags": [
+                    "Public - News"
+                ],
+                "summary": "Chi tiết tin tức (Public)",
+                "operationId": "a61f55f5cdf89e5e89c8a86df901c106",
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                }
+            }
+        },
+        "/api/admin/news": {
+            "get": {
+                "tags": [
+                    "Admin - News"
+                ],
+                "summary": "Quản lý tin tức (Admin)",
+                "operationId": "bbdb7c500dd535693c3f745f11f39f41",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - News"
+                ],
+                "summary": "Tạo tin tức mới (Admin)",
+                "operationId": "5dd5321bebb5c90d59c2fb9f5d5daf6d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "content"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "summary": {
+                                        "type": "string"
+                                    },
+                                    "content": {
+                                        "type": "string"
+                                    },
+                                    "thumbnail": {
+                                        "type": "string"
+                                    },
+                                    "is_featured": {
+                                        "type": "boolean"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    },
+                                    "published_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/news/{id}": {
+            "put": {
+                "tags": [
+                    "Admin - News"
+                ],
+                "summary": "Cập nhật tin tức (Admin)",
+                "operationId": "d0405d9edfa617a10338c7c37f5053ae",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "content": {
+                                        "type": "string"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - News"
+                ],
+                "summary": "Xóa tin tức (Admin)",
+                "operationId": "955b2525daa770dc206fabd80d4f68a7",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/contacts": {
+            "post": {
+                "tags": [
+                    "Public - Contacts"
+                ],
+                "summary": "Gửi liên hệ (Public)",
+                "operationId": "e2af6399d73a28d7041c3d54f704c249",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fullname",
+                                    "email",
+                                    "subject",
+                                    "message"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "subject": {
+                                        "type": "string"
+                                    },
+                                    "message": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Gửi thành công"
+                    }
+                }
+            }
+        },
+        "/api/admin/contacts": {
+            "get": {
+                "tags": [
+                    "Admin - Contacts"
+                ],
+                "summary": "Danh sách liên hệ (Admin)",
+                "operationId": "5eef53afcee991b3d007dfb78656d52e",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/contacts/{id}/reply": {
+            "patch": {
+                "tags": [
+                    "Admin - Contacts"
+                ],
+                "summary": "Phản hồi liên hệ (Admin)",
+                "operationId": "31030e6a2ccafb7cf189f66119eef5ab",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reply_content"
+                                ],
+                                "properties": {
+                                    "reply_content": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/attribute-groups": {
+            "get": {
+                "tags": [
+                    "Admin - Attributes"
+                ],
+                "summary": "Nhóm thuộc tính (Admin)",
+                "operationId": "d1b4c85d49fa5342cda250c1e0848c55",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Attributes"
+                ],
+                "summary": "Tạo nhóm thuộc tính (Admin)",
+                "operationId": "fcce25691295e2287d2bdabc570c9f99",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "display_name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "display_name": {
+                                        "type": "string"
+                                    },
+                                    "display_order": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/attributes": {
+            "get": {
+                "tags": [
+                    "Admin - Attributes"
+                ],
+                "summary": "Giá trị thuộc tính (Admin)",
+                "operationId": "9944e83d88d13bb7e07c3e6a22cbb330",
+                "parameters": [
+                    {
+                        "name": "attribute_group_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Attributes"
+                ],
+                "summary": "Tạo giá trị thuộc tính (Admin)",
+                "operationId": "d06500e2a36ed7c8cc160ba84cda9e46",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "attribute_group_id",
+                                    "value"
+                                ],
+                                "properties": {
+                                    "attribute_group_id": {
+                                        "type": "integer"
+                                    },
+                                    "value": {
+                                        "type": "string"
+                                    },
+                                    "color_code": {
+                                        "type": "string"
+                                    },
+                                    "display_order": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/dashboard/stats": {
+            "get": {
+                "tags": [
+                    "Admin - Dashboard"
+                ],
+                "summary": "Thống kê tổng quan (Admin)",
+                "operationId": "001d07201838aa9d93442d7d9ca7cd51",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/dashboard/revenue": {
+            "get": {
+                "tags": [
+                    "Admin - Dashboard"
+                ],
+                "summary": "Thống kê doanh thu (Admin)",
+                "operationId": "f6b3707abab696e127c8edf7d14f7ee6",
+                "parameters": [
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -3524,16 +4257,36 @@
     },
     "tags": [
         {
+            "name": "Authentication",
+            "description": "Authentication"
+        },
+        {
+            "name": "Password Reset",
+            "description": "Password Reset"
+        },
+        {
+            "name": "Admin - Attributes",
+            "description": "Admin - Attributes"
+        },
+        {
             "name": "Admin - Categories",
             "description": "Admin - Categories"
         },
         {
-            "name": "Admin - Orders",
-            "description": "Admin - Orders"
+            "name": "Admin - Contacts",
+            "description": "Admin - Contacts"
         },
         {
-            "name": "Admin - Products",
-            "description": "Admin - Products"
+            "name": "Admin - Dashboard",
+            "description": "Admin - Dashboard"
+        },
+        {
+            "name": "Admin - News",
+            "description": "Admin - News"
+        },
+        {
+            "name": "Admin - Orders",
+            "description": "Admin - Orders"
         },
         {
             "name": "Admin - Product Images",
@@ -3544,20 +4297,20 @@
             "description": "Admin - Product Variants"
         },
         {
+            "name": "Admin - Products",
+            "description": "Admin - Products"
+        },
+        {
+            "name": "Admin - Reviews",
+            "description": "Admin - Reviews"
+        },
+        {
             "name": "Admin - Users",
             "description": "Admin - Users"
         },
         {
             "name": "Admin - Vouchers",
             "description": "Admin - Vouchers"
-        },
-        {
-            "name": "Password Reset",
-            "description": "Password Reset"
-        },
-        {
-            "name": "Authentication",
-            "description": "Authentication"
         },
         {
             "name": "Client - Address",
@@ -3590,6 +4343,26 @@
         {
             "name": "Client - Profile",
             "description": "Client - Profile"
+        },
+        {
+            "name": "Client - Reviews",
+            "description": "Client - Reviews"
+        },
+        {
+            "name": "Client - Wishlist",
+            "description": "Client - Wishlist"
+        },
+        {
+            "name": "Public - Contacts",
+            "description": "Public - Contacts"
+        },
+        {
+            "name": "Public - News",
+            "description": "Public - News"
+        },
+        {
+            "name": "Public - Reviews",
+            "description": "Public - Reviews"
         }
     ]
 }
