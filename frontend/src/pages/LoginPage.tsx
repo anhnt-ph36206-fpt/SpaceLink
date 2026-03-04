@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import type { User } from '../types/user';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import { axiosInstance } from '../api/axios';
+import type { AxiosError } from 'axios';
 
 type LoginForm = {
   email: string;
@@ -15,37 +17,26 @@ const LoginPage: React.FC = () => {
 
   const onLogin = async (data: LoginForm) => {
     try {
-      // json-server-auth's /login endpoint returns { accessToken, user }
-      const res = await fetch('http://localhost:3000/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password
-        })
+      // POST /api/auth/login → { status: true, data: { user, token, token_type } }
+      const res = await axiosInstance.post('/auth/login', {
+        email: data.email,
+        password: data.password,
       });
 
-      if (!res.ok) {
-        alert('Email hoặc mật khẩu không đúng!');
-        return;
-      }
+      const user: User = res.data.data.user;
+      const token: string = res.data.data.token;
 
-      const { accessToken, user }: { accessToken: string; user: User } = await res.json();
-
-      // Kiểm tra trạng thái tài khoản
-      if (user.status === 'banned') {
-        alert('⛔ Tài khoản của bạn đã bị cấm vĩnh viễn. Vui lòng liên hệ quản trị viên để được hỗ trợ.');
-        return;
+      login(token, user);
+    } catch (err) {
+      const error = err as AxiosError<{ message?: string }>;
+      const msg = error.response?.data?.message;
+      if (error.response?.status === 403) {
+        alert(msg ?? 'Tài khoản của bạn đã bị khóa.');
+      } else if (error.response?.status === 401) {
+        alert(msg ?? 'Email hoặc mật khẩu không đúng!');
+      } else {
+        alert(msg ?? 'Đã có lỗi xảy ra, vui lòng thử lại!');
       }
-      if (user.status === 'inactive') {
-        alert('🔒 Tài khoản của bạn đang bị tạm khóa. Vui lòng liên hệ quản trị viên để mở khóa.');
-        return;
-      }
-
-      login(accessToken, user);
-    } catch (error) {
-      console.error(error);
-      alert('Đã có lỗi xảy ra, vui lòng thử lại!');
     }
   };
 

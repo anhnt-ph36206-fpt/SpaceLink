@@ -1,57 +1,51 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import type { User } from '../types/user';
-import { useNavigate, Link } from 'react-router-dom';
+import { axiosInstance } from '../api/axios';
+import type { AxiosError } from 'axios';
 
 type RegisterForm = {
-  fullname: string;
+  name: string;
   email: string;
   password: string;
   confirmPassword: string;
+  phone: string;
+  address: string;
 };
 
 const RegisterPage: React.FC = () => {
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterForm>();
-  const navigate = useNavigate();
+  const { login } = useAuth();
   const passwordValue = watch('password');
 
   const onRegister = async (data: RegisterForm) => {
     try {
-      // Kiểm tra email tồn tại chưa
-      const checkEmail = await fetch('http://localhost:3000/users?email=' + data.email);
-      const checkEmailJson = await checkEmail.json();
-      if (checkEmailJson.length > 0) {
-        alert('Email này đã được sử dụng, vui lòng dùng email khác!');
-        return;
-      }
-
-      const newUser: Omit<User, 'id'> = {
-        fullname: data.fullname,
+      // POST /api/auth/register → { status: true, data: { user, token, token_type } }
+      const res = await axiosInstance.post('/auth/register', {
+        name: data.name,                   // backend field: 'name'
         email: data.email,
         password: data.password,
-        role: 'customer',
-        status: 'active',
-        avatar: '',
-      };
-
-      console.log(newUser);
-
-      const res = await fetch('http://localhost:3000/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser),
-
+        phone: data.phone,
+        address: data.address,
+        password_confirmation: data.confirmPassword, // bắt buộc theo 'confirmed' rule
       });
 
-     
+      const user: User = res.data.data.user;
+      const token: string = res.data.data.token;
 
-      if (!res.ok) throw new Error('Register failed');
-
-      alert('Đăng ký thành công! Vui lòng đăng nhập.');
-      navigate('/login');
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Đã có lỗi xảy ra, vui lòng thử lại!');
+      alert('🎉 Đăng ký thành công! Chào mừng bạn đến với SpaceLink!');
+      login(token, user); // tự động đăng nhập + điều hướng
+    } catch (err) {
+      const error = err as AxiosError<{ message?: string; errors?: Record<string, string[]> }>;
+      const resData = error.response?.data;
+      if (resData?.errors) {
+        const firstError = Object.values(resData.errors)[0];
+        alert(firstError?.[0] ?? 'Đăng ký thất bại!');
+      } else {
+        alert(resData?.message ?? 'Đã có lỗi xảy ra, vui lòng thử lại!');
+      }
     }
   };
 
@@ -106,14 +100,50 @@ const RegisterPage: React.FC = () => {
                             <input
                               type="text"
                               placeholder="Nguyễn Văn A"
-                              {...register('fullname', {
+                              {...register('name', {
                                 required: 'Vui lòng nhập họ tên',
                                 minLength: { value: 2, message: 'Tên phải có ít nhất 2 ký tự' }
                               })}
-                              className={`form-control form-control-custom with-icon ${errors.fullname ? 'is-invalid' : ''}`}
+                              className={`form-control form-control-custom with-icon ${errors.name ? 'is-invalid' : ''}`}
                             />
                           </div>
-                          {errors.fullname && <div className="invalid-feedback d-block" style={{fontSize:'13px'}}><i className="fas fa-exclamation-circle me-1"></i>{errors.fullname.message}</div>}
+                          {errors.name && <div className="invalid-feedback d-block" style={{fontSize:'13px'}}><i className="fas fa-exclamation-circle me-1"></i>{errors.name.message}</div>}
+                        </div>
+                        <div className="mb-3">
+                          <label className="form-label fw-semibold" style={{fontSize:'14px'}}>
+                            Số điện thoại <span className="text-danger">*</span>
+                          </label>
+                          <div className="input-icon-wrapper">
+                            <i className="fas fa-phone input-icon"></i>
+                            <input
+                              type="text"
+                              placeholder="0123456789"
+                              {...register('phone', {
+                                required: 'Vui lòng nhập số điện thoại',
+                                minLength: { value: 2, message: "Số điện thoại không hợp lệ" }
+                              })}
+                              className={`form-control form-control-custom with-icon ${errors.phone ? 'is-invalid' : ''}`}
+                            />
+                          </div>
+                          {errors.phone && <div className="invalid-feedback d-block" style={{fontSize:'13px'}}><i className="fas fa-exclamation-circle me-1"></i>{errors.phone.message}</div>}
+                        </div>
+                        <div className="mb-3">
+                          <label className="form-label fw-semibold" style={{fontSize:'14px'}}>
+                            Địa chỉ <span className="text-danger">*</span>
+                          </label>
+                          <div className="input-icon-wrapper">
+                            <i className="fas fa-phone input-icon"></i>
+                            <input
+                              type="text"
+                              placeholder="Địa chỉ"
+                              {...register('address', {
+                                required: 'Vui lòng nhập địa chỉ',
+                                minLength: { value: 2, message: "Địa chỉ hẳn hoi" }
+                              })}
+                              className={`form-control form-control-custom with-icon ${errors.address ? 'is-invalid' : ''}`}
+                            />
+                          </div>
+                          {errors.address && <div className="invalid-feedback d-block" style={{fontSize:'13px'}}><i className="fas fa-exclamation-circle me-1"></i>{errors.address.message}</div>}
                         </div>
 
                         {/* Email */}

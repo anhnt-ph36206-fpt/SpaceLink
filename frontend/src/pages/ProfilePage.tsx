@@ -3,12 +3,14 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import type { User } from '../types/user';
+import { axiosInstance } from '../api/axios';
+import type { AxiosError } from 'axios';
 
 type ProfileForm = {
-  fullname: string;
-  email: string;
+  name: string;     // khớp với backend field 'fullname' (mapped)
   phone: string;
   gender: string;
+  email: string;
 };
 
 type PasswordForm = {
@@ -32,10 +34,10 @@ const ProfilePage: React.FC = () => {
     formState: { errors: errInfo, isSubmitting: submittingInfo },
   } = useForm<ProfileForm>({
     defaultValues: {
-      fullname: user?.fullname || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
+      name:   user?.name   || '',
+      phone:  user?.phone  || '',
       gender: user?.gender || '',
+      email:  user?.email  || '',
     },
   });
 
@@ -68,67 +70,48 @@ const ProfilePage: React.FC = () => {
   const onSaveInfo = async (data: ProfileForm) => {
     if (!user) return;
     try {
-      const updatedUser: User = {
-        ...user,
-        fullname: data.fullname,
-        email: data.email,
-        phone: data.phone,
-        gender: data.gender,
-        avatar: avatarPreview,
-      };
-      const res = await fetch(`http://localhost:3000/users/${user.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullname: data.fullname,
-          email: data.email,
-          phone: data.phone,
-          gender: data.gender,
-          avatar: avatarPreview,
-        }),
+      // PUT /api/profile — axiosInstance tự gắn Bearer token
+      const res = await axiosInstance.put('/profile', {
+        fullname: data.name,      // backend field: 'fullname'
+        phone:    data.phone,
+        gender:   data.gender,
+        email:    user.email,
+
+        avatar:   avatarPreview || null,
       });
-      if (!res.ok) throw new Error('Update failed');
-      updateUser(updatedUser);
+      // Response: { status: true, data: UserResource }
+      const freshUser: User = res.data.data;
+      updateUser(freshUser);
       showToast('Cập nhật thông tin thành công!', 'success');
-    } catch {
-      showToast('Đã có lỗi xảy ra, vui lòng thử lại!', 'error');
+    } catch (err) {
+      const error = err as AxiosError<{ message?: string; errors?: Record<string, string[]> }>;
+      const msg = error.response?.data?.message ?? 'Đã có lỗi xảy ra, vui lòng thử lại!';
+      showToast(msg, 'error');
     }
   };
 
   const onSavePassword = async (data: PasswordForm) => {
     if (!user) return;
     try {
-
-      const verifiRes = await fetch('http://localhost:3000/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: user.email, // email của user đang đăng nhập
-          password: data.currentPassword // mật khẩu hiện tại
-        }),
-        })
-        if(!verifiRes.ok){
-          showToast('Mật khẩu hiện tại không đúng!', 'error');
-          return;
-        }
-
-        const {accessToken} = await verifiRes.json();
-        const token = accessToken || localStorage.getItem('token') || '';   // lấy token từ response hoặc từ local storage
-      
-         //gủi request đổi mật khẩu.
-         const res = await fetch(`http://localhost:3000/users/${user.id}`,{
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
-          body: JSON.stringify({ password: data.newPassword }),
-        })
-        
-      if (!res.ok) throw new Error('Update failed');
-      updateUser({ ...user, password: data.newPassword });
+      // Gửi cùng endpoint PUT /api/profile — backend validate current_password
+      const res = await axiosInstance.put('/profile', {
+        current_password:      data.currentPassword,
+        password:              data.newPassword,
+        password_confirmation: data.confirmPassword,
+      });
+      const freshUser: User = res.data.data;
+      updateUser(freshUser);
       resetPwd();
       showToast('Đổi mật khẩu thành công!', 'success');
-      }  
-     catch {
-      showToast('Đã có lỗi xảy ra, vui lòng thử lại!', 'error');
+    } catch (err) {
+      const error = err as AxiosError<{ message?: string; errors?: Record<string, string[]> }>;
+      const resData = error.response?.data;
+      if (resData?.errors) {
+        const firstMsg = Object.values(resData.errors)[0]?.[0];
+        showToast(firstMsg ?? 'Dữ liệu không hợp lệ!', 'error');
+      } else {
+        showToast(resData?.message ?? 'Đã có lỗi xảy ra, vui lòng thử lại!', 'error');
+      }
     }
   };
 
@@ -494,7 +477,7 @@ const ProfilePage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="sidebar-username">{user.fullname}</div>
+                  <div className="sidebar-username">{user.name}</div>
                   <div className="sidebar-email">{user.email}</div>
                   <div className="text-center mb-2">
                     <span className="sidebar-role">{user.role}</span>
@@ -599,17 +582,17 @@ const ProfilePage: React.FC = () => {
                               <i className="fas fa-user pf-input-icon" />
                               <input
                                 type="text"
-                                className={`pf-input ${errInfo.fullname ? 'pf-error' : ''}`}
+                                className={`pf-input ${errInfo.name ? 'pf-error' : ''}`}
                                 placeholder="Nguyễn Văn A"
-                                {...regInfo('fullname', {
+                                {...regInfo('name', {
                                   required: 'Vui lòng nhập họ tên',
                                   minLength: { value: 2, message: 'Tên phải có ít nhất 2 ký tự' },
                                 })}
                               />
                             </div>
-                            {errInfo.fullname && (
+                            {errInfo.name && (
                               <div className="pf-err-msg">
-                                <i className="fas fa-exclamation-circle" />{errInfo.fullname.message}
+                                <i className="fas fa-exclamation-circle" />{errInfo.name.message}
                               </div>
                             )}
                           </div>

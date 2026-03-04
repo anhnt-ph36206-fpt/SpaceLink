@@ -115,7 +115,7 @@ const Header: React.FC = () => {
                             <span className="text-muted mx-2">|</span>
                             <div className="dropdown">
                                 <a href="#" className="dropdown-toggle text-muted ms-2" data-bs-toggle="dropdown">
-                                    <small><i className="fa fa-home me-2"></i> {user ? `Hello, ${user.fullname}` : 'My Dashboard'}</small>
+                                    <small><i className="fa fa-home me-2"></i> {user ? `Hello, ${user.name}` : 'My Dashboard'}</small>
                                 </a>
                                 <div className="dropdown-menu rounded">
                                     {!user ? (
