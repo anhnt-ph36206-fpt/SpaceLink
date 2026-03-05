@@ -7,7 +7,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import {
     ShoppingOutlined, PlusOutlined, DeleteOutlined,
-    ThunderboltOutlined, ArrowLeftOutlined, LinkOutlined,
+    ArrowLeftOutlined, LinkOutlined,
     PictureOutlined, TagsOutlined, UploadOutlined, CloseCircleOutlined
 } from '@ant-design/icons';
 import { axiosInstance } from '../../../api/axios';
