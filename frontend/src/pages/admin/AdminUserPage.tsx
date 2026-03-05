@@ -11,15 +11,23 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { User } from '../../types/user';
+import { axiosInstance } from '../../api/axios';
+import { userPrefix } from '../../api/apiAdminPrefix';
 
 const { Title, Text } = Typography;
 
-const API = 'http://localhost:3000/users';
+const API_PREFIX = userPrefix;
 
 const ROLE_CONFIG: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
   admin: { color: 'gold', label: 'Admin', icon: <CrownOutlined /> },
+  staff: { color: 'purple', label: 'Nhân viên', icon: <UserOutlined /> },
   customer: { color: 'blue', label: 'Khách hàng', icon: <UserOutlined /> },
-  user: { color: 'green', label: 'Người dùng', icon: <UserOutlined /> },
+};
+
+const ROLE_NAME_TO_ID: Record<string, number> = {
+  admin: 1,
+  staff: 2,
+  customer: 3,
 };
 
 
@@ -37,10 +45,19 @@ const AdminUserPage: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API);
-      setUsers(await res.json());
-    } catch { message.error('Không thể tải danh sách người dùng'); }
-    finally { setLoading(false); }
+      const res = await axiosInstance.get(API_PREFIX, {
+        params: {
+          per_page: 100,
+        },
+      });
+      const data = (res.data && res.data.data) ? res.data.data : res.data;
+      setUsers(data as User[]);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      message.error('Không thể tải danh sách người dùng');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchUsers(); }, []);
@@ -54,73 +71,150 @@ const AdminUserPage: React.FC = () => {
 
   const openEdit = (u: User) => {
     setEditingUser(u);
-    form.setFieldsValue({ ...u, password: '' });
+    form.setFieldsValue({
+      fullname: u.name,
+      email: u.email,
+      role: u.role || 'customer',
+      status: u.status || 'active',
+      avatar: u.avatar || '',
+      password: '',
+    });
     setModalOpen(true);
   };
 
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      if (!values.password) delete values.password;
 
       if (editingUser) {
-        await fetch(`${API}/${editingUser.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...editingUser, ...values }),
-        });
+        const payload: Record<string, unknown> = {};
+
+        if (values.fullname) {
+          payload.fullname = values.fullname;
+        }
+        if (values.status) {
+          payload.status = values.status;
+        }
+        if (values.role) {
+          const roleId = ROLE_NAME_TO_ID[values.role];
+          if (roleId) {
+            payload.role_id = roleId;
+          }
+        }
+
+        await axiosInstance.put(`${API_PREFIX}/${editingUser.id}`, payload);
         message.success('Cập nhật người dùng thành công!');
       } else {
-        await fetch(API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...values, id: Date.now().toString(), avatar: '' }),
+        // Đăng ký user mới qua backend
+        const registerRes = await axiosInstance.post('/auth/register', {
+          name: values.fullname,
+          email: values.email,
+          password: values.password,
+          password_confirmation: values.password,
         });
+
+        const newUser: User | undefined = registerRes.data?.data?.user;
+
+        // Nếu admin chọn role/status khác mặc định thì cập nhật lại qua admin users
+        if (newUser?.id) {
+          const updatePayload: Record<string, unknown> = {};
+
+          if (values.role) {
+            const roleId = ROLE_NAME_TO_ID[values.role];
+            if (roleId) {
+              updatePayload.role_id = roleId;
+            }
+          }
+
+          if (values.status) {
+            updatePayload.status = values.status;
+          }
+
+          if (Object.keys(updatePayload).length > 0) {
+            await axiosInstance.put(`${API_PREFIX}/${newUser.id}`, updatePayload);
+          }
+        }
+
         message.success('Thêm người dùng thành công!');
       }
 
       setModalOpen(false);
       fetchUsers();
-    } catch {
-      // validation error
+    } catch (error: any) {
+      console.error('Error saving user:', error);
+      const msg = error?.response?.data?.message ?? 'Có lỗi xảy ra khi lưu người dùng';
+      message.error(msg);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string | number) => {
     try {
-      await fetch(`${API}/${id}`, { method: 'DELETE' });
+      await axiosInstance.delete(`${API_PREFIX}/${id}`);
       message.success('Đã xóa người dùng');
       fetchUsers();
-    } catch { message.error('Xóa thất bại'); }
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      const msg = error?.response?.data?.message ?? 'Xóa thất bại';
+      message.error(msg);
+    }
   };
 
-  const handleQuickRole = async (userId: string, newRole: string) => {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-    await fetch(`${API}/${userId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...user, role: newRole }),
-    });
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-    message.success('Đã cập nhật quyền!');
-  };
+  const handleQuickRole = async (userId: string | number, newRole: string) => {
+    try {
+      const roleId = ROLE_NAME_TO_ID[newRole];
+      if (!roleId) {
+        message.error('Quyền không hợp lệ');
+        return;
+      }
 
-  const handleQuickStatus = async (userId: string, newStatus: string) => {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-    await fetch(`${API}/${userId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...user, status: newStatus }),
-    });
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
-    message.success('Đã cập nhật trạng thái!');
+      const res = await axiosInstance.put(`${API_PREFIX}/${userId}`, {
+        role_id: roleId,
+      });
+
+      if (res.data && res.data.status === false) {
+        message.error(res.data.message || 'Cập nhật quyền thất bại');
+        return;
+      }
+
+      setUsers(prev =>
+        prev.map(u => (u.id === userId ? { ...u, role: newRole } : u))
+      );
+      message.success('Đã cập nhật quyền!');
+    } catch (error: any) {
+      console.error('Error updating role:', error);
+      const msg = error?.response?.data?.message ?? 'Có lỗi xảy ra khi cập nhật quyền';
+      message.error(msg);
+    }
   };
+ 
+
+    const handleQuickStatus = async (userId: string | number, newStatus: string) => {
+      try {
+        const res = await axiosInstance.put(`${API_PREFIX}/${userId}`, {
+          status: newStatus,
+        });
+
+        if (res.data && res.data.status === false) {
+          message.error(res.data.message || 'Cập nhật trạng thái thất bại');
+          return;
+        }
+
+        setUsers(prev =>
+          prev.map(u => (u.id === userId ? { ...u, status: newStatus } : u))
+        );
+        message.success('Đã cập nhật trạng thái!');
+      } catch (error: any) {
+        console.error('Error updating status:', error);
+        const msg = error?.response?.data?.message ?? 'Có lỗi xảy ra khi cập nhật trạng thái';
+        message.error(msg);
+      }
+    };
+
+ 
 
   const filtered = users.filter(u => {
     const matchSearch =
-      (u.fullname || '').toLowerCase().includes(search.toLowerCase()) ||
+      (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase());
     const matchRole = roleFilter ? u.role === roleFilter : true;
     return matchSearch && matchRole;
@@ -148,7 +242,7 @@ const AdminUserPage: React.FC = () => {
             }}
           />
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>{r.fullname || '—'}</div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{r.name || '—'}</div>
             <Text type="secondary" style={{ fontSize: 12 }}>{r.email}</Text>
           </div>
         </Space>
@@ -204,7 +298,7 @@ const AdminUserPage: React.FC = () => {
               onClick={() => openEdit(r)}
             />
           </Tooltip>
-          <Tooltip title="Xóa">
+          {/* <Tooltip title="Xóa">
             <Popconfirm
               title="Xóa người dùng này?"
               description="Hành động này không thể hoàn tác"
@@ -213,14 +307,14 @@ const AdminUserPage: React.FC = () => {
             >
               <Button danger size="small" icon={<DeleteOutlined />} style={{ borderRadius: 8 }} />
             </Popconfirm>
-          </Tooltip>
+          </Tooltip> */}
         </Space>
       ),
     },
   ];
 
   const adminCount = users.filter(u => u.role === 'admin').length;
-  const customerCount = users.filter(u => u.role === 'customer' || u.role === 'user').length;
+  const customerCount = users.filter(u => u.role === 'customer').length;
   const activeCount = users.filter(u => !u.status || u.status === 'active').length;
 
   return (
@@ -376,7 +470,7 @@ const AdminUserPage: React.FC = () => {
             </Col>
           </Row>
 
-          <Form.Item name="avatar" label="Avatar URL">
+          <Form.Item name="avatar" label="Avatar URL">  
             <Input placeholder="https://..." style={{ borderRadius: 8 }} />
           </Form.Item>
         </Form>
