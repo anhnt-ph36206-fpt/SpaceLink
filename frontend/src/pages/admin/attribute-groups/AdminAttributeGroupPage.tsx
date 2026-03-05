@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
     Table, Button, Space, Typography, Popconfirm, Card,
     Row, Col, Input, Tag, Modal, Form, Tooltip, InputNumber,
+    ColorPicker,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -296,49 +297,64 @@ const AdminAttributeGroupPage: React.FC = () => {
 
                     <Card title={<><TagsOutlined /> Các giá trị thuộc tính</>} size="small" type="inner" style={{ background: '#fafafa' }}>
                         <Form.List name="attributes">
-                            {(fields, { add, remove }) => (
-                                <>
-                                    {fields.map(({ key, name, ...restField }) => (
-                                        <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                                            {/* Hidden ID field for edit mapping */}
-                                            <Form.Item
-                                                {...restField}
-                                                name={[name, 'id']}
-                                                style={{ display: 'none' }}
-                                            >
-                                                <Input />
-                                            </Form.Item>
+                            {(fields, { add, remove }) => {
+                                return (
+                                    <>
+                                        {fields.map(({ key, name, ...restField }) => (
+                                            <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                                                {/* Hidden ID field for edit mapping */}
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'id']}
+                                                    style={{ display: 'none' }}
+                                                >
+                                                    <Input />
+                                                </Form.Item>
 
-                                            <Form.Item
-                                                {...restField}
-                                                name={[name, 'value']}
-                                                rules={[{ required: true, message: 'Nhập giá trị' }]}
-                                                style={{ width: 200, margin: 0 }}
-                                            >
-                                                <Input placeholder="Giá trị (Đỏ, Xanh, S, M...)" />
-                                            </Form.Item>
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'value']}
+                                                    rules={[{ required: true, message: 'Nhập giá trị' }]}
+                                                    style={{ width: 200, margin: 0 }}
+                                                >
+                                                    <Input placeholder="Giá trị (Đỏ, Xanh, S, M...)" />
+                                                </Form.Item>
 
-                                            <Form.Item
-                                                {...restField}
-                                                name={[name, 'color_code']}
-                                                style={{ width: 150, margin: 0 }}
-                                            >
-                                                <Input placeholder="Mã màu (VD: #ff0000)" />
-                                            </Form.Item>
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'color_code']}
+                                                    style={{ width: 160, margin: 0 }}
+                                                >
+                                                    <Input
+                                                        placeholder="Mã màu (#hex)"
+                                                        suffix={
+                                                            <ColorPicker
+                                                                size="small"
+                                                                onChange={(c) => {
+                                                                    const hex = c.toHexString();
+                                                                    const attrs = form.getFieldValue('attributes');
+                                                                    attrs[name].color_code = hex;
+                                                                    form.setFieldsValue({ attributes: [...attrs] });
+                                                                }}
+                                                            />
+                                                        }
+                                                    />
+                                                </Form.Item>
 
-                                            <MinusCircleOutlined
-                                                style={{ color: '#ff4d4f', fontSize: 16, cursor: 'pointer' }}
-                                                onClick={() => remove(name)}
-                                            />
-                                        </Space>
-                                    ))}
-                                    <Form.Item style={{ marginTop: 12, marginBottom: 0 }}>
-                                        <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                                            Thêm giá trị thuộc tính
-                                        </Button>
-                                    </Form.Item>
-                                </>
-                            )}
+                                                <MinusCircleOutlined
+                                                    style={{ color: '#ff4d4f', fontSize: 16, cursor: 'pointer' }}
+                                                    onClick={() => remove(name)}
+                                                />
+                                            </Space>
+                                        ))}
+                                        <Form.Item style={{ marginTop: 12, marginBottom: 0 }}>
+                                            <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                                                Thêm giá trị thuộc tính
+                                            </Button>
+                                        </Form.Item>
+                                    </>
+                                )
+                            }}
                         </Form.List>
                     </Card>
                 </Form>
