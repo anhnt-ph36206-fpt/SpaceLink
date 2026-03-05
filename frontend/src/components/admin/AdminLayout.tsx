@@ -205,9 +205,9 @@ const AdminLayout: React.FC = () => {
               size={32}
               style={{ border: '2px solid #0d6efd', flexShrink: 0 }}
             />
-            <div style={{ overflow: 'hidden' }}>
-              <div style={{ color: '#fff', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {user.fullname || user.email}
+              <div style={{ overflow: 'hidden' }}>
+            <div style={{ color: '#fff', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {user.name || user.email}
               </div>
               <div style={{ color: '#ffc107', fontSize: 11 }}>Administrator</div>
             </div>
