@@ -41,23 +41,28 @@ class ProductImageController extends Controller
     )]
     public function store(Request $request, string $product): JsonResponse
     {
-        // Validate inline vì ProductImage đơn giản
+        // Validate
         $validated = $request->validate([
-            'image_path'    => 'required|string|max:255',
+            'image'         => 'required|image|max:5120', // Giới hạn 5MB
             'is_primary'    => 'nullable|boolean',
             'display_order' => 'nullable|integer|min:0',
         ]);
 
         $parentProduct = Product::findOrFail($product);
 
+        $isPrimary = filter_var($request->input('is_primary', false), FILTER_VALIDATE_BOOLEAN);
+
         // Nếu set làm ảnh chính, bỏ ảnh chính cũ
-        if (!empty($validated['is_primary'])) {
+        if ($isPrimary) {
             $parentProduct->images()->update(['is_primary' => false]);
         }
 
+        // Lưu file
+        $path = $request->file('image')->store('products', 'public');
+
         $image = $parentProduct->images()->create([
-            'image_path'    => $validated['image_path'],
-            'is_primary'    => $validated['is_primary'] ?? false,
+            'image_path'    => $path,
+            'is_primary'    => $isPrimary,
             'display_order' => $validated['display_order'] ?? 0,
         ]);
 

@@ -21,6 +21,7 @@ import AdminUserPage from './pages/admin/AdminUserPage';
 import ProductList from "./pages/admin/products/list";
 import ProductCreate from "./pages/admin/products/create";
 import ProductEdit from "./pages/admin/products/edit";
+import AdminAttributeGroupPage from "./pages/admin/attribute-groups/AdminAttributeGroupPage";
 import SearchPage from './components/home/SearchPage';
 import './App.css';
 
@@ -30,26 +31,26 @@ const PublicRoot = () => (
     </Layout>
 );
 
-  //     {/* Public routes – wrapped in public Layout */}
-  //         <Route element={<PublicRoot />}>
-  //           <Route path="/" element={<HomePage />} />
-  //           <Route path="/shop" element={<ShopPage />} />
-  //           <Route path="/product/:id" element={<ProductDetailPage />} />
-  //           <Route path="/cart" element={<CartPage />} />
-  //           <Route element={<PrivateRoute />}>
-  //             <Route path="/checkout" element={<CheckoutPage />} />
-  //             <Route path="/profile" element={<ProfilePage />} />
-  //           </Route>
-  //           <Route path="/bestseller" element={<BestsellerPage />} />
-  //           <Route path="/contact" element={<ContactPage />} />
-  //           <Route path="/login" element={<LoginPage />} />
-  //           <Route path="/register" element={<RegisterPage />} />
-  //           <Route path="*" element={<NotFoundPage />} />
-  //         </Route>
-  //       </Routes>
-  //     </AuthProvider>
-  //   </BrowserRouter>
-  // );
+//     {/* Public routes – wrapped in public Layout */}
+//         <Route element={<PublicRoot />}>
+//           <Route path="/" element={<HomePage />} />
+//           <Route path="/shop" element={<ShopPage />} />
+//           <Route path="/product/:id" element={<ProductDetailPage />} />
+//           <Route path="/cart" element={<CartPage />} />
+//           <Route element={<PrivateRoute />}>
+//             <Route path="/checkout" element={<CheckoutPage />} />
+//             <Route path="/profile" element={<ProfilePage />} />
+//           </Route>
+//           <Route path="/bestseller" element={<BestsellerPage />} />
+//           <Route path="/contact" element={<ContactPage />} />
+//           <Route path="/login" element={<LoginPage />} />
+//           <Route path="/register" element={<RegisterPage />} />
+//           <Route path="*" element={<NotFoundPage />} />
+//         </Route>
+//       </Routes>
+//     </AuthProvider>
+//   </BrowserRouter>
+// );
 
 function App() {
     return (
@@ -61,6 +62,7 @@ function App() {
                     <Route path="/admin" element={<AdminLayout />}>
                         <Route index element={<AdminDashboardPage />} />
                         <Route path="categories" element={<AdminCategoryPage />} />
+                        <Route path="attribute-groups" element={<AdminAttributeGroupPage />} />
 
                         <Route path="products">
                             <Route index element={<ProductList />} />
@@ -73,13 +75,13 @@ function App() {
                     </Route>
 
                     {/* Public routes – wrapped in public Layout */}
-                    <Route element={<PublicRoot/>}>
-                        <Route path="/" element={<HomePage/>}/>
-                        <Route path="/shop" element={<ShopPage/>}/>
-                        <Route path="/product/:id" element={<ProductDetailPage/>}/>
-                        <Route path="/cart" element={<CartPage/>}/>
-                        <Route element={<PrivateRoute/>}>
-                            <Route path="/checkout" element={<CheckoutPage/>}/>
+                    <Route element={<PublicRoot />}>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/shop" element={<ShopPage />} />
+                        <Route path="/product/:id" element={<ProductDetailPage />} />
+                        <Route path="/cart" element={<CartPage />} />
+                        <Route element={<PrivateRoute />}>
+                            <Route path="/checkout" element={<CheckoutPage />} />
                             <Route path="/profile" element={<ProfilePage />} />
                         </Route>
 

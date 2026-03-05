@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\Client\BrandController;
 // Admin Controllers
 use App\Http\Controllers\Api\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Api\Admin\AttributeGroupController as AdminAttributeGroupController;
 
 
 
@@ -111,11 +112,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
 
     // --- Admin Categories ---
     Route::apiResource('categories', AdminCategoryController::class);
-    // GET    /api/admin/categories          -> index
-    // POST   /api/admin/categories          -> store
-    // GET    /api/admin/categories/{id}     -> show
-    // PUT    /api/admin/categories/{id}     -> update
-    // DELETE /api/admin/categories/{id}     -> destroy (xóa mềm)
+
+    // --- Admin Attribute Groups ---
+    Route::apiResource('attribute-groups', AdminAttributeGroupController::class);
 
     // --- Admin Products ---
     Route::apiResource('products', \App\Http\Controllers\Api\Admin\ProductController::class);
