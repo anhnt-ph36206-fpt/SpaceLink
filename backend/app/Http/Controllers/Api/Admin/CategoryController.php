@@ -10,6 +10,7 @@ use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
 
 class CategoryController extends Controller
@@ -165,7 +166,13 @@ class CategoryController extends Controller
     )]
     public function store(StoreCategoryRequest $request): JsonResponse
     {
-        $category = Category::create($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->store('categories', 'public');
+        }
+
+        $category = Category::create($data);
 
         return response()->json([
             'status'  => true,
@@ -222,7 +229,17 @@ class CategoryController extends Controller
     public function update(UpdateCategoryRequest $request, string $id): JsonResponse
     {
         $category = Category::findOrFail($id);
-        $category->update($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('image')) {
+            // Xóa ảnh cũ nếu có
+            if ($category->image) {
+                Storage::disk('public')->delete($category->image);
+            }
+            $data['image'] = $request->file('image')->store('categories', 'public');
+        }
+
+        $category->update($data);
 
         return response()->json([
             'status'  => true,

@@ -22,6 +22,7 @@ import ProductList from "./pages/admin/products/list";
 import ProductCreate from "./pages/admin/products/create";
 import ProductEdit from "./pages/admin/products/edit";
 import AdminAttributeGroupPage from "./pages/admin/attribute-groups/AdminAttributeGroupPage";
+import AdminBrandPage from './pages/admin/brands/AdminBrandPage';
 import SearchPage from './components/home/SearchPage';
 import './App.css';
 
@@ -62,6 +63,7 @@ function App() {
                     <Route path="/admin" element={<AdminLayout />}>
                         <Route index element={<AdminDashboardPage />} />
                         <Route path="categories" element={<AdminCategoryPage />} />
+                        <Route path="brands" element={<AdminBrandPage />} />
                         <Route path="attribute-groups" element={<AdminAttributeGroupPage />} />
 
                         <Route path="products">

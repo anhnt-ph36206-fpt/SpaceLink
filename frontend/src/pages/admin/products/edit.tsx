@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
     Form, Input, InputNumber, Switch, Button, Row, Col,
     Typography, Select, Card, Tabs, Tag, Space, Divider,
-    Popconfirm, Table, Tooltip, Spin, Alert, Upload,
+    Popconfirm, Table, Tooltip, Spin, Alert, Upload, Modal,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -27,7 +27,6 @@ interface ExistingImage {
     image_path: string;
     image_url?: string;
     is_primary: boolean;
-    display_order: number;
     _deleted?: boolean;
 }
 
@@ -108,17 +107,63 @@ const ProductEdit: React.FC = () => {
     const [selectedAttrs, setSelectedAttrs] = useState<{ groupId: number; groupName: string; values: AttrValue[] }[]>([]);
     const [addGroupId, setAddGroupId] = useState<number | null>(null);
 
+    // Quick add attribute group
+    const [attrModalVisible, setAttrModalVisible] = useState(false);
+    const [attrModalLoading, setAttrModalLoading] = useState(false);
+    const [attrForm] = Form.useForm();
+
+    const handleQuickAddAttrGroup = async () => {
+        try {
+            const values = await attrForm.validateFields();
+            setAttrModalLoading(true);
+
+            const attrValues = values.attributes.split('\n')
+                .map((v: string) => v.trim())
+                .filter((v: string) => v !== '')
+                .map((v: string) => ({ value: v }));
+
+            if (attrValues.length === 0) {
+                toast.warning('Vui lòng nhập ít nhất một giá trị thuộc tính');
+                setAttrModalLoading(false);
+                return;
+            }
+
+            const res = await axiosInstance.post(attributeGroupPrefix, {
+                name: values.name,
+                display_name: values.display_name || values.name,
+                attributes: attrValues
+            });
+
+            const newGroup = res.data.data;
+            setAttrGroups(prev => [...prev, newGroup]);
+
+            setSelectedAttrs(prev => [...prev, {
+                groupId: newGroup.id,
+                groupName: newGroup.display_name || newGroup.name,
+                values: []
+            }]);
+
+            toast.success('Đã tạo nhóm thuộc tính mới');
+            setAttrModalVisible(false);
+            attrForm.resetFields();
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Không thể tạo nhóm thuộc tính');
+        } finally {
+            setAttrModalLoading(false);
+        }
+    };
+
     /* ── Load product data & options ── */
     useEffect(() => {
         const load = async () => {
             try {
                 setPageLoading(true);
                 const [productRes, catRes,
-                    //brandRes,
+                    brandRes,
                     attrRes] = await Promise.all([
                         axiosInstance.get(`${productPrefix}/${id}`),
                         axiosInstance.get(`${categoryPrefix}`),
-                        // axiosInstance.get(`${brandPrefix}/get-options`),
+                        axiosInstance.get(`${brandPrefix}`),
                         axiosInstance.get(attributeGroupPrefix),
                     ]);
 
@@ -146,7 +191,6 @@ const ProductEdit: React.FC = () => {
                     image_path: img.image_path,
                     image_url: img.image_url || `http://localhost:8000/storage/${img.image_path}`,
                     is_primary: img.is_primary,
-                    display_order: img.display_order ?? 0,
                 })));
 
                 setVariants((p.variants || []).map((v: any) => ({
@@ -163,7 +207,7 @@ const ProductEdit: React.FC = () => {
                 })));
 
                 setCategoryOptions(catRes.data.data.map((c: any) => ({ value: c.id, label: c.name })));
-                // setBrandOptions(brandRes.data.data.map((b: any) => ({ value: b.id, label: b.name })));
+                setBrandOptions(brandRes.data.data.map((b: any) => ({ value: b.id, label: b.name })));
                 setAttrGroups(attrRes.data.data);
             } catch {
                 toast.error('Không tải được dữ liệu sản phẩm');
@@ -339,55 +383,103 @@ const ProductEdit: React.FC = () => {
             const values = await form.validateFields();
             setSubmitting(true);
 
-            await axiosInstance.put(`${productPrefix}/${id}`, values);
+            // Gửi 1 FormData duy nhất: product fields + ảnh mới + variants mới + cập nhật cũ
+            const fd = new FormData();
+            fd.append('_method', 'PUT'); // Laravel method spoofing
 
-            for (const img of newImages) {
-                try {
-                    const fd = new FormData();
-                    fd.append('image', img.file);
-                    fd.append('is_primary', img.is_primary ? '1' : '0');
-                    fd.append('display_order', (existingImages.length + newImages.indexOf(img)).toString());
-                    await axiosInstance.post(`${productPrefix}/${id}/images`, fd, {
-                        headers: { 'Content-Type': 'multipart/form-data' }
-                    });
-                } catch { /* continue */ }
-            }
-            setNewImages([]);
+            // ── Product fields ──
+            Object.entries(values).forEach(([key, val]) => {
+                if (val === null || val === undefined) return;
+                fd.append(key, typeof val === 'boolean' ? (val ? '1' : '0') : String(val));
+            });
 
-            const pendingNew = variants.filter(v => v._isNew);
-            for (const v of pendingNew) {
-                try {
-                    const fd = new FormData();
-                    if (v.sku) fd.append('sku', v.sku);
-                    fd.append('price', v.price.toString());
-                    if (v.sale_price !== null) fd.append('sale_price', v.sale_price.toString());
-                    fd.append('quantity', v.quantity.toString());
-                    if (v.imageFile) fd.append('image', v.imageFile);
-                    else if (v.image) fd.append('image', v.image);
-                    fd.append('is_active', v.is_active ? '1' : '0');
-                    if (v.attribute_ids.length > 0) {
-                        v.attribute_ids.forEach(id => fd.append('attribute_ids[]', id.toString()));
-                    }
+            // ── Cập nhật ảnh đã có (existing_images) ──
+            existingImages.forEach((img) => {
+                fd.append(`existing_images[${img.id}][is_primary]`, img.is_primary ? '1' : '0');
+                fd.append(`existing_images[${img.id}][display_order]`, '0');
+            });
 
-                    const res = await axiosInstance.post(`${productPrefix}/${id}/variants`, fd, {
-                        headers: { 'Content-Type': 'multipart/form-data' }
-                    });
-                    const created = res.data.data;
-                    setVariants(prev => prev.map(vr => vr._key === v._key ? { ...vr, id: created.id, _isNew: false } : vr));
-                } catch { /* continue */ }
-            }
+            // ── Ảnh mới thêm (newImages) ──
+            newImages.forEach((img, index) => {
+                fd.append(`images[${index}][file]`, img.file);
+                fd.append(`images[${index}][is_primary]`, img.is_primary ? '1' : '0');
+                fd.append(`images[${index}][display_order]`, '0');
+            });
+
+            // ── Cập nhật variants đã có (existing_variants) ──
+            const existingVariants = variants.filter(v => !v._isNew);
+            existingVariants.forEach((v) => {
+                if (!v.id) return;
+                fd.append(`existing_variants[${v.id}][price]`, v.price.toString());
+                fd.append(`existing_variants[${v.id}][quantity]`, v.quantity.toString());
+                fd.append(`existing_variants[${v.id}][is_active]`, v.is_active ? '1' : '0');
+                if (v.sku) fd.append(`existing_variants[${v.id}][sku]`, v.sku);
+                if (v.sale_price !== null && v.sale_price !== undefined) {
+                    fd.append(`existing_variants[${v.id}][sale_price]`, v.sale_price.toString());
+                }
+                if (v.imageFile) {
+                    fd.append(`existing_variants[${v.id}][image]`, v.imageFile);
+                }
+                // Nếu muốn sync attributes cho variant cũ trong bulk update:
+                v.attribute_ids.forEach(attrId => {
+                    fd.append(`existing_variants[${v.id}][attribute_ids][]`, attrId.toString());
+                });
+            });
+
+            // ── Thêm variants mới (_isNew) ──
+            const newVariantsInput = variants.filter(v => v._isNew);
+            newVariantsInput.forEach((v, index) => {
+                fd.append(`variants[${index}][price]`, v.price.toString());
+                fd.append(`variants[${index}][quantity]`, v.quantity.toString());
+                fd.append(`variants[${index}][is_active]`, v.is_active ? '1' : '0');
+                if (v.sku) fd.append(`variants[${index}][sku]`, v.sku);
+                if (v.sale_price !== null && v.sale_price !== undefined) {
+                    fd.append(`variants[${index}][sale_price]`, v.sale_price.toString());
+                }
+                if (v.imageFile) {
+                    fd.append(`variants[${index}][image]`, v.imageFile);
+                }
+                v.attribute_ids.forEach(attrId => {
+                    fd.append(`variants[${index}][attribute_ids][]`, attrId.toString());
+                });
+            });
+
+            const res = await axiosInstance.post(`${productPrefix}/${id}`, fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
 
             toast.success('Cập nhật sản phẩm thành công!');
-            const updated = await axiosInstance.get(`${productPrefix}/${id}`);
-            setExistingImages((updated.data.data.images || []).map((img: any) => ({
-                id: img.id,
-                image_path: img.image_path,
-                image_url: img.image_url || `http://localhost:8000/storage/${img.image_path}`,
-                is_primary: img.is_primary,
-                display_order: img.display_order ?? 0,
-            })));
+
+            // Làm mới state: xóa newImages, cập nhật lại variants từ response
+            setNewImages([]);
+            const savedProduct = res.data.data;
+            if (savedProduct?.images) {
+                setExistingImages(savedProduct.images.map((img: any) => ({
+                    id: img.id,
+                    image_path: img.image_path,
+                    image_url: img.image_url || `http://localhost:8000/storage/${img.image_path}`,
+                    is_primary: img.is_primary,
+                })));
+            }
+            if (savedProduct?.variants) {
+                setVariants(savedProduct.variants.map((v: any) => ({
+                    _key: `var-existing-${v.id}`,
+                    id: v.id,
+                    label: (v.attributes || []).map((a: any) => a.value).join(' / ') || 'Không có thuộc tính',
+                    attribute_ids: (v.attributes || []).map((a: any) => a.id),
+                    sku: v.sku || '',
+                    price: parseFloat(v.price),
+                    sale_price: v.sale_price ? parseFloat(v.sale_price) : null,
+                    quantity: v.quantity ?? 0,
+                    image: v.image || '',
+                    is_active: v.is_active ?? true,
+                })));
+            }
         } catch (error: any) {
-            if (error?.errorFields) {
+            if (error?.response?.data?.errors) {
+                const firstError = Object.values(error.response.data.errors)[0];
+                toast.error(Array.isArray(firstError) ? firstError[0] : String(firstError));
+            } else if (error?.errorFields) {
                 setActiveTab('info');
                 toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
             } else {
@@ -532,7 +624,7 @@ const ProductEdit: React.FC = () => {
 
     const allDisplayImages = [
         ...existingImages.map(i => ({ ...i, _key: `ex-${i.id}`, isExisting: true })),
-        ...newImages.map(i => ({ id: 0, image_path: '', image_url: i.previewUrl, is_primary: i.is_primary, display_order: 0, _key: i._key, isExisting: false })),
+        ...newImages.map(i => ({ id: 0, image_path: '', image_url: i.previewUrl, is_primary: i.is_primary, _key: i._key, isExisting: false })),
     ];
 
     const tabItems = [
@@ -721,6 +813,7 @@ const ProductEdit: React.FC = () => {
                                         value={addGroupId} onChange={v => setAddGroupId(v)}
                                         options={attrGroups.filter(g => !selectedAttrs.some(a => a.groupId === g.id)).map(g => ({ value: g.id, label: g.display_name || g.name }))}
                                     />
+                                    <Button type="default" onClick={() => setAttrModalVisible(true)} icon={<PlusOutlined />}>Tạo mới</Button>
                                     <Button type="default" onClick={addAttrGroup} icon={<PlusOutlined />}>Thêm nhóm</Button>
                                 </Space>
 
@@ -835,6 +928,28 @@ const ProductEdit: React.FC = () => {
             <Form form={form} layout="vertical">
                 <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} type="card" size="large" />
             </Form>
+
+            {/* Quick Add Attribute Group Modal */}
+            <Modal
+                title="Tạo nhóm thuộc tính nhanh"
+                open={attrModalVisible}
+                onOk={handleQuickAddAttrGroup}
+                onCancel={() => setAttrModalVisible(false)}
+                confirmLoading={attrModalLoading}
+                destroyOnClose
+            >
+                <Form form={attrForm} layout="vertical">
+                    <Form.Item name="name" label="Tên nhóm (Kỹ thuật)" rules={[{ required: true, message: 'VD: color, size' }]}>
+                        <Input placeholder="color" />
+                    </Form.Item>
+                    <Form.Item name="display_name" label="Tên hiển thị" rules={[{ required: true, message: 'VD: Màu sắc, Kích thước' }]}>
+                        <Input placeholder="Màu sắc" />
+                    </Form.Item>
+                    <Form.Item name="attributes" label="Các giá trị (Mỗi dòng 1 giá trị)" rules={[{ required: true, message: 'Nhập ít nhất 1 giá trị' }]}>
+                        <TextArea rows={5} placeholder="Đỏ&#10;Xanh&#10;Vàng" />
+                    </Form.Item>
+                </Form>
+            </Modal>
 
             <style>{`
                 .row-new-variant { background: #f6ffed; }
