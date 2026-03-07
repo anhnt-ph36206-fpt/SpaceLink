@@ -22,6 +22,13 @@ axiosInstance.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // Thêm X-Session-ID để hỗ trợ giỏ hàng khách vãng lai
+        const sessionId = localStorage.getItem("spacelink_session_id");
+        if (sessionId) {
+            config.headers["X-Session-ID"] = sessionId;
+        }
+
         return config;
     },
     (error) => Promise.reject(error)

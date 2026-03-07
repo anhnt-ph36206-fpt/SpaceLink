@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import PrivateRoute from './components/layout/PrivateRoute';
 import Layout from './components/layout/Layout';
 import AdminLayout from './components/admin/AdminLayout';
@@ -25,6 +26,8 @@ import ProductDetail from "./pages/admin/products/ProductDetail";
 import AdminAttributeGroupPage from "./pages/admin/attribute-groups/AdminAttributeGroupPage";
 import AdminBrandPage from './pages/admin/brands/AdminBrandPage';
 import SearchPage from './components/home/SearchPage';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
 const PublicRoot = () => (
@@ -33,72 +36,53 @@ const PublicRoot = () => (
     </Layout>
 );
 
-//     {/* Public routes – wrapped in public Layout */}
-//         <Route element={<PublicRoot />}>
-//           <Route path="/" element={<HomePage />} />
-//           <Route path="/shop" element={<ShopPage />} />
-//           <Route path="/product/:id" element={<ProductDetailPage />} />
-//           <Route path="/cart" element={<CartPage />} />
-//           <Route element={<PrivateRoute />}>
-//             <Route path="/checkout" element={<CheckoutPage />} />
-//             <Route path="/profile" element={<ProfilePage />} />
-//           </Route>
-//           <Route path="/bestseller" element={<BestsellerPage />} />
-//           <Route path="/contact" element={<ContactPage />} />
-//           <Route path="/login" element={<LoginPage />} />
-//           <Route path="/register" element={<RegisterPage />} />
-//           <Route path="*" element={<NotFoundPage />} />
-//         </Route>
-//       </Routes>
-//     </AuthProvider>
-//   </BrowserRouter>
-// );
-
 function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
-                <Routes>
+                <CartProvider>
+                    <ToastContainer position="top-right" autoClose={3000} />
+                    <Routes>
 
-                    {/* ADMIN */}
-                    <Route path="/admin" element={<AdminLayout />}>
-                        <Route index element={<AdminDashboardPage />} />
-                        <Route path="categories" element={<AdminCategoryPage />} />
-                        <Route path="brands" element={<AdminBrandPage />} />
-                        <Route path="attribute-groups" element={<AdminAttributeGroupPage />} />
+                        {/* ADMIN */}
+                        <Route path="/admin" element={<AdminLayout />}>
+                            <Route index element={<AdminDashboardPage />} />
+                            <Route path="categories" element={<AdminCategoryPage />} />
+                            <Route path="brands" element={<AdminBrandPage />} />
+                            <Route path="attribute-groups" element={<AdminAttributeGroupPage />} />
 
-                        <Route path="products">
-                            <Route index element={<ProductList />} />
-                            <Route path="create" element={<ProductCreate />} />
-                            <Route path="edit/:id" element={<ProductEdit />} />
-                            <Route path="detail/:id" element={<ProductDetail />} />
+                            <Route path="products">
+                                <Route index element={<ProductList />} />
+                                <Route path="create" element={<ProductCreate />} />
+                                <Route path="edit/:id" element={<ProductEdit />} />
+                                <Route path="detail/:id" element={<ProductDetail />} />
+                            </Route>
+
+                            <Route path="orders" element={<AdminOrderPage />} />
+                            <Route path="users" element={<AdminUserPage />} />
                         </Route>
 
-                        <Route path="orders" element={<AdminOrderPage />} />
-                        <Route path="users" element={<AdminUserPage />} />
-                    </Route>
-
-                    {/* Public routes – wrapped in public Layout */}
-                    <Route element={<PublicRoot />}>
-                        <Route path="/" element={<HomePage />} />
-                        <Route path="/shop" element={<ShopPage />} />
-                        <Route path="/product/:id" element={<ProductDetailPage />} />
-                        <Route path="/cart" element={<CartPage />} />
-                        <Route element={<PrivateRoute />}>
-                            <Route path="/checkout" element={<CheckoutPage />} />
-                            <Route path="/profile" element={<ProfilePage />} />
+                        {/* Public routes */}
+                        <Route element={<PublicRoot />}>
+                            <Route path="/" element={<HomePage />} />
+                            <Route path="/shop" element={<ShopPage />} />
+                            <Route path="/product/:id" element={<ProductDetailPage />} />
+                            <Route path="/cart" element={<CartPage />} />
+                            <Route element={<PrivateRoute />}>
+                                <Route path="/checkout" element={<CheckoutPage />} />
+                                <Route path="/profile" element={<ProfilePage />} />
+                            </Route>
+                            <Route path="/bestseller" element={<BestsellerPage />} />
+                            <Route path="/contact" element={<ContactPage />} />
+                            <Route path="/search" element={<SearchPage />} />
+                            <Route path="*" element={<NotFoundPage />} />
                         </Route>
 
-                        <Route path="/bestseller" element={<BestsellerPage />} />
-                        <Route path="/contact" element={<ContactPage />} />
-                        <Route path="/search" element={<SearchPage />} />
-                        <Route path="*" element={<NotFoundPage />} />
-                    </Route>
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/register" element={<RegisterPage />} />
 
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-
-                </Routes>
+                    </Routes>
+                </CartProvider>
             </AuthProvider>
         </BrowserRouter>
     );
