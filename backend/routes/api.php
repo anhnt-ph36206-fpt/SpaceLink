@@ -67,6 +67,10 @@ Route::prefix('client')->name('client.')->group(function () {
     Route::get('/categories',        [ClientCategoryController::class, 'index'])->name('categories.index'); // GET /api/client/categories
     Route::get('/categories/{slug}', [ClientCategoryController::class, 'show'])->name('categories.show');  // GET /api/client/categories/{slug}
 
+    // --- Client Banners & Shippings (public) ---
+    Route::get('/banners', [\App\Http\Controllers\Api\Client\BannerController::class, 'index']);
+    Route::get('/shippings', [\App\Http\Controllers\Api\Client\ShippingController::class, 'index']);
+
     // --- Client Cart (optional auth – hỗ trợ Guest + User) ---
     Route::prefix('cart')->group(function () {
         Route::get('/',            [CartController::class, 'index']);           // GET  /api/client/cart
@@ -119,6 +123,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
 
     // --- Admin Brands ---
     Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class);
+
+    // --- Admin Banners ---
+    Route::apiResource('banners', \App\Http\Controllers\Api\Admin\BannerController::class);
+    Route::patch('banners/{banner}/toggle', [\App\Http\Controllers\Api\Admin\BannerController::class, 'toggle']);
+
+    // --- Admin Shippings ---
+    Route::apiResource('shippings', \App\Http\Controllers\Api\Admin\ShippingController::class);
+    Route::patch('shippings/{shipping}/toggle', [\App\Http\Controllers\Api\Admin\ShippingController::class, 'toggle']);
 
     // --- Admin Attribute Groups ---
     Route::apiResource('attribute-groups', AdminAttributeGroupController::class);

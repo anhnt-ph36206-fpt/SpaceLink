@@ -99,4 +99,10 @@ class Order extends Model
     {
         return $this->hasMany(VoucherUsage::class);
     }
+
+    // Order có thể có 1 yêu cầu hoàn trả
+    public function productReturn()
+    {
+        return $this->hasOne(ProductReturn::class);
+    }
 }
