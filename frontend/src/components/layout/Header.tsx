@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 
 interface Category {
     id: number;
@@ -17,8 +18,9 @@ interface ProductSuggestion {
 
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
+    const { totalItems } = useCart();
     const [categories, setCategories] = useState<Category[]>([]);
-  
+
 
     // --- STATE CHO TÌM KIẾM ---
     const [keyword, setKeyword] = useState("");
@@ -230,7 +232,7 @@ const Header: React.FC = () => {
                                         className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark"
                                         style={{ fontSize: '10px', border: '2px solid #fff' }}
                                     >
-                                        1
+                                        {totalItems > 0 ? (totalItems > 99 ? '99+' : totalItems) : ''}
                                     </span>
                                 </div>
 

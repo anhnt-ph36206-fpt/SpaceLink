@@ -75,7 +75,7 @@ class ProductController extends Controller
     )]
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'brand', 'images'])
+        $query = Product::with(['category', 'brand', 'images', 'variants.attributes.attributeGroup'])
             ->where('is_active', true);
 
         // Lọc theo danh mục

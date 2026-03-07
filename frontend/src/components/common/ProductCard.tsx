@@ -14,10 +14,11 @@ interface ProductCardProps {
         isNew?: boolean;
         isSale?: boolean;
     };
-    index?: number; // <--- THÊM BIẾN NÀY ĐỂ NHẬN SỐ THỨ TỰ
+    index?: number;
+    onAddToCart?: (product: any) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCart }) => {
 
     // --- LOGIC TẠO HIỆU ỨNG SO LE GIỐNG HOME ---
     // Mỗi sản phẩm chậm hơn cái trước 0.1 giây.
@@ -48,7 +49,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
                         <div className="rounded-top text-center p-3" style={{ height: '240px', backgroundColor: '#fff' }}>
                             <Link to={`/product/${product.id}`} className="d-block h-100 w-100 position-relative">
                                 <img
-                                    src={product.image}
+                                    src={product.image || undefined}
                                     className="img-fluid"
                                     alt={product.name}
                                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
@@ -92,6 +93,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
                     <button
                         className="btn btn-primary rounded-pill px-4 py-2 mb-4 fw-bold transition-all"
                         style={{ width: '100%', borderRadius: '50px' }}
+                        onClick={() => onAddToCart && onAddToCart(product)}
                     >
                         <i className="fas fa-shopping-bag me-2"></i> Thêm vào giỏ
                     </button>

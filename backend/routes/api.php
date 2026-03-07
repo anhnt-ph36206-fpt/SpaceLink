@@ -41,6 +41,10 @@ Route::prefix('auth')->group(function () {
 // --- Brands ---
 Route::get('/brands', [BrandController::class, 'index']);
 
+// --- Categories (public) ---
+Route::get('/categories', [ClientCategoryController::class, 'index']);
+Route::get('/categories/{slug}', [ClientCategoryController::class, 'show']);
+
 // --- Products ---
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
@@ -83,7 +87,7 @@ Route::prefix('client')->name('client.')->group(function () {
 // 3. PROTECTED ROUTES (Bắt buộc phải có Token)
 // ========================================================================
 Route::middleware('auth:sanctum')->group(function () {
-    
+
     // --- Auth & Profile ---
     Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
