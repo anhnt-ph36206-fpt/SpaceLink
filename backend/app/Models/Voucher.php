@@ -20,6 +20,8 @@ class Voucher extends Model
         'start_date',
         'end_date',
         'is_active',
+        'product_id',
+        'category_id',
     ];
 
     protected $casts = [
@@ -45,5 +47,17 @@ class Voucher extends Model
     public function usages()
     {
         return $this->hasMany(VoucherUsage::class);
+    }
+
+    // Áp dụng riêng cho sản phẩm cụ thể (nullable)
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    // Áp dụng riêng cho danh mục cụ thể (nullable)
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
     }
 }

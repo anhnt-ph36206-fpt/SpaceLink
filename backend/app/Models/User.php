@@ -100,4 +100,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(News::class, 'author_id');
     }
+
+    // User has many product returns
+    public function productReturns()
+    {
+        return $this->hasMany(ProductReturn::class);
+    }
 }

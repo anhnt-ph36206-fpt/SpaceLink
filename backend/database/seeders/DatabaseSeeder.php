@@ -32,6 +32,8 @@ class DatabaseSeeder extends Seeder
             ProductVariantSeeder::class,
             SettingSeeder::class,
             VoucherSeeder::class,
+            BannerSeeder::class,
+            ShippingSeeder::class,
         ]);
     }
 }

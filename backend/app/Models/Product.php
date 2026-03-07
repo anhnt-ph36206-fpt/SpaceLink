@@ -26,6 +26,7 @@ class Product extends Model
         'is_active',
         'meta_title',
         'meta_description',
+        'sale_end',
     ];
 
     protected $casts = [
@@ -33,6 +34,7 @@ class Product extends Model
         'sale_price' => 'decimal:2',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
+        'sale_end' => 'datetime',
     ];
 
     /**
@@ -99,5 +101,11 @@ class Product extends Model
         return $this->belongsToMany(Promotion::class, 'promotion_products')
             ->withPivot('discount_percent', 'discount_amount')
             ->withTimestamps();
+    }
+
+    // Product has specific vouchers
+    public function vouchers()
+    {
+        return $this->hasMany(Voucher::class);
     }
 }
