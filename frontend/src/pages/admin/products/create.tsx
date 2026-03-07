@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
     Form, Input, InputNumber, Switch, Button, Row, Col,
     Typography, Select, Card, Tabs, Tag, Space, Divider,
-    Popconfirm, Table, Tooltip, Upload, Modal,
+    Popconfirm, Table, Tooltip, Upload, Modal, TreeSelect,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -64,7 +64,14 @@ function cartesian<T>(arrays: T[][]): T[][] {
     );
 }
 
-/* ─────────────────────────── Component ─────────────────────────── */
+/* ─────────────────────────── Component ─────────────────────────── */const removeAccents = (str: string) => {
+    return str.normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+        .replace(/\s+/g, '-')
+        .toUpperCase();
+};
+
 const ProductCreate: React.FC = () => {
     const [form] = Form.useForm();
     const navigate = useNavigate();
@@ -141,7 +148,30 @@ const ProductCreate: React.FC = () => {
                     axiosInstance.get(`${brandPrefix}`),
                     axiosInstance.get(`${attributeGroupPrefix}`),
                 ]);
-                setCategoryOptions(catRes.data.data.map((c: any) => ({ value: c.id, label: c.name })));
+                const buildTree = (data: any[]) => {
+                    const map = new Map<number, any>();
+                    const roots: any[] = [];
+                    data.forEach(item => {
+                        map.set(item.id, {
+                            key: item.id,
+                            value: item.id,
+                            title: item.name,
+                            children: [],
+                            selectable: true
+                        });
+                    });
+                    data.forEach(item => {
+                        if (item.parent_id && map.has(item.parent_id)) {
+                            const parent = map.get(item.parent_id);
+                            parent.children.push(map.get(item.id));
+                            parent.selectable = false;
+                        } else if (!item.parent_id) {
+                            roots.push(map.get(item.id));
+                        }
+                    });
+                    return roots;
+                };
+                setCategoryOptions(buildTree(catRes.data.data));
                 setBrandOptions(brandRes.data.data.map((b: any) => ({ value: b.id, label: b.name })));
                 console.log(attrRes.data.data)
                 setAttrGroups(attrRes.data.data);
@@ -211,14 +241,18 @@ const ProductCreate: React.FC = () => {
 
         const combos = cartesian(groups.map(g => g.values));
 
+        const productPrice = form.getFieldValue('price') || 0;
+        const productSku = form.getFieldValue('sku') || '';
+
         const newVariants: VariantRow[] = combos.map((combo) => {
-            const label = combo.map(v => v.value).join(' / ');
+            const attrLabel = combo.map(v => v.value).join(' / ');
+            const attrSkuPart = combo.map(v => removeAccents(v.value)).join('-');
             return {
                 _key: `var-${Date.now()}-${Math.random()}`,
                 attribute_ids: combo.map(v => v.id),
-                label,
-                sku: '',
-                price: 0,
+                label: attrLabel,
+                sku: productSku ? `${productSku}-${attrSkuPart}` : attrSkuPart,
+                price: productPrice,
                 sale_price: null,
                 quantity: 0,
                 imageFile: undefined,
@@ -240,12 +274,14 @@ const ProductCreate: React.FC = () => {
     };
 
     const addManualVariant = () => {
+        const productPrice = form.getFieldValue('price') || 0;
+        const productSku = form.getFieldValue('sku') || '';
         setVariants(prev => [...prev, {
             _key: `var-${Date.now()}`,
             attribute_ids: [],
             label: 'Biến thể mới',
-            sku: '',
-            price: 0,
+            sku: productSku,
+            price: productPrice,
             sale_price: null,
             quantity: 0,
             imageFile: undefined,
@@ -452,7 +488,18 @@ const ProductCreate: React.FC = () => {
                                 </Col>
                                 <Col span={12}>
                                     <Form.Item name="category_id" label="Danh mục" rules={[{ required: true, message: 'Chọn danh mục' }]}>
-                                        <Select placeholder="Chọn danh mục" options={categoryOptions} showSearch filterOption={(i, o) => (o?.label ?? '').toLowerCase().includes(i.toLowerCase())} />
+                                        <TreeSelect
+                                            showSearch
+                                            style={{ width: '100%' }}
+                                            dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+                                            placeholder="Chọn danh mục"
+                                            allowClear
+                                            treeDefaultExpandAll
+                                            treeData={categoryOptions}
+                                            filterTreeNode={(search, item) =>
+                                                (item?.title ?? '').toString().toLowerCase().indexOf(search.toLowerCase()) >= 0
+                                            }
+                                        />
                                     </Form.Item>
                                 </Col>
                             </Row>

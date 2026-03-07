@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import {
     Table, Button, Space, Tag,
     Typography, Popconfirm, Card, Row, Col, Tooltip,
-    Select, Input, Badge, Image, Switch,
+    Select, Input, Badge, Image, Switch, TreeSelect,
 } from 'antd';
 import {
     PlusOutlined, EditOutlined, DeleteOutlined,
     SearchOutlined, ShoppingOutlined, ReloadOutlined,
-    UndoOutlined,
+    UndoOutlined, EyeOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { axiosInstance } from '../../../api/axios';
@@ -22,6 +22,17 @@ interface ProductImage {
     image_path: string;
     image_url?: string;
     is_primary: boolean;
+}
+
+interface Variant {
+    id: number;
+    sku: string;
+    price: number;
+    sale_price?: number | null;
+    quantity: number;
+    image?: string | null;
+    is_active: boolean;
+    attributes?: { id: number; value: string; color_code?: string; group?: string }[];
 }
 
 interface Product {
@@ -39,7 +50,7 @@ interface Product {
     is_active?: boolean;
     deleted_at?: string | null;
     images?: ProductImage[];
-    variants?: any[];
+    variants?: Variant[];
 }
 
 const formatVND = (v: number) =>
@@ -63,6 +74,9 @@ const ProductList: React.FC = () => {
     const [brandOptions, setBrandOptions] = useState<any[]>([]);
 
     const navigate = useNavigate();
+    const openDetail = (id: number) => {
+        navigate(`/admin/products/detail/${id}`);
+    };
 
     const fetchProducts = async (page = 1) => {
         try {
@@ -95,11 +109,33 @@ const ProductList: React.FC = () => {
     const fetchFilters = async () => {
         try {
             const [catRes, brandRes] = await Promise.all([
-                axiosInstance.get(`${categoryPrefix}/get-options`),
-                axiosInstance.get(`${brandPrefix}/get-options`),
+                axiosInstance.get(`${categoryPrefix}`), // Use base index for categories
+                axiosInstance.get(`${brandPrefix}`),    // Use base index for brands
             ]);
-            setCategoryOptions(catRes.data.data.map((c: any) => ({ value: c.id, label: c.name })));
-            setBrandOptions(brandRes.data.data.map((b: any) => ({ value: b.id, label: b.name })));
+
+            const buildTree = (data: any[]) => {
+                const map = new Map<number, any>();
+                const roots: any[] = [];
+                data.forEach(item => {
+                    map.set(item.id, {
+                        key: item.id,
+                        value: item.id,
+                        title: item.name,
+                        children: []
+                    });
+                });
+                data.forEach(item => {
+                    if (item.parent_id && map.has(item.parent_id)) {
+                        map.get(item.parent_id).children.push(map.get(item.id));
+                    } else if (!item.parent_id) {
+                        roots.push(map.get(item.id));
+                    }
+                });
+                return roots;
+            };
+
+            setCategoryOptions(buildTree(catRes.data.data));
+            setBrandOptions((brandRes.data.data || []).map((b: any) => ({ value: b.id, label: b.name })));
         } catch {
             toast.error('Lỗi tải bộ lọc');
         }
@@ -263,6 +299,13 @@ const ProductList: React.FC = () => {
                         </Tooltip>
                     ) : (
                         <>
+                            <Tooltip title="Xem chi tiết">
+                                <Button
+                                    size="small" icon={<EyeOutlined />}
+                                    onClick={() => openDetail(r.id)}
+                                    style={{ color: '#1677ff', borderColor: '#1677ff' }}
+                                />
+                            </Tooltip>
                             <Tooltip title="Sửa">
                                 <Button
                                     type="primary" ghost size="small" icon={<EditOutlined />}
@@ -313,10 +356,19 @@ const ProductList: React.FC = () => {
                         />
                     </Col>
                     <Col>
-                        <Select
-                            placeholder="Danh mục" allowClear style={{ width: 160 }}
-                            value={categoryId} onChange={v => setCategoryId(v)}
-                            options={categoryOptions}
+                        <TreeSelect
+                            placeholder="Danh mục"
+                            allowClear
+                            style={{ width: 220 }}
+                            value={categoryId}
+                            onChange={v => setCategoryId(v)}
+                            treeData={categoryOptions}
+                            treeDefaultExpandAll
+                            showSearch
+                            filterTreeNode={(search, item) =>
+                                (item?.title ?? '').toString().toLowerCase().indexOf(search.toLowerCase()) >= 0
+                            }
+                            dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
                         />
                     </Col>
                     <Col>
@@ -381,6 +433,7 @@ const ProductList: React.FC = () => {
                     onChange: (page) => fetchProducts(page),
                 }}
             />
+
         </div>
     );
 };

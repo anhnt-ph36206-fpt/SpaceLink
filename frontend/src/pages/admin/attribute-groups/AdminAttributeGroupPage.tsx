@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
     Table, Button, Space, Typography, Popconfirm, Card,
-    Row, Col, Input, Tag, Modal, Form, Tooltip, InputNumber,
+    Row, Col, Input, Tag, Modal, Form, Tooltip,
     ColorPicker,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -187,13 +187,6 @@ const AdminAttributeGroupPage: React.FC = () => {
             },
         },
         {
-            title: 'Thứ tự',
-            dataIndex: 'display_order',
-            align: 'center',
-            width: 100,
-            sorter: (a, b) => a.display_order - b.display_order,
-        },
-        {
             title: 'Hành động',
             align: 'center',
             width: 120,
@@ -284,13 +277,6 @@ const AdminAttributeGroupPage: React.FC = () => {
                         <Col span={12}>
                             <Form.Item name="display_name" label="Tên hiển thị ngoại vi (vd: Màu sắc, Kích cỡ)">
                                 <Input placeholder="Tùy chọn, sẽ hiển thị ra frontend" />
-                            </Form.Item>
-                        </Col>
-                    </Row>
-                    <Row gutter={16}>
-                        <Col span={12}>
-                            <Form.Item name="display_order" label="Thứ tự hiển thị" initialValue={0}>
-                                <InputNumber min={0} style={{ width: '100%' }} />
                             </Form.Item>
                         </Col>
                     </Row>
