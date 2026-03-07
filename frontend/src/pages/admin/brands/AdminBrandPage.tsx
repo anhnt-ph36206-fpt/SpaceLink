@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import {
     Table, Button, Modal, Form, Input, Switch, Space, Tag,
-    Typography, Popconfirm, Card, Row, Col, Select, Avatar, Upload, type UploadFile,
+    Typography, Popconfirm, Card, Row, Col, Avatar, Upload, type UploadFile, Select
 } from 'antd';
 import {
     PlusOutlined, EditOutlined, DeleteOutlined,
-    SearchOutlined, AppstoreOutlined
+    SearchOutlined, ShopOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { axiosInstance } from "../../../api/axios.ts";
 import { toast } from "react-toastify";
 import type { UploadProps } from 'antd';
-import { categoryPrefix } from "../../../api/apiAdminPrefix.ts";
+import { brandPrefix } from "../../../api/apiAdminPrefix.ts";
 
 const { Title, Text } = Typography;
 
@@ -27,113 +27,43 @@ const convertToSlug = (text: string) => {
         .replace(/-+/g, '-');
 };
 
-interface Category {
+interface Brand {
     id: number;
-    parent_id: number | null;
     name: string;
     slug: string;
-    image?: string | null;
+    logo?: string | null;
     description?: string | null;
     is_active?: boolean;
-    children?: Category[];
+    display_order?: number;
 }
 
-const AdminCategoryPage: React.FC = () => {
-
-    const [categories, setCategories] = useState<Category[]>([]);
+const AdminBrandPage: React.FC = () => {
+    const [brands, setBrands] = useState<Brand[]>([]);
     const [loading, setLoading] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
-    const [editingItem, setEditingItem] = useState<Category | null>(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [editingItem, setEditingItem] = useState<Brand | null>(null);
     const [form] = Form.useForm();
 
     const [search, setSearch] = useState('');
     const [isActive, setIsActive] = useState<number | undefined>(undefined);
-    const [parentId, setParentId] = useState<number | undefined>(undefined);
-
     const [fileList, setFileList] = useState<UploadFile[]>([]);
 
-    const fetchCategories = async (params?: {
-        search?: string;
-        is_active?: number;
-        parent_id?: number;
-    }) => {
+    const fetchBrands = async () => {
         setLoading(true);
         try {
-            const res = await axiosInstance.get(categoryPrefix, {
-                params: {
-                    search: params?.search,
-                    is_active: params?.is_active,
-                    parent_id: params?.parent_id,
-                },
-            });
-
-            setCategories(res.data.data);
+            const res = await axiosInstance.get(brandPrefix);
+            setBrands(res.data.data);
         } catch {
-            toast.error('Không thể tải danh mục');
+            toast.error('Không thể tải thương hiệu');
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchCategories();
+        fetchBrands();
     }, []);
-
-    const buildTree = (data: Category[]) => {
-        const map = new Map<number, Category>();
-        const roots: Category[] = [];
-
-        data.forEach(item => {
-            map.set(item.id, { ...item, children: [] });
-        });
-
-        map.forEach(item => {
-            if (item.parent_id && map.has(item.parent_id)) {
-                map.get(item.parent_id)!.children!.push(item);
-            } else {
-                roots.push(item);
-            }
-        });
-
-        map.forEach(item => {
-            if (!item.children || item.children.length === 0) {
-                delete item.children;
-            }
-        });
-
-        return roots;
-    };
-
-    const sortByOrder = (arr: Category[]): Category[] => {
-        arr.sort((a, b) => a.name.localeCompare(b.name));
-
-        arr.forEach(item => {
-            if (item.children?.length) {
-                sortByOrder(item.children);
-            }
-        });
-
-        return arr;
-    };
-
-    const treeData = sortByOrder(buildTree(categories));
-
-
-    const handleFilter = () => {
-        fetchCategories({
-            search,
-            is_active: isActive,
-            parent_id: parentId,
-        });
-    };
-
-    const handleReset = () => {
-        setSearch('');
-        setIsActive(undefined);
-        setParentId(undefined);
-        fetchCategories({});
-    };
-
 
     const openAdd = () => {
         setEditingItem(null);
@@ -143,19 +73,19 @@ const AdminCategoryPage: React.FC = () => {
         setModalOpen(true);
     };
 
-    const openEdit = (item: Category) => {
+    const openEdit = (item: Brand) => {
         setEditingItem(item);
         form.setFieldsValue({
             ...item,
         });
 
-        if (item.image) {
+        if (item.logo) {
             setFileList([
                 {
                     uid: '-1',
-                    name: 'image',
+                    name: 'logo',
                     status: 'done',
-                    url: item.image,
+                    url: item.logo.startsWith('http') ? item.logo : `http://localhost:8000/storage/${item.logo}`,
                 },
             ]);
         } else {
@@ -168,38 +98,30 @@ const AdminCategoryPage: React.FC = () => {
     const handleSave = async () => {
         try {
             const values = await form.validateFields();
+            setSubmitting(true);
 
             const formData = new FormData();
-
             formData.append('name', values.name);
-            formData.append(
-                'slug',
-                values.slug || values.name.toLowerCase().replace(/\s+/g, '-')
-            );
-
-            if (values.parent_id) {
-                formData.append('parent_id', values.parent_id);
-            }
+            formData.append('slug', values.slug || convertToSlug(values.name));
+            formData.append('is_active', values.is_active ? '1' : '0');
+            formData.append('display_order', '0');
 
             if (values.description) {
                 formData.append('description', values.description);
             }
 
-            formData.append('is_active', values.is_active ? '1' : '0');
-            formData.append('display_order', '0');
-
             if (fileList.length > 0 && fileList[0].originFileObj) {
-                formData.append('image', fileList[0].originFileObj);
+                formData.append('logo', fileList[0].originFileObj);
             }
 
             if (editingItem) {
                 formData.append('_method', 'PUT');
-                await axiosInstance.post(`${categoryPrefix}/${editingItem.id}`, formData, {
+                await axiosInstance.post(`${brandPrefix}/${editingItem.id}`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                 });
                 toast.success('Cập nhật thành công');
             } else {
-                await axiosInstance.post(categoryPrefix, formData, {
+                await axiosInstance.post(brandPrefix, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                 });
                 toast.success('Thêm thành công');
@@ -207,17 +129,19 @@ const AdminCategoryPage: React.FC = () => {
 
             setModalOpen(false);
             setFileList([]);
-            fetchCategories();
+            fetchBrands();
         } catch (error: any) {
             toast.error(error?.response?.data?.message || 'Có lỗi xảy ra');
+        } finally {
+            setSubmitting(false);
         }
     };
 
     const handleDelete = async (id: number) => {
         try {
-            await axiosInstance.delete(`${categoryPrefix}/${id}`);
+            await axiosInstance.delete(`${brandPrefix}/${id}`);
             toast.success('Đã xóa');
-            fetchCategories();
+            fetchBrands();
         } catch (error: any) {
             toast.error(error.message || "Xóa thất bại");
         }
@@ -228,43 +152,26 @@ const AdminCategoryPage: React.FC = () => {
         maxCount: 1,
         beforeUpload: () => false,
         fileList,
-        onChange: ({ fileList }) => {
-            setFileList(fileList);
-        },
-        onRemove: () => {
-            setFileList([]);
-        },
+        onChange: ({ fileList }) => setFileList(fileList),
+        onRemove: () => setFileList([]),
     };
 
-    const getFlatOptions = (items: Category[], depth = 0, excludeId?: number): { value: number; label: string }[] => {
-        let result: { value: number; label: string }[] = [];
-        items.forEach(item => {
-            if (item.id === excludeId) return;
-            result.push({
-                value: item.id,
-                label: `${'— '.repeat(depth)}${item.name}`
-            });
-            if (item.children && item.children.length > 0) {
-                // If we are excluding an ID, we also exclude all its children
-                result = [...result, ...getFlatOptions(item.children, depth + 1, excludeId)];
-            }
-        });
-        return result;
-    };
+    const filteredBrands = brands.filter(b => {
+        const matchSearch = b.name.toLowerCase().includes(search.toLowerCase());
+        const matchActive = isActive === undefined || (b.is_active ? 1 : 0) === isActive;
+        return matchSearch && matchActive;
+    });
 
-    const parentOptions = getFlatOptions(treeData, 0, editingItem?.id);
-    const filterParentOptions = getFlatOptions(treeData);
-
-    const columns: ColumnsType<Category> = [
+    const columns: ColumnsType<Brand> = [
         {
-            title: 'Danh mục',
+            title: 'Thương hiệu',
             key: 'name',
             render: (_, r) => (
                 <Space>
                     <Avatar
-                        src={r.image || undefined}
+                        src={r.logo ? (r.logo.startsWith('http') ? r.logo : `http://localhost:8000/storage/${r.logo}`) : undefined}
                         size={36}
-                        style={{ borderRadius: 8, background: '#e8f0fe' }}
+                        style={{ borderRadius: 8, background: '#f0f0f0' }}
                     />
                     <div>
                         <div style={{ fontWeight: 600 }}>{r.name}</div>
@@ -278,8 +185,8 @@ const AdminCategoryPage: React.FC = () => {
             dataIndex: 'is_active',
             width: 120,
             align: 'center',
-            render: (v: number) => (
-                <Tag color={v == 1 ? 'success' : 'default'}>
+            render: (v: boolean) => (
+                <Tag color={v ? 'success' : 'default'}>
                     {v ? 'Hoạt động' : 'Tắt'}
                 </Tag>
             ),
@@ -298,7 +205,7 @@ const AdminCategoryPage: React.FC = () => {
                         onClick={() => openEdit(r)}
                     />
                     <Popconfirm
-                        title="Xóa danh mục?"
+                        title="Xóa thương hiệu?"
                         onConfirm={() => handleDelete(r.id)}
                         okText="Xóa"
                         cancelText="Hủy"
@@ -315,8 +222,8 @@ const AdminCategoryPage: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
                 <div>
                     <Title level={4} style={{ margin: 0, color: '#1a1a2e' }}>
-                        <AppstoreOutlined style={{ marginRight: 10, color: '#0d6efd' }} />
-                        Quản lí Danh mục
+                        <ShopOutlined style={{ marginRight: 10, color: '#0d6efd' }} />
+                        Quản lí Thương hiệu
                     </Title>
                 </div>
                 <Button
@@ -327,22 +234,21 @@ const AdminCategoryPage: React.FC = () => {
                         boxShadow: '0 4px 12px rgba(13,110,253,0.35)',
                     }}
                 >
-                    Thêm danh mục
+                    Thêm thương hiệu
                 </Button>
             </div>
 
             <Card style={{ marginBottom: 20 }}>
                 <Row gutter={12}>
-                    <Col span={8}>
+                    <Col span={10}>
                         <Input
-                            placeholder="Tìm kiếm..."
+                            placeholder="Tìm kiếm tên thương hiệu..."
                             prefix={<SearchOutlined />}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             allowClear
                         />
                     </Col>
-
                     <Col span={6}>
                         <Select
                             placeholder="Trạng thái"
@@ -356,44 +262,14 @@ const AdminCategoryPage: React.FC = () => {
                             ]}
                         />
                     </Col>
-
-                    <Col span={6}>
-                        <Select
-                            placeholder="Danh mục cha"
-                            value={parentId}
-                            onChange={setParentId}
-                            allowClear
-                            style={{ width: '100%' }}
-                            options={filterParentOptions}
-                        />
-                    </Col>
-
-                    <Col span={4}>
-                        <Space>
-                            <Button type="primary" onClick={handleFilter}>
-                                Lọc
-                            </Button>
-                            <Button onClick={handleReset}>
-                                Reset
-                            </Button>
-                        </Space>
-                    </Col>
                 </Row>
             </Card>
 
             <Table
                 columns={columns}
-                dataSource={treeData}
+                dataSource={filteredBrands}
                 rowKey="id"
                 loading={loading}
-                expandable={{
-                    childrenColumnName: 'children',
-                    indentSize: 25,
-                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                    // @ts-expect-error
-                    rowExpandable: (record) =>
-                        record.children && record.children.length > 0,
-                }}
             />
 
             <Modal
@@ -408,38 +284,31 @@ const AdminCategoryPage: React.FC = () => {
                             alignItems: 'center',
                             justifyContent: 'center'
                         }}>
-                            <AppstoreOutlined style={{ color: '#fff', fontSize: 15 }} />
+                            <ShopOutlined style={{ color: '#fff', fontSize: 15 }} />
                         </div>
-                        <span>{editingItem ? 'Sửa danh mục' : 'Thêm danh mục mới'}</span>
+                        <span>{editingItem ? 'Sửa thương hiệu' : 'Thêm thương hiệu mới'}</span>
                     </div>
                 }
                 open={modalOpen}
                 onOk={handleSave}
                 onCancel={() => setModalOpen(false)}
                 okText={editingItem ? 'Cập nhật' : 'Thêm mới'}
+                confirmLoading={submitting}
                 cancelText="Hủy"
-                okButtonProps={{
-                    style: {
-                        background: 'linear-gradient(135deg,#0d6efd,#084298)',
-                        border: 'none',
-                        borderRadius: 8
-                    }
-                }}
-                cancelButtonProps={{ style: { borderRadius: 8 } }}
                 width={560}
                 style={{ top: 40 }}
             >
                 <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
                     <Row gutter={16}>
                         <Col span={12}>
-                            <Form.Item name="name" label="Tên danh mục"
-                                rules={[{ required: true, message: 'Nhập tên danh mục' }]}>
+                            <Form.Item name="name" label="Tên thương hiệu"
+                                rules={[{ required: true, message: 'Nhập tên thương hiệu' }]}>
                                 <Input
-                                    placeholder="VD: SmartPhone"
-                                    style={{ borderRadius: 8 }}
+                                    placeholder="VD: Apple, Samsung"
                                     onChange={(e) => {
-                                        const name = e.target.value;
-                                        form.setFieldsValue({ slug: convertToSlug(name) });
+                                        if (!editingItem) {
+                                            form.setFieldsValue({ slug: convertToSlug(e.target.value) });
+                                        }
                                     }}
                                 />
                             </Form.Item>
@@ -447,23 +316,13 @@ const AdminCategoryPage: React.FC = () => {
                         <Col span={12}>
                             <Form.Item name="slug" label="Slug (URL)"
                                 rules={[{ required: true, message: 'Nhập slug' }]}>
-                                <Input placeholder="VD: smartphone" style={{ borderRadius: 8 }} />
+                                <Input placeholder="VD: apple" />
                             </Form.Item>
                         </Col>
                     </Row>
 
                     <Row gutter={16}>
-                        <Col span={12}>
-                            <Form.Item name="parent_id" label="Danh mục cha">
-                                <Select
-                                    placeholder="Chọn danh mục cha (nếu có)"
-                                    allowClear
-                                    options={parentOptions}
-                                    style={{ borderRadius: 8 }}
-                                />
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
+                        <Col span={24}>
                             <Form.Item name="is_active" label="Trạng thái" valuePropName="checked">
                                 <Switch checkedChildren="Hoạt động" unCheckedChildren="Tắt" />
                             </Form.Item>
@@ -471,9 +330,10 @@ const AdminCategoryPage: React.FC = () => {
                     </Row>
 
                     <Form.Item name="description" label="Mô tả">
-                        <Input.TextArea rows={3} placeholder="Mô tả ngắn về danh mục..." style={{ borderRadius: 8 }} />
+                        <Input.TextArea rows={3} placeholder="Mô tả về thương hiệu..." />
                     </Form.Item>
-                    <Form.Item label="Hình ảnh">
+
+                    <Form.Item label="Logo">
                         <Upload {...uploadProps}>
                             {fileList.length < 1 && (
                                 <div>
@@ -489,4 +349,4 @@ const AdminCategoryPage: React.FC = () => {
     );
 };
 
-export default AdminCategoryPage;
+export default AdminBrandPage;

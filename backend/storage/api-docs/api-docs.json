@@ -1497,12 +1497,12 @@
                                     },
                                     "gender": {
                                         "type": "string",
+                                        "nullable": true,
                                         "enum": [
                                             "male",
                                             "female",
                                             "other"
-                                        ],
-                                        "nullable": true
+                                        ]
                                     },
                                     "date_of_birth": {
                                         "type": "string",
@@ -1899,12 +1899,12 @@
                                     },
                                     "address_type": {
                                         "type": "string",
+                                        "example": "home",
                                         "enum": [
                                             "home",
                                             "office",
                                             "other"
-                                        ],
-                                        "example": "home"
+                                        ]
                                     }
                                 },
                                 "type": "object"
@@ -2024,12 +2024,12 @@
                                     },
                                     "address_type": {
                                         "type": "string",
+                                        "example": "office",
                                         "enum": [
                                             "home",
                                             "office",
                                             "other"
-                                        ],
-                                        "example": "office"
+                                        ]
                                     }
                                 },
                                 "type": "object"
@@ -2364,10 +2364,10 @@
                         "required": false,
                         "schema": {
                             "type": "string",
+                            "example": "tree",
                             "enum": [
                                 "tree"
-                            ],
-                            "example": "tree"
+                            ]
                         }
                     }
                 ],

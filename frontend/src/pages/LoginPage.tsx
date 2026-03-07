@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import type { User } from '../types/user';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import { axiosInstance } from '../api/axios';
+import type { AxiosError } from 'axios';
 
 type LoginForm = {
   email: string;
@@ -15,20 +17,26 @@ const LoginPage: React.FC = () => {
 
   const onLogin = async (data: LoginForm) => {
     try {
-      const res = await fetch(`http://localhost:3000/users?email=${data.email}&password=${data.password}`);
-      const users: User[] = await res.json();
+      // POST /api/auth/login → { status: true, data: { user, token, token_type } }
+      const res = await axiosInstance.post('/auth/login', {
+        email: data.email,
+        password: data.password,
+      });
 
-      if (users.length === 0) {
-        alert('Email hoặc mật khẩu không đúng!');
-        return;
-      }
+      const user: User = res.data.data.user;
+      const token: string = res.data.data.token;
 
-      const user = users[0];
-      const token = btoa(JSON.stringify({ email: user.email, password: user.password, role: user.role }));
       login(token, user);
-    } catch (error) {
-      console.error(error);
-      alert('Đã có lỗi xảy ra, vui lòng thử lại!');
+    } catch (err) {
+      const error = err as AxiosError<{ message?: string }>;
+      const msg = error.response?.data?.message;
+      if (error.response?.status === 403) {
+        alert(msg ?? 'Tài khoản của bạn đã bị khóa.');
+      } else if (error.response?.status === 401) {
+        alert(msg ?? 'Email hoặc mật khẩu không đúng!');
+      } else {
+        alert(msg ?? 'Đã có lỗi xảy ra, vui lòng thử lại!');
+      }
     }
   };
 

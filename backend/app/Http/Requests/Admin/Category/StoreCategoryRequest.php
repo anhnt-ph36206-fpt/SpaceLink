@@ -17,10 +17,9 @@ class StoreCategoryRequest extends FormRequest
             'name'          => 'required|string|max:255',
             'slug'          => 'required|string|max:255|unique:categories,slug',
             'parent_id'     => 'nullable|integer|exists:categories,id',
-            'image'         => 'nullable|string|max:255',
+            'image'         => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'icon'          => 'nullable|string|max:100',
             'description'   => 'nullable|string',
-            'display_order' => 'nullable|integer|min:0',
             'is_active'     => 'nullable|boolean',
         ];
     }
@@ -32,7 +31,6 @@ class StoreCategoryRequest extends FormRequest
             'slug.required'      => 'Slug không được để trống.',
             'slug.unique'        => 'Slug này đã tồn tại, vui lòng chọn slug khác.',
             'parent_id.exists'   => 'Danh mục cha không tồn tại.',
-            'display_order.min'  => 'Thứ tự hiển thị phải >= 0.',
         ];
     }
 }

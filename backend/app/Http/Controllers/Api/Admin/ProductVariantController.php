@@ -28,12 +28,16 @@ class ProductVariantController extends Controller
             content: new OA\JsonContent(
                 required: ['price'],
                 properties: [
-                    new OA\Property(property: 'sku',        type: 'string',  nullable: true),
-                    new OA\Property(property: 'price',      type: 'number'),
-                    new OA\Property(property: 'sale_price', type: 'number',  nullable: true),
-                    new OA\Property(property: 'quantity',   type: 'integer', nullable: true),
-                    new OA\Property(property: 'image',      type: 'string',  nullable: true, description: 'Đường dẫn ảnh variant'),
-                    new OA\Property(property: 'is_active',  type: 'boolean', nullable: true),
+                    new OA\Property(property: 'sku',           type: 'string',  nullable: true),
+                    new OA\Property(property: 'price',         type: 'number'),
+                    new OA\Property(property: 'sale_price',    type: 'number',  nullable: true),
+                    new OA\Property(property: 'quantity',      type: 'integer', nullable: true),
+                    new OA\Property(property: 'image',         type: 'string',  nullable: true, description: 'Đường dẫn ảnh variant'),
+                    new OA\Property(property: 'is_active',     type: 'boolean', nullable: true),
+                    new OA\Property(property: 'attribute_ids', type: 'array',   nullable: true,
+                        items: new OA\Items(type: 'integer'),
+                        description: 'Mảng attribute IDs gán cho biến thể này'
+                    ),
                 ]
             )
         ),
@@ -47,12 +51,26 @@ class ProductVariantController extends Controller
     {
         $parentProduct = Product::findOrFail($product);
 
-        $variant = $parentProduct->variants()->create($request->validated());
+        $data = $request->except(['attribute_ids', 'image']);
+    if ($request->hasFile('image')) {
+        $data['image'] = $request->file('image')->store('products/variants', 'public');
+    } elseif (is_string($request->image)) {
+        $data['image'] = $request->image;
+    }
+
+    $variant = $parentProduct->variants()->create($data);
+
+        // Sync attributes (many-to-many)
+        if ($request->filled('attribute_ids')) {
+            $variant->attributes()->sync($request->attribute_ids);
+        }
+
+        $variant->load('attributes.attributeGroup');
 
         return response()->json([
             'status'  => true,
             'message' => 'Tạo biến thể thành công.',
-            'data'    => $variant,
+            'data'    => $this->formatVariant($variant),
         ], 201);
     }
 
@@ -73,12 +91,15 @@ class ProductVariantController extends Controller
             content: new OA\JsonContent(
                 required: ['price'],
                 properties: [
-                    new OA\Property(property: 'sku',        type: 'string',  nullable: true),
-                    new OA\Property(property: 'price',      type: 'number'),
-                    new OA\Property(property: 'sale_price', type: 'number',  nullable: true),
-                    new OA\Property(property: 'quantity',   type: 'integer', nullable: true),
-                    new OA\Property(property: 'image',      type: 'string',  nullable: true),
-                    new OA\Property(property: 'is_active',  type: 'boolean', nullable: true),
+                    new OA\Property(property: 'sku',           type: 'string',  nullable: true),
+                    new OA\Property(property: 'price',         type: 'number'),
+                    new OA\Property(property: 'sale_price',    type: 'number',  nullable: true),
+                    new OA\Property(property: 'quantity',      type: 'integer', nullable: true),
+                    new OA\Property(property: 'image',         type: 'string',  nullable: true),
+                    new OA\Property(property: 'is_active',     type: 'boolean', nullable: true),
+                    new OA\Property(property: 'attribute_ids', type: 'array',   nullable: true,
+                        items: new OA\Items(type: 'integer')
+                    ),
                 ]
             )
         ),
@@ -90,16 +111,34 @@ class ProductVariantController extends Controller
     )]
     public function update(UpdateVariantRequest $request, string $product, string $variant): JsonResponse
     {
-        // Đảm bảo variant thuộc đúng product này
         $variantModel = ProductVariant::where('product_id', $product)
             ->findOrFail($variant);
 
-        $variantModel->update($request->validated());
+        $data = $request->except(['attribute_ids', 'image']);
+    
+    if ($request->hasFile('image')) {
+        // Delete old image if exists? (optional)
+        $data['image'] = $request->file('image')->store('products/variants', 'public');
+    } elseif ($request->has('image') && is_string($request->image)) {
+        // Keep existing image URL/path or clear it if empty string
+        $data['image'] = $request->image;
+    } elseif ($request->has('image') && $request->image === null) {
+        $data['image'] = null;
+    }
+
+    $variantModel->update($data);
+
+        // Sync attributes
+        if ($request->has('attribute_ids')) {
+            $variantModel->attributes()->sync($request->attribute_ids ?? []);
+        }
+
+        $variantModel->load('attributes.attributeGroup');
 
         return response()->json([
             'status'  => true,
             'message' => 'Cập nhật biến thể thành công.',
-            'data'    => $variantModel,
+            'data'    => $this->formatVariant($variantModel),
         ]);
     }
 
@@ -131,5 +170,26 @@ class ProductVariantController extends Controller
             'status'  => true,
             'message' => 'Đã xóa biến thể thành công.',
         ]);
+    }
+
+    // Helper — format variant với attributes
+    private function formatVariant(ProductVariant $v): array
+    {
+        return [
+            'id'         => $v->id,
+            'sku'        => $v->sku,
+            'price'      => $v->price,
+            'sale_price' => $v->sale_price,
+            'quantity'   => $v->quantity,
+            'image'      => $v->image,
+            'is_active'  => $v->is_active,
+            'attributes' => $v->attributes->map(fn($a) => [
+                'id'                 => $a->id,
+                'value'              => $a->value,
+                'color_code'         => $a->color_code,
+                'group_name'         => $a->attributeGroup?->name,
+                'group_display_name' => $a->attributeGroup?->display_name,
+            ]),
+        ];
     }
 }
