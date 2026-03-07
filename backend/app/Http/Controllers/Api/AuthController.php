@@ -39,6 +39,8 @@ class AuthController extends Controller
 
     $token = $user->createToken('auth_token')->plainTextToken;
 
+    $user->load('role');
+
     return response()->json([
         'status'  => 'success',
         'message' => 'Đăng ký thành công',
@@ -91,6 +93,8 @@ class AuthController extends Controller
         $user->update(['last_login_at' => now()]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        $user->load('role');
 
         return response()->json([
             'status'  => 'success',
