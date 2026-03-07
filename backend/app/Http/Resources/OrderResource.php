@@ -23,7 +23,7 @@ class OrderResource extends JsonResource
 
             // Địa chỉ giao hàng (snapshot)
             'shipping' => [
-                'name'     => $this->shipping_name,
+                'fullname' => $this->shipping_name,
                 'phone'    => $this->shipping_phone,
                 'email'    => $this->shipping_email,
                 'province' => $this->shipping_province,
