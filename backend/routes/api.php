@@ -153,9 +153,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     // --- Admin Categories ---
     Route::apiResource('categories', AdminCategoryController::class);
 
-    // --- Admin Attribute Groups ---
-    Route::apiResource('attribute-groups', AdminAttributeGroupController::class);
-
     // --- Admin Products ---
     Route::apiResource('products', \App\Http\Controllers\Api\Admin\ProductController::class);
     Route::post('products/{product}/restore', [\App\Http\Controllers\Api\Admin\ProductController::class, 'restore']);
