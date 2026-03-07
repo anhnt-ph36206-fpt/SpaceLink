@@ -113,6 +113,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     // --- Admin Categories ---
     Route::apiResource('categories', AdminCategoryController::class);
 
+    // --- Admin Brands ---
+    Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class);
+
     // --- Admin Attribute Groups ---
     Route::apiResource('attribute-groups', AdminAttributeGroupController::class);
 

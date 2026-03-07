@@ -39,7 +39,6 @@ class ProductController extends Controller
     )]
     public function index(Request $request): AnonymousResourceCollection
     {
-        // Nếu ?trashed=true → chỉ lấy sản phẩm đã xóa mềm
         $showTrashed = filter_var($request->get('trashed', false), FILTER_VALIDATE_BOOLEAN);
 
         $query = $showTrashed
@@ -48,7 +47,6 @@ class ProductController extends Controller
 
         $query->with(['category:id,name,slug', 'brand:id,name,slug', 'images'])->latest();
 
-        // Tìm kiếm theo tên / slug / SKU
         if ($request->filled('search')) {
             $kw = $request->search;
             $query->where(function ($q) use ($kw) {
@@ -83,19 +81,6 @@ class ProductController extends Controller
     // =========================================================================
     // GET /api/admin/products/{id} — Chi tiết sản phẩm (kèm variants + images)
     // =========================================================================
-    #[OA\Get(
-        path: '/api/admin/products/{id}',
-        summary: '[Admin] Chi tiết sản phẩm',
-        tags: ['Admin - Products'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm'),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Thành công'),
-            new OA\Response(response: 404, description: 'Không tìm thấy sản phẩm'),
-        ]
-    )]
     public function show(string $id): ProductResource
     {
         $product = Product::with([
@@ -110,124 +95,226 @@ class ProductController extends Controller
     }
 
     // =========================================================================
-    // POST /api/admin/products — Tạo mới sản phẩm
+    // POST /api/admin/products — Tạo mới sản phẩm (kèm images + variants)
     // =========================================================================
-    #[OA\Post(
-        path: '/api/admin/products',
-        summary: '[Admin] Tạo sản phẩm mới',
-        tags: ['Admin - Products'],
-        security: [['sanctum' => []]],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['category_id', 'name', 'slug', 'price'],
-                properties: [
-                    new OA\Property(property: 'category_id',      type: 'integer'),
-                    new OA\Property(property: 'brand_id',         type: 'integer',  nullable: true),
-                    new OA\Property(property: 'name',             type: 'string'),
-                    new OA\Property(property: 'slug',             type: 'string'),
-                    new OA\Property(property: 'sku',              type: 'string',   nullable: true),
-                    new OA\Property(property: 'price',            type: 'number'),
-                    new OA\Property(property: 'sale_price',       type: 'number',   nullable: true),
-                    new OA\Property(property: 'quantity',         type: 'integer',  nullable: true),
-                    new OA\Property(property: 'description',      type: 'string',   nullable: true),
-                    new OA\Property(property: 'content',          type: 'string',   nullable: true),
-                    new OA\Property(property: 'is_featured',       type: 'boolean',  nullable: true),
-                    new OA\Property(property: 'is_active',        type: 'boolean',  nullable: true),
-                    new OA\Property(property: 'meta_title',       type: 'string',   nullable: true),
-                    new OA\Property(property: 'meta_description', type: 'string',   nullable: true),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 201, description: 'Tạo thành công'),
-            new OA\Response(response: 422, description: 'Validation thất bại'),
-        ]
-    )]
     public function store(StoreProductRequest $request): JsonResponse
     {
-        $product = Product::create($request->validated());
-        $product->load(['category:id,name', 'brand:id,name', 'images', 'variants']);
+        return \DB::transaction(function () use ($request) {
+            // Lấy chỉ product fields (loại bỏ images, variants)
+            $productData = $request->safe()->except(['images', 'variants']);
+            $product = Product::create($productData);
 
-        return response()->json([
-            'status'  => true,
-            'message' => 'Tạo sản phẩm thành công.',
-            'data'    => new ProductResource($product),
-        ], 201);
+            // ── Xử lý gallery images ──
+            $imagesInput = $request->input('images', []);
+            if (is_array($imagesInput) && count($imagesInput) > 0) {
+                $hasPrimary = false;
+
+                foreach ($imagesInput as $index => $imgData) {
+                    $file = $request->file("images.{$index}.file");
+                    if (!$file) continue;
+
+                    $isPrimary = filter_var($imgData['is_primary'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                    $displayOrder = (int) ($imgData['display_order'] ?? $index);
+
+                    if ($isPrimary && !$hasPrimary) {
+                        $hasPrimary = true;
+                    } elseif ($isPrimary && $hasPrimary) {
+                        $isPrimary = false;
+                    }
+
+                    if ($index === 0 && !$hasPrimary) {
+                        $isPrimary = true;
+                        $hasPrimary = true;
+                    }
+
+                    $path = $file->store('products', 'public');
+
+                    $product->images()->create([
+                        'image_path'    => $path,
+                        'is_primary'    => $isPrimary,
+                        'display_order' => $displayOrder,
+                    ]);
+                }
+            }
+
+            // ── Xử lý variants ──
+            if ($request->has('variants')) {
+                $variantsInput = $request->input('variants', []);
+                foreach ($variantsInput as $index => $varData) {
+                    $varFields = [
+                        'sku'        => $varData['sku'] ?? null,
+                        'price'      => $varData['price'],
+                        'sale_price' => $varData['sale_price'] ?? null,
+                        'quantity'   => $varData['quantity'] ?? 0,
+                        'is_active'  => filter_var($varData['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                    ];
+                    // Xử lý ảnh variant
+                    $variantFile = $request->file("variants.{$index}.image");
+                    if ($variantFile) {
+                        $varFields['image'] = $variantFile->store('products/variants', 'public');
+                    }
+
+                    $variant = $product->variants()->create($varFields);
+
+                    // Sync attributes
+                    $attributeIds = $varData['attribute_ids'] ?? [];
+                    if (!empty($attributeIds)) {
+                        $variant->attributes()->sync($attributeIds);
+                    }
+                }
+            }
+
+            $product->load(['category:id,name', 'brand:id,name', 'images', 'variants', 'variants.attributes.attributeGroup']);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Tạo sản phẩm thành công.',
+                'data'    => new ProductResource($product),
+            ], 201);
+        });
     }
 
     // =========================================================================
-    // PUT /api/admin/products/{id} — Cập nhật sản phẩm
+    // PUT /api/admin/products/{id} — Cập nhật sản phẩm (kèm ảnh mới + variant mới)
     // =========================================================================
-    #[OA\Put(
-        path: '/api/admin/products/{id}',
-        summary: '[Admin] Cập nhật sản phẩm',
-        tags: ['Admin - Products'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['category_id', 'name', 'slug', 'price'],
-                properties: [
-                    new OA\Property(property: 'category_id',      type: 'integer'),
-                    new OA\Property(property: 'brand_id',         type: 'integer',  nullable: true),
-                    new OA\Property(property: 'name',             type: 'string'),
-                    new OA\Property(property: 'slug',             type: 'string'),
-                    new OA\Property(property: 'sku',              type: 'string',   nullable: true),
-                    new OA\Property(property: 'price',            type: 'number'),
-                    new OA\Property(property: 'sale_price',       type: 'number',   nullable: true),
-                    new OA\Property(property: 'quantity',         type: 'integer',  nullable: true),
-                    new OA\Property(property: 'description',      type: 'string',   nullable: true),
-                    new OA\Property(property: 'content',          type: 'string',   nullable: true),
-                    new OA\Property(property: 'is_featured',       type: 'boolean',  nullable: true),
-                    new OA\Property(property: 'is_active',        type: 'boolean',  nullable: true),
-                    new OA\Property(property: 'meta_title',       type: 'string',   nullable: true),
-                    new OA\Property(property: 'meta_description', type: 'string',   nullable: true),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Cập nhật thành công'),
-            new OA\Response(response: 404, description: 'Không tìm thấy sản phẩm'),
-            new OA\Response(response: 422, description: 'Validation thất bại'),
-        ]
-    )]
-    public function update(UpdateProductRequest $request, string $id): JsonResponse
+    public function update(UpdateProductRequest $request, string $product): JsonResponse
     {
-        $product = Product::findOrFail($id);
-        $product->update($request->validated());
-        $product->load(['category:id,name', 'brand:id,name', 'images', 'variants']);
+        return \DB::transaction(function () use ($request, $product) {
+            $product = Product::findOrFail($product);
 
-        return response()->json([
-            'status'  => true,
-            'message' => 'Cập nhật sản phẩm thành công.',
-            'data'    => new ProductResource($product),
-        ]);
+            // Cập nhật product fields
+            $productData = $request->safe()->except(['images', 'variants']);
+            $product->update($productData);
+
+            // ── Xử lý cập nhật ảnh đã tồn tại (ví dụ: đổi is_primary) ──
+            $existingImagesInput = $request->input('existing_images', []);
+            if (is_array($existingImagesInput) && count($existingImagesInput) > 0) {
+                foreach ($existingImagesInput as $imgId => $imgData) {
+                    $image = $product->images()->find($imgId);
+                    if ($image) {
+                        $isPrimary = filter_var($imgData['is_primary'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                        if ($isPrimary) {
+                            // Nếu set cái này là primary, thì unset tất cả cái khác
+                            $product->images()->where('id', '!=', $imgId)->update(['is_primary' => false]);
+                        }
+                        $image->update([
+                            'is_primary'    => $isPrimary,
+                            'display_order' => $imgData['display_order'] ?? $image->display_order,
+                        ]);
+                    }
+                }
+            }
+
+            // ── Xử lý ảnh mới (thêm vào) ──
+            $imagesInput = $request->input('images', []);
+            if (is_array($imagesInput) && count($imagesInput) > 0) {
+                // Kiểm tra xem hiện tại product có primary chưa (sau khi đã update existing)
+                $existingHasPrimary = $product->images()->where('is_primary', true)->exists();
+
+                foreach ($imagesInput as $index => $imgData) {
+                    $file = $request->file("images.{$index}.file");
+                    if (!$file) continue;
+
+                    $isPrimary = filter_var($imgData['is_primary'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                    $displayOrder = (int) ($imgData['display_order'] ?? $index);
+
+                    // Nếu set primary → bỏ primary cũ trước
+                    if ($isPrimary) {
+                        $product->images()->update(['is_primary' => false]);
+                        $existingHasPrimary = true;
+                    }
+
+                    // Nếu không có ảnh primary nào và đây là ảnh đầu tiên → set primary
+                    if (!$existingHasPrimary && $index === 0) {
+                        $isPrimary = true;
+                        $existingHasPrimary = true;
+                    }
+
+                    $path = $file->store('products', 'public');
+
+                    $product->images()->create([
+                        'image_path'    => $path,
+                        'is_primary'    => $isPrimary,
+                        'display_order' => $displayOrder,
+                    ]);
+                }
+            }
+
+            // ── Xử lý cập nhật variants đã tồn tại ──
+            $existingVariantsInput = $request->input('existing_variants', []);
+            if (is_array($existingVariantsInput) && count($existingVariantsInput) > 0) {
+                foreach ($existingVariantsInput as $varId => $varData) {
+                    $variant = $product->variants()->find($varId);
+                    if ($variant) {
+                        $varFields = [
+                            'sku'        => $varData['sku'] ?? $variant->sku,
+                            'price'      => $varData['price'] ?? $variant->price,
+                            'sale_price' => $varData['sale_price'] ?? $variant->sale_price,
+                            'quantity'   => $varData['quantity'] ?? $variant->quantity,
+                            'is_active'  => filter_var($varData['is_active'] ?? $variant->is_active, FILTER_VALIDATE_BOOLEAN),
+                        ];
+
+                        // Xử lý ảnh variant hiện tại nếu có file mới
+                        $variantFile = $request->file("existing_variants.{$varId}.image");
+                        if ($variantFile) {
+                            $varFields['image'] = $variantFile->store('products/variants', 'public');
+                        }
+
+                        $variant->update($varFields);
+
+                        // Sync attributes if provided
+                        if (isset($varData['attribute_ids'])) {
+                            $variant->attributes()->sync($varData['attribute_ids']);
+                        }
+                    }
+                }
+            }
+
+            // ── Xử lý variants mới ──
+            if ($request->has('variants')) {
+                $variantsInput = $request->input('variants', []);
+                foreach ($variantsInput as $index => $varData) {
+                    $varFields = [
+                        'sku'        => $varData['sku'] ?? null,
+                        'price'      => $varData['price'],
+                        'sale_price' => $varData['sale_price'] ?? null,
+                        'quantity'   => $varData['quantity'] ?? 0,
+                        'is_active'  => filter_var($varData['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                    ];
+
+                    // Xử lý ảnh variant
+                    $variantFile = $request->file("variants.{$index}.image");
+                    if ($variantFile) {
+                        $varFields['image'] = $variantFile->store('products/variants', 'public');
+                    }
+
+                    $variant = $product->variants()->create($varFields);
+
+                    // Sync attributes
+                    $attributeIds = $varData['attribute_ids'] ?? [];
+                    if (!empty($attributeIds)) {
+                        $variant->attributes()->sync($attributeIds);
+                    }
+                }
+            }
+
+            $product->load(['category:id,name', 'brand:id,name', 'images', 'variants', 'variants.attributes.attributeGroup']);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Cập nhật sản phẩm thành công.',
+                'data'    => new ProductResource($product),
+            ]);
+        });
     }
 
     // =========================================================================
     // DELETE /api/admin/products/{id} — Soft delete sản phẩm
     // =========================================================================
-    #[OA\Delete(
-        path: '/api/admin/products/{id}',
-        summary: '[Admin] Xóa mềm sản phẩm',
-        tags: ['Admin - Products'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Đã xóa'),
-            new OA\Response(response: 404, description: 'Không tìm thấy'),
-        ]
-    )]
     public function destroy(string $id): JsonResponse
     {
         $product = Product::findOrFail($id);
-        $product->delete(); // Soft delete (SoftDeletes trait)
+        $product->delete();
 
         return response()->json([
             'status'  => true,
@@ -238,22 +325,8 @@ class ProductController extends Controller
     // =========================================================================
     // POST /api/admin/products/{id}/restore — Khôi phục sản phẩm đã xóa mềm
     // =========================================================================
-    #[OA\Post(
-        path: '/api/admin/products/{id}/restore',
-        summary: '[Admin] Khôi phục sản phẩm đã xóa mềm',
-        tags: ['Admin - Products'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm đã bị xóa mềm'),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Khôi phục thành công'),
-            new OA\Response(response: 404, description: 'Không tìm thấy sản phẩm đã xóa'),
-        ]
-    )]
     public function restore(string $id): JsonResponse
     {
-        // withTrashed() để có thể tìm thấy cả sản phẩm đã xóa mềm
         $product = Product::withTrashed()->findOrFail($id);
 
         if (!$product->trashed()) {
@@ -263,7 +336,7 @@ class ProductController extends Controller
             ], 422);
         }
 
-        $product->restore(); // Set deleted_at = NULL
+        $product->restore();
 
         return response()->json([
             'status'  => true,
