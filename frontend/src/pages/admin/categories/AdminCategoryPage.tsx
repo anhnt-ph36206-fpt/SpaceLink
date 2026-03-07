@@ -186,6 +186,7 @@ const AdminCategoryPage: React.FC = () => {
             }
 
             formData.append('is_active', values.is_active ? '1' : '0');
+            formData.append('display_order', '0');
 
             if (fileList.length > 0 && fileList[0].originFileObj) {
                 formData.append('image', fileList[0].originFileObj);
@@ -235,9 +236,24 @@ const AdminCategoryPage: React.FC = () => {
         },
     };
 
-    const parentOptions = categories
-        .filter(c => !c.parent_id)
-        .map(c => ({ value: c.id, label: c.name }));
+    const getFlatOptions = (items: Category[], depth = 0, excludeId?: number): { value: number; label: string }[] => {
+        let result: { value: number; label: string }[] = [];
+        items.forEach(item => {
+            if (item.id === excludeId) return;
+            result.push({
+                value: item.id,
+                label: `${'— '.repeat(depth)}${item.name}`
+            });
+            if (item.children && item.children.length > 0) {
+                // If we are excluding an ID, we also exclude all its children
+                result = [...result, ...getFlatOptions(item.children, depth + 1, excludeId)];
+            }
+        });
+        return result;
+    };
+
+    const parentOptions = getFlatOptions(treeData, 0, editingItem?.id);
+    const filterParentOptions = getFlatOptions(treeData);
 
     const columns: ColumnsType<Category> = [
         {
@@ -348,7 +364,7 @@ const AdminCategoryPage: React.FC = () => {
                             onChange={setParentId}
                             allowClear
                             style={{ width: '100%' }}
-                            options={parentOptions}
+                            options={filterParentOptions}
                         />
                     </Col>
 

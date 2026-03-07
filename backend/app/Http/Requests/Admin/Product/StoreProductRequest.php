@@ -40,8 +40,8 @@ class StoreProductRequest extends FormRequest
             'variants'                  => 'nullable|array',
             'variants.*.sku'            => 'nullable|string|max:100',
             'variants.*.price'          => 'required_with:variants.*|numeric|min:0',
-            'variants.*.sale_price'     => 'nullable|numeric|min:0',
-            'variants.*.quantity'       => 'nullable|integer|min:0',
+            'variants.*.sale_price'     => 'nullable|numeric|min:0|lt:variants.*.price',
+            'variants.*.quantity'       => 'required_with:variants.*|integer|min:0',
             'variants.*.is_active'      => 'nullable', // Sẽ được filter_var
             'variants.*.image'          => 'nullable|image|max:10240',
             'variants.*.attribute_ids'  => 'nullable|array',

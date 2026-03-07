@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
     Form, Input, InputNumber, Switch, Button, Row, Col,
     Typography, Select, Card, Tabs, Tag, Space, Divider,
-    Popconfirm, Table, Tooltip, Spin, Alert, Upload, Modal,
+    Popconfirm, Table, Tooltip, Spin, Alert, Upload, Modal, TreeSelect,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -18,6 +18,14 @@ import { productPrefix, categoryPrefix, brandPrefix, attributeGroupPrefix } from
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+
+const removeAccents = (str: string) => {
+    return str.normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+        .replace(/\s+/g, '-')
+        .toUpperCase();
+};
 
 interface AttrValue { id: number; value: string; color_code?: string }
 interface AttrGroup { id: number; name: string; display_name?: string; attributes: AttrValue[] }
@@ -206,7 +214,30 @@ const ProductEdit: React.FC = () => {
                     is_active: v.is_active ?? true,
                 })));
 
-                setCategoryOptions(catRes.data.data.map((c: any) => ({ value: c.id, label: c.name })));
+                const buildTree = (data: any[]) => {
+                    const map = new Map<number, any>();
+                    const roots: any[] = [];
+                    data.forEach(item => {
+                        map.set(item.id, {
+                            key: item.id,
+                            value: item.id,
+                            title: item.name,
+                            children: [],
+                            selectable: true
+                        });
+                    });
+                    data.forEach(item => {
+                        if (item.parent_id && map.has(item.parent_id)) {
+                            const parent = map.get(item.parent_id);
+                            parent.children.push(map.get(item.id));
+                            parent.selectable = false;
+                        } else if (!item.parent_id) {
+                            roots.push(map.get(item.id));
+                        }
+                    });
+                    return roots;
+                };
+                setCategoryOptions(buildTree(catRes.data.data));
                 setBrandOptions(brandRes.data.data.map((b: any) => ({ value: b.id, label: b.name })));
                 setAttrGroups(attrRes.data.data);
             } catch {
@@ -326,22 +357,45 @@ const ProductEdit: React.FC = () => {
         const groups = selectedAttrs.filter(a => a.values.length > 0);
         if (groups.length === 0) { toast.warning('Chọn ít nhất 1 giá trị thuộc tính'); return; }
         const combos = cartesian(groups.map(g => g.values));
-        const newVars: VariantRow[] = combos.map(combo => ({
-            _key: `var-new-${Date.now()}-${Math.random()}`,
-            attribute_ids: combo.map(v => v.id),
-            label: combo.map(v => v.value).join(' / '),
-            sku: '',
-            price: 0,
+        const productPrice = form.getFieldValue('price') || 0;
+        const productSku = form.getFieldValue('sku') || '';
+
+        const newVariants: VariantRow[] = combos.map((combo) => {
+            const attrLabel = combo.map(v => v.value).join(' / ');
+            const attrSkuPart = combo.map(v => removeAccents(v.value)).join('-');
+            return {
+                _key: `var-${Date.now()}-${Math.random()}`,
+                label: attrLabel,
+                attribute_ids: combo.map(v => v.id),
+                sku: productSku ? `${productSku}-${attrSkuPart}` : attrSkuPart,
+                price: productPrice,
+                sale_price: null,
+                quantity: 0,
+                image: '',
+                is_active: true,
+                _isNew: true,
+            };
+        });
+        setVariants(prev => [...prev, ...newVariants]);
+        setShowBuilder(false);
+        setSelectedAttrs([]);
+        toast.success(`Đã thêm ${newVariants.length} biến thể mới. Điền thông tin rồi bấm Lưu.`);
+    };
+    const addManualVariant = () => {
+        const productPrice = form.getFieldValue('price') || 0;
+        const productSku = form.getFieldValue('sku') || '';
+        setVariants(prev => [...prev, {
+            _key: `var-manual-${Date.now()}`,
+            attribute_ids: [],
+            label: 'Biến thể mới',
+            sku: productSku,
+            price: productPrice,
             sale_price: null,
             quantity: 0,
             image: '',
             is_active: true,
             _isNew: true,
-        }));
-        setVariants(prev => [...prev, ...newVars]);
-        setShowBuilder(false);
-        setSelectedAttrs([]);
-        toast.success(`Đã thêm ${newVars.length} biến thể mới. Điền thông tin rồi bấm Lưu.`);
+        }]);
     };
 
     const saveNewVariant = async (row: VariantRow) => {
@@ -649,7 +703,18 @@ const ProductEdit: React.FC = () => {
                                 </Col>
                                 <Col span={12}>
                                     <Form.Item name="category_id" label="Danh mục" rules={[{ required: true }]}>
-                                        <Select options={categoryOptions} showSearch filterOption={(i, o) => (o?.label ?? '').toLowerCase().includes(i.toLowerCase())} />
+                                        <TreeSelect
+                                            showSearch
+                                            style={{ width: '100%' }}
+                                            dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+                                            placeholder="Chọn danh mục"
+                                            allowClear
+                                            treeDefaultExpandAll
+                                            treeData={categoryOptions}
+                                            filterTreeNode={(search, item) =>
+                                                (item?.title ?? '').toString().toLowerCase().indexOf(search.toLowerCase()) >= 0
+                                            }
+                                        />
                                     </Form.Item>
                                 </Col>
                             </Row>
@@ -792,10 +857,7 @@ const ProductEdit: React.FC = () => {
                                 >
                                     {showBuilder ? 'Đóng bộ tạo biến thể' : 'Tạo biến thể mới'}
                                 </Button>
-                                <Button icon={<PlusOutlined />} onClick={() => setVariants(prev => [...prev, {
-                                    _key: `var-manual-${Date.now()}`, attribute_ids: [], label: 'Biến thể mới',
-                                    sku: '', price: 0, sale_price: null, quantity: 0, image: '', is_active: true, _isNew: true,
-                                }])}>
+                                <Button icon={<PlusOutlined />} onClick={addManualVariant}>
                                     Thêm thủ công
                                 </Button>
                             </Space>

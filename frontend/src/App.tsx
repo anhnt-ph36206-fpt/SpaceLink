@@ -21,6 +21,7 @@ import AdminUserPage from './pages/admin/AdminUserPage';
 import ProductList from "./pages/admin/products/list";
 import ProductCreate from "./pages/admin/products/create";
 import ProductEdit from "./pages/admin/products/edit";
+import ProductDetail from "./pages/admin/products/ProductDetail";
 import AdminAttributeGroupPage from "./pages/admin/attribute-groups/AdminAttributeGroupPage";
 import AdminBrandPage from './pages/admin/brands/AdminBrandPage';
 import SearchPage from './components/home/SearchPage';
@@ -70,6 +71,7 @@ function App() {
                             <Route index element={<ProductList />} />
                             <Route path="create" element={<ProductCreate />} />
                             <Route path="edit/:id" element={<ProductEdit />} />
+                            <Route path="detail/:id" element={<ProductDetail />} />
                         </Route>
 
                         <Route path="orders" element={<AdminOrderPage />} />
