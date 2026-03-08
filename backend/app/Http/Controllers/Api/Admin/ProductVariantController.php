@@ -55,6 +55,18 @@ class ProductVariantController extends Controller
 
             $variant->load('attributes.attributeGroup');
 
+            // --- XỬ LÝ ALBUM ẢNH PHỤ (NHIỀU ẢNH) ---
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $file) {
+                    $path = $file->store('products/variants/albums', 'public');
+                    $variant->images()->create([
+                        'image_url' => $path,
+                        'display_order' => $index
+                    ]);
+                }
+            }
+            $variant->load('images');
+
             DB::commit();
 
             return response()->json([
@@ -103,6 +115,18 @@ class ProductVariantController extends Controller
 
             $variantModel->load('attributes.attributeGroup');
 
+            // --- XỬ LÝ ALBUM ẢNH PHỤ THÊM VÀO ---
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $file) {
+                    $path = $file->store('products/variants/albums', 'public');
+                    $variantModel->images()->create([
+                        'image_url' => $path,
+                        'display_order' => $index
+                    ]);
+                }
+            }
+            $variantModel->load('images');
+
             DB::commit();
 
             return response()->json([
@@ -139,6 +163,11 @@ class ProductVariantController extends Controller
             // Dọn file ảnh trước khi soft-delete
             if ($variantModel->image) {
                 $this->deleteStorageFile($variantModel->image);
+            }
+
+            // Dọn toàn bộ rác ảnh phụ (Kích hoạt Observer chạy ngầm xoá khỏi Storage)
+            foreach ($variantModel->images as $img) {
+                $img->delete();
             }
 
             $variantModel->delete(); // SoftDelete

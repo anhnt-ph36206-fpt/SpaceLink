@@ -35,6 +35,11 @@ class ProductVariant extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function images()
+    {
+        return $this->hasMany(ProductVariantImage::class)->orderBy('display_order', 'asc');
+    }
+
     /** Attributes gắn với variant này (many-to-many qua pivot) */
     public function attributes()
     {
