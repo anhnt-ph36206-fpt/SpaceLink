@@ -31,21 +31,18 @@ class ProductResource extends JsonResource
             'variants'    => $this->whenLoaded('variants', function () {
                 return $this->variants->map(function ($variant) {
                     return [
-                        'id'              => $variant->id,
-                        'sku'             => $variant->sku,
-                        'price'           => (float) $variant->price,
-                        'sale_price'      => $variant->sale_price !== null ? (float) $variant->sale_price : null,
-                        'effective_price' => (float) ($variant->sale_price ?? $variant->price),
-                        'quantity'        => $variant->quantity,
-                        'is_active'       => (bool) $variant->is_active,
-                        'image'           => $variant->image,
-                        'attributes'      => $variant->attributes->map(function ($attr) {
+                        'id' => $variant->id,
+                        'sku' => $variant->sku,
+                        'price' => $variant->price,
+                        'sale_price' => $variant->sale_price,
+                        'quantity' => $variant->quantity,
+                        'image' => $variant->image,
+                        'attributes' => $variant->attributes->map(function ($attr) {
                             return [
-                                'id'         => $attr->id,
-                                'name'       => $attr->name,
-                                'value'      => $attr->pivot->value ?? null,
-                                'color_code' => $attr->color_code ?? null,
-                                'group'      => $attr->attributeGroup ? $attr->attributeGroup->name : null,
+                                'id' => $attr->id,
+                                'value' => $attr->value,
+                                'color_code' => $attr->color_code,
+                                'group' => $attr->attributeGroup ? $attr->attributeGroup->name : null,
                             ];
                         }),
                     ];
