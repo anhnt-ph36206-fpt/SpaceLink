@@ -1776,6 +1776,37 @@
             }
         },
         "/api/admin/products/{product}/variants": {
+            "get": {
+                "tags": [
+                    "Admin - Product Variants"
+                ],
+                "summary": "[Admin] Lấy danh sách biến thể của sản phẩm",
+                "operationId": "a1631cabe690418bc4fbc146924223d0",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "description": "ID sản phẩm",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Danh sách biến thể"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy sản phẩm"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
             "post": {
                 "tags": [
                     "Admin - Product Variants"
@@ -1796,7 +1827,7 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "required": [
                                     "price"
@@ -1818,13 +1849,21 @@
                                         "nullable": true
                                     },
                                     "image": {
-                                        "description": "Đường dẫn ảnh variant",
+                                        "description": "Tải ảnh biến thể",
                                         "type": "string",
+                                        "format": "binary",
                                         "nullable": true
                                     },
                                     "is_active": {
                                         "type": "boolean",
                                         "nullable": true
+                                    },
+                                    "attribute_ids[]": {
+                                        "description": "Danh sách ID thuộc tính (VD: 1, 5)",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
                                     }
                                 },
                                 "type": "object"
@@ -1851,12 +1890,13 @@
             }
         },
         "/api/admin/products/{product}/variants/{variant}": {
-            "put": {
+            "post": {
                 "tags": [
                     "Admin - Product Variants"
                 ],
                 "summary": "[Admin] Cập nhật biến thể sản phẩm",
-                "operationId": "0b349182143532f5384f825318cb1bcd",
+                "description": "Sử dụng POST với tham số `_method=PUT` do Laravel không hỗ trợ gửi form-data với PUT.",
+                "operationId": "061a6819ee10624f0dbddc95c0fea465",
                 "parameters": [
                     {
                         "name": "product",
@@ -1880,12 +1920,18 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "required": [
-                                    "price"
+                                    "price",
+                                    "_method"
                                 ],
                                 "properties": {
+                                    "_method": {
+                                        "description": "Ghi đè method POST -> PUT",
+                                        "type": "string",
+                                        "example": "PUT"
+                                    },
                                     "sku": {
                                         "type": "string",
                                         "nullable": true
@@ -1903,11 +1949,19 @@
                                     },
                                     "image": {
                                         "type": "string",
+                                        "format": "binary",
                                         "nullable": true
                                     },
                                     "is_active": {
                                         "type": "boolean",
                                         "nullable": true
+                                    },
+                                    "attribute_ids[]": {
+                                        "description": "Danh sách ID thuộc tính",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
                                     }
                                 },
                                 "type": "object"
@@ -4731,6 +4785,167 @@
                     }
                 ]
             }
+        },
+        "/api/admin/attributes": {
+            "get": {
+                "tags": [
+                    "Admin - Attributes"
+                ],
+                "summary": "[Admin] Lấy danh sách thuộc tính",
+                "operationId": "f1786b62c7ac1692dfa97c13c1bde95c",
+                "parameters": [
+                    {
+                        "name": "group_id",
+                        "in": "query",
+                        "description": "Lọc theo nhóm thuộc tính",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Danh sách thuộc tính"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Attributes"
+                ],
+                "summary": "[Admin] Thêm thuộc tính",
+                "operationId": "1f36d157df8a46552969511161502afd",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "attribute_group_id",
+                                    "value"
+                                ],
+                                "properties": {
+                                    "attribute_group_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "value": {
+                                        "type": "string",
+                                        "example": "Đỏ"
+                                    },
+                                    "color_code": {
+                                        "type": "string",
+                                        "example": "#FF0000",
+                                        "nullable": true
+                                    },
+                                    "display_order": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/attributes/{id}": {
+            "put": {
+                "tags": [
+                    "Admin - Attributes"
+                ],
+                "summary": "[Admin] Sửa thuộc tính",
+                "operationId": "315f4b03de00eeb268b645cca8819cbd",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "attribute_group_id": {
+                                        "type": "integer"
+                                    },
+                                    "value": {
+                                        "type": "string"
+                                    },
+                                    "color_code": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "display_order": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Attributes"
+                ],
+                "summary": "[Admin] Xóa thuộc tính",
+                "operationId": "673d9b423b48ba4954c3fd8556c724b9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Đã xóa"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -4751,6 +4966,10 @@
         {
             "name": "Password Reset",
             "description": "Password Reset"
+        },
+        {
+            "name": "Admin - Attributes",
+            "description": "Admin - Attributes"
         },
         {
             "name": "Admin - Categories",

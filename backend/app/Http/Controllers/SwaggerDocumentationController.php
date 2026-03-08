@@ -506,7 +506,22 @@ interface SwaggerDocumentationController
         )]
     public function api_admin_productImageController_destroy();
 
-    // --- Api/Admin/ProductVariantControllerDocs.php ---
+// --- Api/Admin/ProductVariantControllerDocs.php ---
+    #[OA\Get(
+            path: '/api/admin/products/{product}/variants',
+            summary: '[Admin] Lấy danh sách biến thể của sản phẩm',
+            tags: ['Admin - Product Variants'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm'),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Danh sách biến thể'),
+                new OA\Response(response: 404, description: 'Không tìm thấy sản phẩm'),
+            ]
+        )]
+    public function api_admin_productVariantController_index();
+
     #[OA\Post(
             path: '/api/admin/products/{product}/variants',
             summary: '[Admin] Thêm biến thể cho sản phẩm',
@@ -517,16 +532,20 @@ interface SwaggerDocumentationController
             ],
             requestBody: new OA\RequestBody(
                 required: true,
-                content: new OA\JsonContent(
-                    required: ['price'],
-                    properties: [
-                        new OA\Property(property: 'sku',        type: 'string',  nullable: true),
-                        new OA\Property(property: 'price',      type: 'number'),
-                        new OA\Property(property: 'sale_price', type: 'number',  nullable: true),
-                        new OA\Property(property: 'quantity',   type: 'integer', nullable: true),
-                        new OA\Property(property: 'image',      type: 'string',  nullable: true, description: 'Đường dẫn ảnh variant'),
-                        new OA\Property(property: 'is_active',  type: 'boolean', nullable: true),
-                    ]
+                content: new OA\MediaType(
+                    mediaType: 'multipart/form-data',
+                    schema: new OA\Schema(
+                        required: ['price'],
+                        properties: [
+                            new OA\Property(property: 'sku',           type: 'string',  nullable: true),
+                            new OA\Property(property: 'price',         type: 'number'),
+                            new OA\Property(property: 'sale_price',    type: 'number',  nullable: true),
+                            new OA\Property(property: 'quantity',      type: 'integer', nullable: true),
+                            new OA\Property(property: 'image',         type: 'string',  format: 'binary', nullable: true, description: 'Tải ảnh biến thể'),
+                            new OA\Property(property: 'is_active',     type: 'boolean', nullable: true),
+                            new OA\Property(property: 'attribute_ids[]', type: 'array', items: new OA\Items(type: 'integer'), description: 'Danh sách ID thuộc tính (VD: 1, 5)'),
+                        ]
+                    )
                 )
             ),
             responses: [
@@ -537,9 +556,10 @@ interface SwaggerDocumentationController
         )]
     public function api_admin_productVariantController_store();
 
-    #[OA\Put(
+    #[OA\Post(
             path: '/api/admin/products/{product}/variants/{variant}',
             summary: '[Admin] Cập nhật biến thể sản phẩm',
+            description: 'Sử dụng POST với tham số `_method=PUT` do Laravel không hỗ trợ gửi form-data với PUT.',
             tags: ['Admin - Product Variants'],
             security: [['sanctum' => []]],
             parameters: [
@@ -548,16 +568,21 @@ interface SwaggerDocumentationController
             ],
             requestBody: new OA\RequestBody(
                 required: true,
-                content: new OA\JsonContent(
-                    required: ['price'],
-                    properties: [
-                        new OA\Property(property: 'sku',        type: 'string',  nullable: true),
-                        new OA\Property(property: 'price',      type: 'number'),
-                        new OA\Property(property: 'sale_price', type: 'number',  nullable: true),
-                        new OA\Property(property: 'quantity',   type: 'integer', nullable: true),
-                        new OA\Property(property: 'image',      type: 'string',  nullable: true),
-                        new OA\Property(property: 'is_active',  type: 'boolean', nullable: true),
-                    ]
+                content: new OA\MediaType(
+                    mediaType: 'multipart/form-data',
+                    schema: new OA\Schema(
+                        required: ['price', '_method'],
+                        properties: [
+                            new OA\Property(property: '_method',       type: 'string',  example: 'PUT', description: 'Ghi đè method POST -> PUT'),
+                            new OA\Property(property: 'sku',           type: 'string',  nullable: true),
+                            new OA\Property(property: 'price',         type: 'number'),
+                            new OA\Property(property: 'sale_price',    type: 'number',  nullable: true),
+                            new OA\Property(property: 'quantity',      type: 'integer', nullable: true),
+                            new OA\Property(property: 'image',         type: 'string',  format: 'binary', nullable: true),
+                            new OA\Property(property: 'is_active',     type: 'boolean', nullable: true),
+                            new OA\Property(property: 'attribute_ids[]', type: 'array', items: new OA\Items(type: 'integer'), description: 'Danh sách ID thuộc tính'),
+                        ]
+                    )
                 )
             ),
             responses: [
@@ -1908,5 +1933,82 @@ interface SwaggerDocumentationController
         ]
     )]
     public function api_admin_dashboard_revenue();
+
+    // --- Api/Admin/AttributeControllerDocs.php ---
+    #[OA\Get(
+        path: '/api/admin/attributes',
+        summary: '[Admin] Lấy danh sách thuộc tính',
+        tags: ['Admin - Attributes'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'group_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer'), description: 'Lọc theo nhóm thuộc tính')
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Danh sách thuộc tính')
+        ]
+    )]
+    public function api_admin_attributeController_index();
+
+    #[OA\Post(
+        path: '/api/admin/attributes',
+        summary: '[Admin] Thêm thuộc tính',
+        tags: ['Admin - Attributes'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['attribute_group_id', 'value'],
+                properties: [
+                    new OA\Property(property: 'attribute_group_id', type: 'integer', example: 1),
+                    new OA\Property(property: 'value', type: 'string', example: 'Đỏ'),
+                    new OA\Property(property: 'color_code', type: 'string', example: '#FF0000', nullable: true),
+                    new OA\Property(property: 'display_order', type: 'integer', example: 1),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_attributeController_store();
+
+    #[OA\Put(
+        path: '/api/admin/attributes/{id}',
+        summary: '[Admin] Sửa thuộc tính',
+        tags: ['Admin - Attributes'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'attribute_group_id', type: 'integer'),
+                    new OA\Property(property: 'value', type: 'string'),
+                    new OA\Property(property: 'color_code', type: 'string', nullable: true),
+                    new OA\Property(property: 'display_order', type: 'integer'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công')
+        ]
+    )]
+    public function api_admin_attributeController_update();
+
+    #[OA\Delete(
+        path: '/api/admin/attributes/{id}',
+        summary: '[Admin] Xóa thuộc tính',
+        tags: ['Admin - Attributes'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã xóa')
+        ]
+    )]
+    public function api_admin_attributeController_destroy();
 
 }
