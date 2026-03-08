@@ -64,10 +64,10 @@ Route::get('/products',      [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 
 // --- Cart (Legacy – giữ để không breaking Swagger cũ) ---
-Route::get('/cart',                  [CartController::class, 'index']);
-Route::post('/cart/add',             [CartController::class, 'addToCart']);
-Route::put('/cart/update/{id}',      [CartController::class, 'updateQuantity']);
-Route::delete('/cart/remove/{id}',   [CartController::class, 'remove']);
+Route::get('/cart',                  [ClientCartController::class, 'index']);
+Route::post('/cart/add',             [ClientCartController::class, 'addToCart']);
+Route::put('/cart/update/{id}',      [ClientCartController::class, 'updateQuantity']);
+Route::delete('/cart/remove/{id}',   [ClientCartController::class, 'remove']);
 
 // --- Reviews & News (Public) ---
 Route::get('/products/{id}/reviews', [ClientReviewController::class, 'productReviews']);
@@ -89,28 +89,26 @@ Route::prefix('client')->name('client.')->group(function () {
     Route::get('/categories',        [ClientCategoryController::class, 'index'])->name('categories.index'); // GET /api/client/categories
     Route::get('/categories/{slug}', [ClientCategoryController::class, 'show'])->name('categories.show');  // GET /api/client/categories/{slug}
 
-    // --- Client Cart (optional auth – hỗ trợ Guest + User) ---
-    Route::prefix('cart')->group(function () {
-        Route::get('/',                          [CartController::class, 'index']);
-        Route::post('/add',                      [CartController::class, 'addToCart']);
-        Route::put('/update/{cart_item_id}',     [CartController::class, 'updateQuantity']);
-        Route::delete('/remove/{cart_item_id}',  [CartController::class, 'remove']);
-        Route::delete('/clear',                  [CartController::class, 'clear']);
-    });
+    // --- Carts ---
+    Route::get(   'cart',                     [ClientCartController::class, 'index']);
+    Route::post(  'cart/add',                 [ClientCartController::class, 'add']);
+    Route::put(   'cart/update/{id}',         [ClientCartController::class, 'update']);
+    Route::delete('cart/remove/{id}',         [ClientCartController::class, 'remove']);
+    Route::delete('cart/clear',               [ClientCartController::class, 'clear']);
+    Route::post(  'cart/merge',               [ClientCartController::class, 'mergeCart']);
+
+    // --- Checkout & Payment ---
+    Route::post(  'checkout',                 [ClientCheckoutController::class, 'checkout']);
+    Route::post(  'checkout/vnpay',           [ClientCheckoutController::class, 'createVnpayPayment']);
 
     // --- Bắt buộc đăng nhập từ đây trở xuống ---
     Route::middleware('auth:sanctum')->group(function () {
 
-        // Checkout
-        Route::post('/checkout', [CheckoutController::class, 'checkout']);
-
-        // Merge giỏ hàng guest → user sau khi login
-        Route::post('/cart/merge', [CartController::class, 'merge']);
-
         // Đơn hàng của client
-        Route::get('/orders',              [ClientOrderController::class, 'index']);
-        Route::get('/orders/{id}',         [ClientOrderController::class, 'show']);
-        Route::post('/orders/{id}/cancel', [ClientOrderController::class, 'cancel']);
+        Route::get('/orders',                      [ClientOrderController::class, 'index']);
+        Route::get('/orders/{id}',                 [ClientOrderController::class, 'show']);
+        Route::post('/orders/{id}/cancel',         [ClientOrderController::class, 'cancel']);
+        Route::get('/orders/{id}/retry-vnpay',     [ClientOrderController::class, 'retryVnpayPayment']);
 
         // Review sản phẩm
         Route::post('/reviews',            [ClientReviewController::class, 'store']);
@@ -143,6 +141,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('addresses', AddressController::class);
 });
 
+
+// --- VNPAY Webhooks (Public, không cần Auth) ---
+Route::get('payment/vnpay-return', [\App\Http\Controllers\Api\Client\CheckoutController::class, 'vnpayReturn']);
+Route::get('payment/vnpay-ipn', [\App\Http\Controllers\Api\Client\CheckoutController::class, 'vnpayIpn']);
 
 // ========================================================================
 // 4. ADMIN ROUTES — /api/admin/*
