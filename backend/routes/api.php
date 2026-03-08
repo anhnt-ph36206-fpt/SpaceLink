@@ -105,9 +105,10 @@ Route::prefix('client')->name('client.')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
 
         // Đơn hàng của client
-        Route::get('/orders',              [ClientOrderController::class, 'index']);
-        Route::get('/orders/{id}',         [ClientOrderController::class, 'show']);
-        Route::post('/orders/{id}/cancel', [ClientOrderController::class, 'cancel']);
+        Route::get('/orders',                      [ClientOrderController::class, 'index']);
+        Route::get('/orders/{id}',                 [ClientOrderController::class, 'show']);
+        Route::post('/orders/{id}/cancel',         [ClientOrderController::class, 'cancel']);
+        Route::get('/orders/{id}/retry-vnpay',     [ClientOrderController::class, 'retryVnpayPayment']);
 
         // Review sản phẩm
         Route::post('/reviews',            [ClientReviewController::class, 'store']);

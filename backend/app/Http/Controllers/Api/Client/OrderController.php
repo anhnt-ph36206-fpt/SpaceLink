@@ -112,4 +112,70 @@ class OrderController extends Controller
             'data'    => new OrderResource($order->fresh()),
         ]);
     }
+
+    // =========================================================================
+    // GET /api/client/orders/{id}/retry-vnpay — Tạo lại link thanh toán VNPAY
+    // =========================================================================
+    public function retryVnpayPayment(Request $request, string $id)
+    {
+        $user  = $request->user();
+        $order = Order::findOrFail($id);
+
+        // Kiểm tra quyền sở hữu
+        if ($order->user_id !== $user->id) {
+            return response()->json(['status' => 'error', 'message' => 'Bạn không có quyền truy cập đơn hàng này.'], 403);
+        }
+
+        // Chỉ cho phép nếu: phương thức VNPAY + chưa thanh toán + đang pending
+        if ($order->payment_method !== 'vnpay' || $order->payment_status !== 'unpaid' || $order->status !== 'pending') {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Đơn hàng không hợp lệ để thanh toán lại. (Yêu cầu: phương thức VNPAY, chưa thanh toán, trạng thái pending)',
+            ], 422);
+        }
+
+        // Tái sử dụng đú ng logic hash của VNPAY trong CheckoutController
+        $vnp_TmnCode   = config('vnpay.vnp_TmnCode');
+        $vnp_HashSecret = config('vnpay.vnp_HashSecret');
+        $vnp_Url       = config('vnpay.vnp_Url');
+        $vnp_Returnurl = config('vnpay.vnp_Returnurl');
+
+        $inputData = [
+            'vnp_Version'  => '2.1.0',
+            'vnp_TmnCode'  => $vnp_TmnCode,
+            'vnp_Amount'   => $order->total_amount * 100,
+            'vnp_Command'  => 'pay',
+            'vnp_CreateDate' => date('YmdHis'),
+            'vnp_CurrCode' => 'VND',
+            'vnp_IpAddr'   => $request->ip(),
+            'vnp_Locale'   => 'vn',
+            'vnp_OrderInfo' => 'Thanh toan lai don hang ' . $order->order_code,
+            'vnp_OrderType' => 'billpayment',
+            'vnp_ReturnUrl' => $vnp_Returnurl,
+            'vnp_TxnRef'   => $order->order_code,
+        ];
+
+        ksort($inputData);
+        $hashdata = '';
+        $query    = '';
+        $i = 0;
+        foreach ($inputData as $key => $value) {
+            if ($i == 1) {
+                $hashdata .= '&' . urlencode($key) . '=' . urlencode($value);
+            } else {
+                $hashdata .= urlencode($key) . '=' . urlencode($value);
+                $i = 1;
+            }
+            $query .= urlencode($key) . '=' . urlencode($value) . '&';
+        }
+
+        $paymentUrl = $vnp_Url . '?' . $query . 'vnp_SecureHash=' . hash_hmac('sha512', $hashdata, $vnp_HashSecret);
+
+        return response()->json([
+            'status'      => 'success',
+            'message'     => 'Tạo lại link thanh toán VNPAY thành công.',
+            'payment_url' => $paymentUrl,
+            'data'        => $order->only('id', 'order_code', 'total_amount'),
+        ]);
+    }
 }
