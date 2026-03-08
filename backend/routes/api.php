@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Client\AddressController;
 use App\Http\Controllers\Api\Client\ProductController;
 use App\Http\Controllers\Api\Client\CartController;
 use App\Http\Controllers\Api\Client\CategoryController as ClientCategoryController;
+use App\Http\Controllers\Api\Client\CartController as ClientCartController;
 use App\Http\Controllers\Api\Client\CheckoutController;
 use App\Http\Controllers\Api\Client\BrandController;
 
