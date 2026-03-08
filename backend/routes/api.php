@@ -90,17 +90,20 @@ Route::prefix('client')->name('client.')->group(function () {
     Route::get('/categories',        [ClientCategoryController::class, 'index'])->name('categories.index'); // GET /api/client/categories
     Route::get('/categories/{slug}', [ClientCategoryController::class, 'show'])->name('categories.show');  // GET /api/client/categories/{slug}
 
-    // --- Carts ---
-    Route::get(   'cart',                     [ClientCartController::class, 'index']);
-    Route::post(  'cart/add',                 [ClientCartController::class, 'add']);
-    Route::put(   'cart/update/{id}',         [ClientCartController::class, 'update']);
-    Route::delete('cart/remove/{id}',         [ClientCartController::class, 'remove']);
-    Route::delete('cart/clear',               [ClientCartController::class, 'clear']);
-    Route::post(  'cart/merge',               [ClientCartController::class, 'mergeCart']);
+    // --- Client Cart (optional auth – hỗ trợ Guest + User) ---
+    Route::prefix('cart')->group(function () {
+        Route::get('/',            [CartController::class, 'index']);           // GET  /api/client/cart
+        Route::post('/add',        [CartController::class, 'addToCart']);       // POST /api/client/cart/add
+        Route::put('/update/{cart_item_id}',    [CartController::class, 'updateQuantity']); // PUT  /api/client/cart/update/{id}
+        Route::delete('/remove/{cart_item_id}', [CartController::class, 'remove']);         // DELETE /api/client/cart/remove/{id}
+        Route::delete('/clear',    [CartController::class, 'clear']);           // DELETE /api/client/cart/clear
+    });
 
     // --- Checkout & Payment ---
-    Route::post(  'checkout',                 [ClientCheckoutController::class, 'checkout']);
-    Route::post(  'checkout/vnpay',           [ClientCheckoutController::class, 'createVnpayPayment']);
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post(  'checkout',                 [ClientCheckoutController::class, 'checkout']);
+        Route::post(  'checkout/vnpay',           [ClientCheckoutController::class, 'createVnpayPayment']);
+    });
 
     // --- Bắt buộc đăng nhập từ đây trở xuống ---
     Route::middleware('auth:sanctum')->group(function () {
@@ -155,6 +158,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
 
     // --- Admin Categories ---
     Route::apiResource('categories', AdminCategoryController::class);
+
+    // --- Admin Brands ---
+    Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class);
+
+    // --- Admin Attribute Groups ---
+    Route::apiResource('attribute-groups', AdminAttributeGroupController::class);
 
     // --- Admin Products ---
     Route::apiResource('products', \App\Http\Controllers\Api\Admin\ProductController::class);
