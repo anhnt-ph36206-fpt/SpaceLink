@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            // Hẹn giờ kết thúc flash sale (DATN có, SpaceLink thiếu)
+            // Hẹn giờ kết thúc flash sale
             $table->dateTime('sale_end')->nullable()->after('sale_price')
                 ->comment('Thời điểm hết hạn sale price, null = không giới hạn');
         });

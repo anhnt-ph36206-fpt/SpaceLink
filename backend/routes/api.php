@@ -158,6 +158,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     Route::post('products/{product}/restore', [\App\Http\Controllers\Api\Admin\ProductController::class, 'restore']);
 
     // --- Admin Product Variants (nested) ---
+    Route::get(    'products/{product}/variants',             [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'index']);
     Route::post(   'products/{product}/variants',             [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'store']);
     Route::put(    'products/{product}/variants/{variant}',   [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'update']);
     Route::delete( 'products/{product}/variants/{variant}',   [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'destroy']);
