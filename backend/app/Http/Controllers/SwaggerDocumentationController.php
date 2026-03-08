@@ -23,6 +23,9 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: "Authentication", description: "Authentication")]
 #[OA\Tag(name: "Password Reset", description: "Password Reset")]
 #[OA\Tag(name: "Admin - Attributes", description: "Admin - Attributes")]
+#[OA\Tag(name: "Admin - Banners", description: "Admin - Banners")]
+#[OA\Tag(name: "Admin - Categories", description: "Admin - Categories")]
+#[OA\Tag(name: "Admin - Contacts", description: "Admin - Contacts")]
 #[OA\Tag(name: "Admin - Categories", description: "Admin - Categories")]
 #[OA\Tag(name: "Admin - Contacts", description: "Admin - Contacts")]
 #[OA\Tag(name: "Admin - Dashboard", description: "Admin - Dashboard")]
@@ -32,9 +35,12 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: "Admin - Product Variants", description: "Admin - Product Variants")]
 #[OA\Tag(name: "Admin - Products", description: "Admin - Products")]
 #[OA\Tag(name: "Admin - Reviews", description: "Admin - Reviews")]
+#[OA\Tag(name: "Admin - Shippings", description: "Admin - Shippings")]
 #[OA\Tag(name: "Admin - Users", description: "Admin - Users")]
 #[OA\Tag(name: "Admin - Vouchers", description: "Admin - Vouchers")]
 #[OA\Tag(name: "Client - Address", description: "Client - Address")]
+#[OA\Tag(name: "Client - Banners", description: "Client - Banners")]
+#[OA\Tag(name: "Client - Brands", description: "Client - Brands")]
 #[OA\Tag(name: "Client - Brands", description: "Client - Brands")]
 #[OA\Tag(name: "Client - Cart", description: "Client - Cart")]
 #[OA\Tag(name: "Client - Categories", description: "Client - Categories")]
@@ -43,6 +49,7 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: "Client - Products", description: "Client - Products")]
 #[OA\Tag(name: "Client - Profile", description: "Client - Profile")]
 #[OA\Tag(name: "Client - Reviews", description: "Client - Reviews")]
+#[OA\Tag(name: "Client - Shippings", description: "Client - Shippings")]
 #[OA\Tag(name: "Client - Wishlist", description: "Client - Wishlist")]
 #[OA\Tag(name: "Public - Contacts", description: "Public - Contacts")]
 #[OA\Tag(name: "Public - News", description: "Public - News")]
@@ -2010,5 +2017,262 @@ interface SwaggerDocumentationController
         ]
     )]
     public function api_admin_attributeController_destroy();
+
+    // --- Api/Admin/BannerControllerDocs.php ---
+    #[OA\Get(
+        path: '/api/admin/banners',
+        summary: 'Danh sách banner (Admin)',
+        tags: ['Admin - Banners'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'is_active', in: 'query', description: 'Lọc trạng thái is_active (0/1)', required: false, schema: new OA\Schema(type: 'integer', enum: [0, 1]))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Danh sách banner')
+        ]
+    )]
+    public function api_admin_bannerController_index();
+
+    #[OA\Post(
+        path: '/api/admin/banners',
+        summary: 'Tạo banner mới (Admin)',
+        tags: ['Admin - Banners'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    required: ['title', 'image'],
+                    properties: [
+                        new OA\Property(property: 'title', type: 'string'),
+                        new OA\Property(property: 'image', type: 'string', format: 'binary'),
+                        new OA\Property(property: 'description', type: 'string', nullable: true),
+                        new OA\Property(property: 'link_url', type: 'string', nullable: true),
+                        new OA\Property(property: 'display_order', type: 'integer', default: 0),
+                        new OA\Property(property: 'start_date', type: 'string', format: 'date-time', nullable: true),
+                        new OA\Property(property: 'end_date', type: 'string', format: 'date-time', nullable: true),
+                        new OA\Property(property: 'is_active', type: 'boolean', default: true),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Tạo banner thành công')
+        ]
+    )]
+    public function api_admin_bannerController_store();
+
+    #[OA\Get(
+        path: '/api/admin/banners/{id}',
+        summary: 'Chi tiết banner (Admin)',
+        tags: ['Admin - Banners'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Chi tiết banner')
+        ]
+    )]
+    public function api_admin_bannerController_show();
+
+    #[OA\Post(
+        path: '/api/admin/banners/{id}',
+        summary: 'Cập nhật banner (Admin) - Dùng POST kèm _method=PUT',
+        tags: ['Admin - Banners'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    properties: [
+                        new OA\Property(property: '_method', type: 'string', example: 'PUT'),
+                        new OA\Property(property: 'title', type: 'string'),
+                        new OA\Property(property: 'image', type: 'string', format: 'binary', nullable: true),
+                        new OA\Property(property: 'description', type: 'string', nullable: true),
+                        new OA\Property(property: 'link_url', type: 'string', nullable: true),
+                        new OA\Property(property: 'display_order', type: 'integer'),
+                        new OA\Property(property: 'start_date', type: 'string', format: 'date-time', nullable: true),
+                        new OA\Property(property: 'end_date', type: 'string', format: 'date-time', nullable: true),
+                        new OA\Property(property: 'is_active', type: 'boolean'),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Cập nhật banner thành công')
+        ]
+    )]
+    public function api_admin_bannerController_update();
+
+    #[OA\Delete(
+        path: '/api/admin/banners/{id}',
+        summary: 'Xóa banner (Admin)',
+        tags: ['Admin - Banners'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Xóa banner thành công')
+        ]
+    )]
+    public function api_admin_bannerController_destroy();
+
+    #[OA\Patch(
+        path: '/api/admin/banners/{id}/toggle',
+        summary: 'Bật/Tắt trạng thái banner (Admin)',
+        tags: ['Admin - Banners'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thay đổi trạng thái thành công')
+        ]
+    )]
+    public function api_admin_bannerController_toggle();
+
+    // --- Api/Admin/ShippingControllerDocs.php ---
+    #[OA\Get(
+        path: '/api/admin/shippings',
+        summary: 'Danh sách đơn vị vận chuyển (Admin)',
+        tags: ['Admin - Shippings'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'is_active', in: 'query', description: 'Lọc trạng thái is_active (0/1)', required: false, schema: new OA\Schema(type: 'integer', enum: [0, 1]))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Danh sách vận chuyển')
+        ]
+    )]
+    public function api_admin_shippingController_index();
+
+    #[OA\Post(
+        path: '/api/admin/shippings',
+        summary: 'Tạo đơn vị vận chuyển (Admin)',
+        tags: ['Admin - Shippings'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    required: ['name'],
+                    properties: [
+                        new OA\Property(property: 'name', type: 'string'),
+                        new OA\Property(property: 'code', type: 'string', nullable: true),
+                        new OA\Property(property: 'logo', type: 'string', format: 'binary', nullable: true),
+                        new OA\Property(property: 'base_fee', type: 'number', default: 0),
+                        new OA\Property(property: 'is_active', type: 'boolean', default: true),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Tạo thành công')
+        ]
+    )]
+    public function api_admin_shippingController_store();
+
+    #[OA\Get(
+        path: '/api/admin/shippings/{id}',
+        summary: 'Chi tiết ĐVVC (Admin)',
+        tags: ['Admin - Shippings'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Chi tiết')
+        ]
+    )]
+    public function api_admin_shippingController_show();
+
+    #[OA\Post(
+        path: '/api/admin/shippings/{id}',
+        summary: 'Cập nhật ĐVVC (Admin) - Dùng POST kèm _method=PUT',
+        tags: ['Admin - Shippings'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    properties: [
+                        new OA\Property(property: '_method', type: 'string', example: 'PUT'),
+                        new OA\Property(property: 'name', type: 'string', nullable: true),
+                        new OA\Property(property: 'code', type: 'string', nullable: true),
+                        new OA\Property(property: 'logo', type: 'string', format: 'binary', nullable: true),
+                        new OA\Property(property: 'base_fee', type: 'number', nullable: true),
+                        new OA\Property(property: 'is_active', type: 'boolean', nullable: true),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Cập nhật thành công')
+        ]
+    )]
+    public function api_admin_shippingController_update();
+
+    #[OA\Delete(
+        path: '/api/admin/shippings/{id}',
+        summary: 'Xóa ĐVVC (Admin)',
+        tags: ['Admin - Shippings'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Xóa thành công')
+        ]
+    )]
+    public function api_admin_shippingController_destroy();
+
+    #[OA\Patch(
+        path: '/api/admin/shippings/{id}/toggle',
+        summary: 'Bật/Tắt trạng thái ĐVVC (Admin)',
+        tags: ['Admin - Shippings'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thay đổi trạng thái thành công')
+        ]
+    )]
+    public function api_admin_shippingController_toggle();
+
+    // --- Api/Client/BannerControllerDocs.php ---
+    #[OA\Get(
+        path: '/api/client/banners',
+        summary: 'Danh sách banner trang chủ (Client)',
+        tags: ['Client - Banners'],
+        responses: [
+            new OA\Response(response: 200, description: 'Danh sách banner')
+        ]
+    )]
+    public function api_client_bannerController_index();
+
+    // --- Api/Client/ShippingControllerDocs.php ---
+    #[OA\Get(
+        path: '/api/client/shippings',
+        summary: 'Danh sách đơn vị vận chuyển (Client)',
+        tags: ['Client - Shippings'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Danh sách VC')
+        ]
+    )]
+    public function api_client_shippingController_index();
 
 }
