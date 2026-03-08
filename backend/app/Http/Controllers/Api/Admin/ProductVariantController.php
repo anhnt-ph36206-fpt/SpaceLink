@@ -8,188 +8,212 @@ use App\Http\Requests\Admin\Product\UpdateVariantRequest;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
-use OpenApi\Attributes as OA;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProductVariantController extends Controller
 {
     // =========================================================================
-    // POST /api/admin/products/{product}/variants — Thêm variant mới
+    // GET /api/admin/products/{product}/variants — Lấy danh sách variant
     // =========================================================================
-    #[OA\Post(
-        path: '/api/admin/products/{product}/variants',
-        summary: '[Admin] Thêm biến thể cho sản phẩm',
-        tags: ['Admin - Product Variants'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm'),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['price'],
-                properties: [
-                    new OA\Property(property: 'sku',           type: 'string',  nullable: true),
-                    new OA\Property(property: 'price',         type: 'number'),
-                    new OA\Property(property: 'sale_price',    type: 'number',  nullable: true),
-                    new OA\Property(property: 'quantity',      type: 'integer', nullable: true),
-                    new OA\Property(property: 'image',         type: 'string',  nullable: true, description: 'Đường dẫn ảnh variant'),
-                    new OA\Property(property: 'is_active',     type: 'boolean', nullable: true),
-                    new OA\Property(property: 'attribute_ids', type: 'array',   nullable: true,
-                        items: new OA\Items(type: 'integer'),
-                        description: 'Mảng attribute IDs gán cho biến thể này'
-                    ),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 201, description: 'Tạo variant thành công'),
-            new OA\Response(response: 404, description: 'Không tìm thấy sản phẩm'),
-            new OA\Response(response: 422, description: 'Validation thất bại'),
-        ]
-    )]
-    public function store(StoreVariantRequest $request, string $product): JsonResponse
+    public function index(string $product): JsonResponse
     {
         $parentProduct = Product::findOrFail($product);
 
-        $data = $request->except(['attribute_ids', 'image']);
-    if ($request->hasFile('image')) {
-        $data['image'] = $request->file('image')->store('products/variants', 'public');
-    } elseif (is_string($request->image)) {
-        $data['image'] = $request->image;
-    }
-
-    $variant = $parentProduct->variants()->create($data);
-
-        // Sync attributes (many-to-many)
-        if ($request->filled('attribute_ids')) {
-            $variant->attributes()->sync($request->attribute_ids);
-        }
-
-        $variant->load('attributes.attributeGroup');
+        $variants = ProductVariant::where('product_id', $parentProduct->id)
+            ->with('attributes.attributeGroup')
+            ->get()
+            ->map(fn($v) => $this->formatVariant($v));
 
         return response()->json([
             'status'  => true,
-            'message' => 'Tạo biến thể thành công.',
-            'data'    => $this->formatVariant($variant),
-        ], 201);
+            'message' => 'Danh sách biến thể.',
+            'data'    => $variants,
+        ]);
+    }
+
+    // =========================================================================
+    // POST /api/admin/products/{product}/variants — Thêm variant mới
+    // =========================================================================
+    public function store(StoreVariantRequest $request, string $product): JsonResponse
+    {
+        DB::beginTransaction();
+        try {
+            $parentProduct = Product::findOrFail($product);
+
+            $data = $request->except(['attribute_ids', 'image']);
+            $data['image'] = $this->handleImageUpload($request);
+
+            $variant = $parentProduct->variants()->create($data);
+
+            // Sync attributes (many-to-many)
+            if ($request->filled('attribute_ids')) {
+                $variant->attributes()->sync($request->attribute_ids);
+            }
+
+            $variant->load('attributes.attributeGroup');
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Tạo biến thể thành công.',
+                'data'    => $this->formatVariant($variant),
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Lỗi tạo biến thể: ' . $e->getMessage());
+            return response()->json([
+                'status'  => false,
+                'message' => 'Tạo biến thể thất bại.',
+            ], 500);
+        }
     }
 
     // =========================================================================
     // PUT /api/admin/products/{product}/variants/{variant} — Cập nhật variant
     // =========================================================================
-    #[OA\Put(
-        path: '/api/admin/products/{product}/variants/{variant}',
-        summary: '[Admin] Cập nhật biến thể sản phẩm',
-        tags: ['Admin - Product Variants'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm'),
-            new OA\Parameter(name: 'variant', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID biến thể'),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['price'],
-                properties: [
-                    new OA\Property(property: 'sku',           type: 'string',  nullable: true),
-                    new OA\Property(property: 'price',         type: 'number'),
-                    new OA\Property(property: 'sale_price',    type: 'number',  nullable: true),
-                    new OA\Property(property: 'quantity',      type: 'integer', nullable: true),
-                    new OA\Property(property: 'image',         type: 'string',  nullable: true),
-                    new OA\Property(property: 'is_active',     type: 'boolean', nullable: true),
-                    new OA\Property(property: 'attribute_ids', type: 'array',   nullable: true,
-                        items: new OA\Items(type: 'integer')
-                    ),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Cập nhật thành công'),
-            new OA\Response(response: 404, description: 'Không tìm thấy variant'),
-            new OA\Response(response: 422, description: 'Validation thất bại'),
-        ]
-    )]
     public function update(UpdateVariantRequest $request, string $product, string $variant): JsonResponse
     {
-        $variantModel = ProductVariant::where('product_id', $product)
-            ->findOrFail($variant);
+        DB::beginTransaction();
+        try {
+            $variantModel = ProductVariant::where('product_id', $product)->findOrFail($variant);
 
-        $data = $request->except(['attribute_ids', 'image']);
-    
-    if ($request->hasFile('image')) {
-        // Delete old image if exists? (optional)
-        $data['image'] = $request->file('image')->store('products/variants', 'public');
-    } elseif ($request->has('image') && is_string($request->image)) {
-        // Keep existing image URL/path or clear it if empty string
-        $data['image'] = $request->image;
-    } elseif ($request->has('image') && $request->image === null) {
-        $data['image'] = null;
-    }
+            $data = $request->except(['attribute_ids', 'image']);
 
-    $variantModel->update($data);
+            // Xử lý ảnh — dọn ảnh cũ nếu upload mới
+            if ($request->hasFile('image')) {
+                $this->deleteStorageFile($variantModel->image);
+                $data['image'] = $request->file('image')->store('products/variants', 'public');
+            } elseif ($request->has('image') && is_string($request->image)) {
+                $data['image'] = $request->image;
+            } elseif ($request->has('image') && $request->image === null) {
+                $this->deleteStorageFile($variantModel->image);
+                $data['image'] = null;
+            }
 
-        // Sync attributes
-        if ($request->has('attribute_ids')) {
-            $variantModel->attributes()->sync($request->attribute_ids ?? []);
+            $variantModel->update($data);
+
+            // Sync attributes
+            if ($request->has('attribute_ids')) {
+                $variantModel->attributes()->sync($request->attribute_ids ?? []);
+            }
+
+            $variantModel->load('attributes.attributeGroup');
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Cập nhật biến thể thành công.',
+                'data'    => $this->formatVariant($variantModel),
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Lỗi cập nhật biến thể: ' . $e->getMessage());
+            return response()->json([
+                'status'  => false,
+                'message' => 'Cập nhật biến thể thất bại.',
+            ], 500);
         }
-
-        $variantModel->load('attributes.attributeGroup');
-
-        return response()->json([
-            'status'  => true,
-            'message' => 'Cập nhật biến thể thành công.',
-            'data'    => $this->formatVariant($variantModel),
-        ]);
     }
 
     // =========================================================================
     // DELETE /api/admin/products/{product}/variants/{variant} — Xóa variant
     // =========================================================================
-    #[OA\Delete(
-        path: '/api/admin/products/{product}/variants/{variant}',
-        summary: '[Admin] Xóa biến thể sản phẩm',
-        tags: ['Admin - Product Variants'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'variant', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Đã xóa variant'),
-            new OA\Response(response: 404, description: 'Không tìm thấy variant'),
-        ]
-    )]
     public function destroy(string $product, string $variant): JsonResponse
     {
-        $variantModel = ProductVariant::where('product_id', $product)
-            ->findOrFail($variant);
+        $variantModel = ProductVariant::where('product_id', $product)->findOrFail($variant);
 
-        $variantModel->delete();
+        if ($variantModel->orderItems()->exists()) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Không thể xoá biến thể vì biến thể đã phát sinh đơn hàng.',
+            ], 400);
+        }
 
-        return response()->json([
-            'status'  => true,
-            'message' => 'Đã xóa biến thể thành công.',
-        ]);
+        DB::beginTransaction();
+        try {
+            // Dọn file ảnh trước khi soft-delete
+            if ($variantModel->image) {
+                $this->deleteStorageFile($variantModel->image);
+            }
+
+            $variantModel->delete(); // SoftDelete
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Đã xóa biến thể thành công.',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Lỗi xóa biến thể: ' . $e->getMessage());
+            return response()->json([
+                'status'  => false,
+                'message' => 'Xóa biến thể thất bại.',
+            ], 500);
+        }
     }
 
-    // Helper — format variant với attributes
+    // =========================================================================
+    // Private Helpers
+    // =========================================================================
+
+    /** Upload ảnh từ file hoặc giữ nguyên string URL */
+    private function handleImageUpload($request): ?string
+    {
+        if ($request->hasFile('image')) {
+            return $request->file('image')->store('products/variants', 'public');
+        }
+        if (is_string($request->image) && !empty($request->image)) {
+            return $request->image;
+        }
+        return null;
+    }
+
+    /** Xóa file khỏi Storage nếu tồn tại */
+    private function deleteStorageFile(?string $imagePath): void
+    {
+        if (!$imagePath) return;
+
+        // Xử lý cả full URL lẫn relative path
+        $path = Str::startsWith($imagePath, ['http://', 'https://'])
+            ? Str::after($imagePath, '/storage/')
+            : ltrim($imagePath, '/');
+
+        if (Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
+    }
+
+    /** @return array<string, mixed> */
     private function formatVariant(ProductVariant $v): array
     {
+        $attrs = $v->attributes->map(fn($a) => [
+            'id'                 => $a->id,
+            'value'              => $a->value,
+            'color_code'         => $a->color_code,
+            'group_name'         => $a->attributeGroup?->name,
+            'group_display_name' => $a->attributeGroup?->display_name,
+        ])->values()->all();
+
         return [
             'id'         => $v->id,
             'sku'        => $v->sku,
             'price'      => $v->price,
             'sale_price' => $v->sale_price,
             'quantity'   => $v->quantity,
-            'image'      => $v->image,
+            'image'      => $v->image
+                ? (Str::startsWith($v->image, ['http://', 'https://'])
+                    ? $v->image
+                    : asset('storage/' . $v->image))
+                : null,
             'is_active'  => $v->is_active,
-            'attributes' => $v->attributes->map(fn($a) => [
-                'id'                 => $a->id,
-                'value'              => $a->value,
-                'color_code'         => $a->color_code,
-                'group_name'         => $a->attributeGroup?->name,
-                'group_display_name' => $a->attributeGroup?->display_name,
-            ]),
+            'attributes' => $attrs,
         ];
     }
 }

@@ -7,73 +7,9 @@ use App\Models\Product;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\ProductCollection;
 use Illuminate\Http\Request;
-use OpenApi\Attributes as OA;
 
 class ProductController extends Controller
-{
-    #[OA\Get(
-        path: '/api/products',
-        summary: 'Lấy danh sách sản phẩm',
-        tags: ['Client - Products'],
-        parameters: [
-            new OA\Parameter(
-                name: 'category_id',
-                in: 'query',
-                description: 'Lọc theo ID danh mục',
-                required: false,
-                schema: new OA\Schema(type: 'integer')
-            ),
-            new OA\Parameter(
-                name: 'keyword',
-                in: 'query',
-                description: 'Tìm kiếm theo tên sản phẩm',
-                required: false,
-                schema: new OA\Schema(type: 'string')
-            ),
-            new OA\Parameter(
-                name: 'min_price',
-                in: 'query',
-                description: 'Lọc sản phẩm có giá từ mức này trở lên',
-                required: false,
-                schema: new OA\Schema(type: 'number')
-            ),
-             new OA\Parameter(
-                name: 'max_price',
-                in: 'query',
-                description: 'Lọc sản phẩm có giá đến mức này',
-                required: false,
-                schema: new OA\Schema(type: 'number')
-            ),
-            new OA\Parameter(
-                name: 'sort_by',
-                in: 'query',
-                description: 'Sắp xếp theo: price_asc, price_desc, latest, oldest, view_count',
-                required: false,
-                schema: new OA\Schema(type: 'string')
-            ),
-             new OA\Parameter(
-                name: 'page',
-                in: 'query',
-                description: 'Số trang (phân trang)',
-                required: false,
-                schema: new OA\Schema(type: 'integer')
-            ),
-        ],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Danh sách sản phẩm thành công',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
-                        new OA\Property(property: 'links', type: 'object'),
-                        new OA\Property(property: 'meta', type: 'object'),
-                    ]
-                )
-            )
-        ]
-    )]
-    public function index(Request $request)
+{    public function index(Request $request)
     {
         $query = Product::with(['category', 'brand', 'images', 'variants.attributes.attributeGroup'])
             ->where('is_active', true);
@@ -94,12 +30,16 @@ class ProductController extends Controller
             $query->where('name', 'like', "%{$keyword}%");
         }
 
-        // Lọc theo khoảng giá
+        // Lọc theo khoảng giá (dùng giá hiệu lực = COALESCE(sale_price, price))
         if ($request->filled('min_price')) {
-            $query->where('price', '>=', $request->min_price);
+            $query->where(function ($q) use ($request) {
+                $q->whereRaw('COALESCE(sale_price, price) >= ?', [$request->min_price]);
+            });
         }
         if ($request->filled('max_price')) {
-            $query->where('price', '<=', $request->max_price);
+            $query->where(function ($q) use ($request) {
+                $q->whereRaw('COALESCE(sale_price, price) <= ?', [$request->max_price]);
+            });
         }
 
         // Sắp xếp
@@ -131,38 +71,7 @@ class ProductController extends Controller
         $products = $query->paginate(12);
 
         return new ProductCollection($products);
-    }
-
-    #[OA\Get(
-        path: '/api/products/{id}',
-        summary: 'Xem chi tiết sản phẩm',
-        tags: ['Client - Products'],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                in: 'path',
-                description: 'ID của sản phẩm',
-                required: true,
-                schema: new OA\Schema(type: 'integer')
-            )
-        ],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Chi tiết sản phẩm',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'data', type: 'object')
-                    ]
-                )
-            ),
-            new OA\Response(
-                response: 404,
-                description: 'Không tìm thấy sản phẩm'
-            )
-        ]
-    )]
-    public function show($id)
+    }    public function show($id)
     {
         // Eager Loading sâu để lấy: Variants -> Attributes -> AttributeGroup
         $product = Product::with([
