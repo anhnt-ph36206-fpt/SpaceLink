@@ -37,7 +37,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
     };
 
     return (
-        <div className="col-md-6 col-lg-4 col-xl-3">
+        <div className="col-6 col-sm-6 col-md-4">
             {/* THAY ĐỔI Ở ĐÂY: Dùng biến delayTime đã tính toán */}
             <div
                 className="product-item rounded wow fadeInUp"
@@ -46,7 +46,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
                 <div className="product-item-inner border rounded">
                     <div className="product-item-inner-item position-relative overflow-hidden">
 
-                        <div className="rounded-top text-center p-3" style={{ height: '240px', backgroundColor: '#fff' }}>
+                        <div className="rounded-top text-center p-3" style={{ height: '200px', backgroundColor: '#fff' }}>
                             <Link to={`/product/${product.id}`} className="d-block h-100 w-100 position-relative">
                                 <img
                                     src={product.image || undefined}
@@ -72,7 +72,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
                             {product.category || "Điện thoại"}
                         </Link>
 
-                        <Link to={`/product/${product.id}`} className="d-block h5 text-decoration-none text-dark text-truncate">
+                        <Link to={`/product/${product.id}`} className="d-block h6 text-decoration-none text-dark" title={product.name} style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.4' }}>
                             {product.name}
                         </Link>
 
