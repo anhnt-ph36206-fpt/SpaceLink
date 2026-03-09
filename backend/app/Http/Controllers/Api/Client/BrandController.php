@@ -8,11 +8,7 @@ use App\Http\Resources\BrandResource;
 use Illuminate\Http\Request;
 
 class BrandController extends Controller
-{
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+{    public function index()
     {
         $brands = Brand::where('is_active', true)
             ->orderBy('display_order', 'asc')

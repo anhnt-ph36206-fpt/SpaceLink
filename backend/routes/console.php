@@ -6,3 +6,7 @@ use Illuminate\Support\Facades\Artisan;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+use Illuminate\Support\Facades\Schedule;
+// Tự động hủy đơn hàng VNPAY quá hạn 15 phút
+Schedule::command('orders:cancel-expired-vnpay')->everyMinute();

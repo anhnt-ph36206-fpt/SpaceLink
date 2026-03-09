@@ -1,11 +1,14 @@
 <?php
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProductVariant extends Model
 {
+    use HasFactory, SoftDeletes;
+
     protected $fillable = [
         'product_id',
         'sku',
@@ -17,34 +20,39 @@ class ProductVariant extends Model
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
+        'price'      => 'decimal:2',
         'sale_price' => 'decimal:2',
-        'is_active' => 'boolean',
+        'is_active'  => 'boolean',
+        'quantity'   => 'integer',
     ];
 
-    /**
-     * Relationships
-     */
+    // -------------------------------------------------------------------------
+    // Relationships
+    // -------------------------------------------------------------------------
 
-    // Variant belongs to product
     public function product()
     {
         return $this->belongsTo(Product::class);
     }
 
-    // Variant has many attributes (many-to-many)
+    /** Attributes gắn với variant này (many-to-many qua pivot) */
     public function attributes()
     {
-        return $this->belongsToMany(Attribute::class, 'product_variant_attributes', 'variant_id', 'attribute_id');
+        return $this->belongsToMany(
+            Attribute::class,
+            'product_variant_attributes',
+            'variant_id',
+            'attribute_id'
+        );
     }
 
-    // Variant in cart items
+    /** Các mục trong giỏ hàng chứa variant này */
     public function cartItems()
     {
         return $this->hasMany(Cart::class, 'variant_id');
     }
 
-    // Variant in order items
+    /** Các mục trong đơn hàng chứa variant này */
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class, 'variant_id');

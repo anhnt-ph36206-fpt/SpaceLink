@@ -26,6 +26,7 @@ import ProductEdit from "./pages/admin/products/edit";
 import ProductDetail from "./pages/admin/products/ProductDetail";
 import AdminAttributeGroupPage from "./pages/admin/attribute-groups/AdminAttributeGroupPage";
 import AdminBrandPage from './pages/admin/brands/AdminBrandPage';
+import AdminBannerPage from './pages/admin/banners/AdminBannerPage';
 import SearchPage from './components/home/SearchPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -50,6 +51,7 @@ function App() {
                             <Route index element={<AdminDashboardPage />} />
                             <Route path="categories" element={<AdminCategoryPage />} />
                             <Route path="brands" element={<AdminBrandPage />} />
+                            <Route path="banners" element={<AdminBannerPage />} />
                             <Route path="attribute-groups" element={<AdminAttributeGroupPage />} />
 
                             <Route path="products">
