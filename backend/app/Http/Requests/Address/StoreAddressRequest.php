@@ -25,7 +25,7 @@ class StoreAddressRequest extends FormRequest
             'fullname'      => 'required|string|max:150',
             'phone'         => 'required|string|max:20',
             'province'      => 'required|string|max:100',
-            'district'      => 'required|string|max:100',
+            'district'      => 'nullable|string|max:100',
             'ward'          => 'required|string|max:100',
             'address_detail'=> 'required|string|max:255', // Đúng tên cột trong DB
             'is_default'    => 'boolean',

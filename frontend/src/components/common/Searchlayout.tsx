@@ -97,7 +97,7 @@ const Searchlayout: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
                         <div className="rounded-top text-center p-3" style={{ height: '240px', backgroundColor: '#fff' }}>
                             <Link to={`/product/${product.id}`} className="d-block h-100 w-100 position-relative" style={{ zIndex: 10 }}>
                                 <img
-                                    src={product.image}
+                                    src={product.image || undefined}
                                     className="img-fluid"
                                     alt={product.name}
                                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}

@@ -6,11 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Notifications\ResetPasswordNotification;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+
+    /**
+     * Gửi notification đặt lại mật khẩu.
+     *
+     * @param  string  $token
+     * @return void
+     */
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
 
     // --- 1. KHAI BÁO HẰNG SỐ (CONSTANTS) ---
     const ROLE_ADMIN = 1;
@@ -99,5 +111,11 @@ class User extends Authenticatable
     public function newsArticles()
     {
         return $this->hasMany(News::class, 'author_id');
+    }
+
+    // User has many product returns
+    public function productReturns()
+    {
+        return $this->hasMany(ProductReturn::class);
     }
 }
