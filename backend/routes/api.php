@@ -79,6 +79,7 @@ Route::prefix('client')->name('client.')->group(function () {
     // --- Client Checkout (bắt buộc đăng nhập) ---
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/checkout', [CheckoutController::class, 'checkout']);      // POST /api/client/checkout
+        Route::post('/checkout/check-voucher', [CheckoutController::class, 'checkVoucher']); // POST /api/client/checkout/check-voucher
     });
 });
 

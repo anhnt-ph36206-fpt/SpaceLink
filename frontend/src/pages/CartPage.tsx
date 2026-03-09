@@ -1,172 +1,377 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useCart, type CartItem } from '../context/CartContext';
+import { Modal, Button, Spin, Tag, Tooltip, Divider, Typography } from 'antd';
+import { ShoppingOutlined, CloseOutlined, InfoCircleOutlined, SwapOutlined, MinusOutlined, PlusOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+
+const { Title } = Typography;
 
 const formatVND = (v: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
+const imgUrl = (path?: string) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `http://localhost:8000/storage/${path}`;
+};
+
 const CartPage: React.FC = () => {
-    const { items, removeFromCart, updateQty, totalPrice, totalItems } = useCart();
+    const { items, removeFromCart, updateQty, totalPrice, totalItems, loading, updatingItems } = useCart();
     const navigate = useNavigate();
+
+    // -- State for Variant Switching --
+    const [editingItem, setEditingItem] = useState<CartItem | null>(null);
+    const [selectedAttrs, setSelectedAttrs] = useState<Record<string, number>>({}); // groupName -> attrId
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    // Group available attributes for the editing item
+    const attrGroups = useMemo(() => {
+        if (!editingItem?.availableVariants) return [];
+        const groupMap = new Map<string, any[]>();
+        editingItem.availableVariants.forEach(v => {
+            v.attributes.forEach((a: any) => {
+                if (!groupMap.has(a.group)) groupMap.set(a.group, []);
+                const list = groupMap.get(a.group)!;
+                if (!list.find(item => item.id === a.id)) {
+                    list.push(a);
+                }
+            });
+        });
+        return Array.from(groupMap.entries()).map(([group, attrs]) => ({ group, attrs }));
+    }, [editingItem]);
+
+    const matchingVariant = useMemo(() => {
+        if (!editingItem || !editingItem.availableVariants) return null;
+        const selectedIds = Object.values(selectedAttrs);
+        return editingItem.availableVariants.find(v =>
+            selectedIds.every(sid => v.attributes.some((a: any) => a.id === sid))
+        ) || null;
+    }, [editingItem, selectedAttrs]);
+
+    const handleOpenEdit = (item: CartItem) => {
+        setEditingItem(item);
+        // Initialize with item's current variant attributes
+        if (item.availableVariants) {
+            const currentVariant = item.availableVariants.find(v => v.id === item.variantId);
+            if (currentVariant) {
+                const initial: Record<string, number> = {};
+                currentVariant.attributes.forEach((a: any) => {
+                    initial[a.group] = a.id;
+                });
+                setSelectedAttrs(initial);
+            }
+        }
+    };
+
+    const handleUpdateVariant = async () => {
+        if (!editingItem || !matchingVariant) return;
+        setIsUpdating(true);
+        try {
+            await updateQty(editingItem.id, editingItem.quantity, matchingVariant.id);
+            setEditingItem(null);
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    if (loading && items.length === 0) {
+        return (
+            <div className="container py-5 text-center">
+                <Spin size="large" />
+                <p className="mt-3 text-muted">Đang tải giỏ hàng...</p>
+            </div>
+        );
+    }
 
     if (items.length === 0) {
         return (
-            <div className="container-fluid py-5">
-                <div className="container text-center py-5">
-                    <i className="fas fa-shopping-cart fa-4x text-muted mb-4" />
-                    <h3 className="text-muted mb-3">Giỏ hàng của bạn đang trống</h3>
-                    <p className="text-muted mb-4">Hãy thêm sản phẩm vào giỏ hàng để tiếp tục mua sắm.</p>
-                    <Link to="/shop" className="btn btn-primary rounded-pill px-5 py-2">
-                        <i className="fas fa-arrow-left me-2" />Tiếp tục mua sắm
-                    </Link>
+            <div className="container py-5 text-center">
+                <div className="mb-4">
+                    <ShoppingOutlined style={{ fontSize: 64, color: '#ccc' }} />
                 </div>
+                <h3>Giỏ hàng của bạn đang trống</h3>
+                <p className="text-muted">Hãy chọn thêm sản phẩm để tiếp tục mua sắm.</p>
+                <Link to="/products" className="btn btn-primary px-4 rounded-pill mt-3">
+                    Tiếp tục mua sắm
+                </Link>
             </div>
         );
     }
 
     return (
-        <div className="container-fluid py-5" style={{ background: '#f8f9fa', minHeight: '80vh' }}>
-            <div className="container">
-                <h2 className="mb-4 fw-bold">
-                    <i className="fas fa-shopping-cart me-2 text-primary" />
-                    Giỏ hàng ({totalItems} sản phẩm)
-                </h2>
+        <div className="container py-4">
+            <h1 className="h4 mb-4 fw-bold d-flex align-items-center gap-2">
+                <ShoppingOutlined className="text-primary" />
+                Giỏ hàng của tôi ({totalItems})
+            </h1>
 
-                <div className="row g-4">
-                    {/* Items */}
-                    <div className="col-lg-8">
-                        <div className="card border-0 shadow-sm" style={{ borderRadius: 16 }}>
-                            <div className="card-body p-0">
-                                {items.map((item, index) => (
+            <div className="row g-4">
+                {/* Product List */}
+                <div className="col-lg-8">
+                    <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
+                        <div className="card-body p-0">
+                            {items.map((item, idx) => (
+                                <div
+                                    key={item.id}
+                                    className={`p-3 d-flex gap-3 align-items-center ${idx !== items.length - 1 ? 'border-bottom' : ''}`}
+                                >
+                                    {/* Image */}
                                     <div
-                                        key={item.id}
-                                        className={`d-flex align-items-center gap-3 p-4 ${index < items.length - 1 ? 'border-bottom' : ''}`}
+                                        style={{
+                                            width: 100, height: 100, flexShrink: 0,
+                                            borderRadius: 12, overflow: 'hidden',
+                                            background: '#f5f5f5', display: 'flex',
+                                            alignItems: 'center', justifyContent: 'center',
+                                            border: '1px solid #eee'
+                                        }}
                                     >
-                                        {/* Image */}
-                                        <div
-                                            style={{
-                                                width: 90, height: 90, flexShrink: 0,
-                                                borderRadius: 10, overflow: 'hidden',
-                                                background: '#f5f5f5', display: 'flex',
-                                                alignItems: 'center', justifyContent: 'center',
-                                            }}
+                                        {item.image ? (
+                                            <img src={imgUrl(item.image) || ''} alt={item.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                        ) : (
+                                            <i className="fas fa-box text-muted fa-2x" />
+                                        )}
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="flex-grow-1 min-w-0">
+                                        <Link
+                                            to={`/product/${item.productSlug || item.productId}`}
+                                            className="fw-semibold text-dark text-decoration-none hover-primary"
+                                            style={{ fontSize: 16, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}
                                         >
-                                            {item.image ? (
-                                                <img src={item.image} alt={item.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                                            ) : (
-                                                <i className="fas fa-box text-muted fa-2x" />
-                                            )}
-                                        </div>
+                                            {item.name}
+                                        </Link>
 
-                                        {/* Info */}
-                                        <div className="flex-grow-1 min-w-0">
-                                            <Link
-                                                to={`/product/${item.productId}`}
-                                                className="fw-semibold text-dark text-decoration-none"
-                                                style={{ fontSize: 15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                                            >
-                                                {item.name}
-                                            </Link>
-                                            {item.attributes && (
-                                                <div className="text-muted small mt-1">
-                                                    <i className="fas fa-tag me-1" />{item.attributes}
+                                        {/* Variant Selector Trigger */}
+                                        <div className="mt-2">
+                                            <Tooltip title="Nhấn để đổi phân loại">
+                                                <div
+                                                    className="d-inline-flex align-items-center gap-1 px-2 py-1 rounded bg-light border text-muted small cursor-pointer hover-border-primary"
+                                                    onClick={() => handleOpenEdit(item)}
+                                                >
+                                                    <span className="text-truncate" style={{ maxWidth: 150 }}>
+                                                        Phân loại: {item.attributes || 'Mặc định'}
+                                                    </span>
+                                                    <SwapOutlined size={10} />
                                                 </div>
-                                            )}
-                                            {item.sku && (
-                                                <div className="text-muted" style={{ fontSize: 11 }}>SKU: {item.sku}</div>
-                                            )}
-                                            <div className="fw-bold text-danger mt-1">{formatVND(item.price)}</div>
+                                            </Tooltip>
                                         </div>
 
-                                        {/* Qty */}
-                                        <div className="input-group" style={{ width: 120, flexShrink: 0 }}>
+                                        <div className="mt-2 text-danger fw-bold">{formatVND(item.price)}</div>
+
+                                        {item.stock < item.quantity && (
+                                            <div className="mt-1 text-danger small">
+                                                <InfoCircleOutlined className="me-1" />
+                                                Chỉ còn {item.stock} sản phẩm trong kho
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Qty */}
+                                    <div className="d-flex flex-column align-items-end gap-2" style={{ width: 140 }}>
+                                        <div className={`input-group input-group-sm rounded-pill overflow-hidden border ${updatingItems.has(item.id) ? 'opacity-50' : ''}`}>
                                             <button
-                                                className="btn btn-outline-secondary btn-sm"
+                                                className="btn btn-light border-0 px-2"
                                                 onClick={() => updateQty(item.id, item.quantity - 1)}
-                                            >-</button>
+                                                disabled={item.quantity <= 1 || updatingItems.has(item.id)}
+                                            >
+                                                <MinusOutlined />
+                                            </button>
                                             <input
                                                 type="text"
-                                                className="form-control form-control-sm text-center"
+                                                className="form-control border-0 text-center fw-bold bg-white"
                                                 value={item.quantity}
                                                 readOnly
+                                                style={{ width: 40, pointerEvents: 'none' }}
                                             />
                                             <button
-                                                className="btn btn-outline-secondary btn-sm"
+                                                className="btn btn-light border-0 px-2"
                                                 onClick={() => updateQty(item.id, item.quantity + 1)}
-                                                disabled={item.quantity >= item.stock}
-                                            >+</button>
+                                                disabled={item.quantity >= item.stock || updatingItems.has(item.id)}
+                                            >
+                                                <PlusOutlined />
+                                            </button>
                                         </div>
-
-                                        {/* Subtotal */}
-                                        <div className="fw-bold text-end" style={{ width: 110, flexShrink: 0 }}>
+                                        <div className="fw-bold text-primary small d-flex align-items-center gap-1">
+                                            {updatingItems.has(item.id) && <Spin size="small" />}
                                             {formatVND(item.price * item.quantity)}
                                         </div>
-
-                                        {/* Remove */}
-                                        <button
-                                            className="btn btn-sm btn-light text-danger"
-                                            style={{ borderRadius: '50%', width: 34, height: 34, padding: 0 }}
-                                            onClick={() => removeFromCart(item.id)}
-                                            title="Xóa"
-                                        >
-                                            <i className="fas fa-times" />
-                                        </button>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
 
-                        <div className="d-flex justify-content-between mt-3">
-                            <Link to="/shop" className="btn btn-outline-primary rounded-pill">
-                                <i className="fas fa-arrow-left me-2" />Tiếp tục mua sắm
-                            </Link>
+                                    {/* Remove */}
+                                    <button
+                                        className="btn btn-link text-muted p-2"
+                                        onClick={() => removeFromCart(item.id)}
+                                    >
+                                        <CloseOutlined />
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     </div>
+                </div>
 
-                    {/* Summary */}
-                    <div className="col-lg-4">
-                        <div className="card border-0 shadow-sm" style={{ borderRadius: 16, position: 'sticky', top: 20 }}>
-                            <div className="card-body p-4">
-                                <h5 className="fw-bold mb-4">Tóm tắt đơn hàng</h5>
+                {/* Summary */}
+                <div className="col-lg-4">
+                    <div className="card border-0 shadow-sm rounded-4 position-sticky" style={{ top: 20 }}>
+                        <div className="card-body p-4">
+                            <h5 className="fw-bold mb-4">Tổng cộng</h5>
 
-                                {items.map(item => (
-                                    <div key={item.id} className="d-flex justify-content-between mb-2 small">
-                                        <span className="text-muted text-truncate me-2" style={{ maxWidth: 170 }}>
-                                            {item.name} {item.attributes ? `(${item.attributes})` : ''} ×{item.quantity}
-                                        </span>
-                                        <span className="fw-semibold">{formatVND(item.price * item.quantity)}</span>
-                                    </div>
-                                ))}
-
-                                <hr />
-
-                                <div className="d-flex justify-content-between mb-2">
-                                    <span>Tạm tính</span>
-                                    <span className="fw-semibold">{formatVND(totalPrice)}</span>
-                                </div>
-                                <div className="d-flex justify-content-between mb-2 text-muted small">
-                                    <span>Phí vận chuyển</span>
-                                    <span>Tính khi thanh toán</span>
-                                </div>
-
-                                <hr />
-
-                                <div className="d-flex justify-content-between mb-4">
-                                    <strong>Tổng cộng</strong>
-                                    <strong className="text-danger fs-5">{formatVND(totalPrice)}</strong>
-                                </div>
-
-                                <button
-                                    className="btn btn-primary w-100 rounded-pill py-3 fw-bold"
-                                    onClick={() => navigate('/checkout')}
-                                >
-                                    Tiến hành thanh toán <i className="fas fa-arrow-right ms-2" />
-                                </button>
+                            <div className="d-flex justify-content-between mb-2">
+                                <span className="text-muted">Tạm tính ({totalItems} món)</span>
+                                <span>{formatVND(totalPrice)}</span>
                             </div>
+                            <div className="d-flex justify-content-between mb-4">
+                                <span className="text-muted">Phí vận chuyển</span>
+                                <span className="text-success small">Liên hệ sau</span>
+                            </div>
+
+                            <Divider style={{ margin: '16px 0' }} />
+
+                            <div className="d-flex justify-content-between mb-4 align-items-center">
+                                <span className="fw-bold h5 mb-0">Thành tiền</span>
+                                <span className="text-danger fw-bold h4 mb-0">{formatVND(totalPrice)}</span>
+                            </div>
+
+                            <button
+                                className="btn btn-primary w-100 py-3 rounded-pill fw-bold"
+                                onClick={() => navigate('/checkout')}
+                                style={{ fontSize: 16 }}
+                            >
+                                TIẾN HÀNH THANH TOÁN
+                            </button>
+
+                            <Link to="/products" className="btn btn-link w-100 text-muted mt-2 text-decoration-none small">
+                                Tiếp tục mua sắm
+                            </Link>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Change Variant Modal */}
+            <Modal
+                title={<div style={{ paddingBottom: 10, fontWeight: 600 }}>Cập nhật phân loại</div>}
+                open={!!editingItem}
+                onCancel={() => setEditingItem(null)}
+                footer={[
+                    <Button key="back" style={{ borderRadius: 8 }} onClick={() => setEditingItem(null)}>Hủy bỏ</Button>,
+                    <Button
+                        key="submit"
+                        type="primary"
+                        loading={isUpdating}
+                        disabled={!matchingVariant || matchingVariant.id === editingItem?.variantId || matchingVariant.quantity === 0}
+                        onClick={handleUpdateVariant}
+                        style={{ borderRadius: 8, fontWeight: 600 }}
+                    >
+                        Xác nhận thay đổi
+                    </Button>,
+                ]}
+                width={500}
+                centered
+            >
+                {editingItem && (
+                    <div className="py-2">
+                        {/* Header Info Block */}
+                        <div className="d-flex gap-3 mb-1">
+                            <div style={{ width: 100, height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa', borderRadius: 12, border: '1px solid #eee', overflow: 'hidden' }}>
+                                <img
+                                    src={imgUrl(matchingVariant?.image || editingItem.image) || ''}
+                                    alt={editingItem.name}
+                                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                                />
+                            </div>
+                            <div className="flex-grow-1">
+                                <Title level={5} style={{ margin: 0, fontSize: '1rem', fontWeight: 600, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {editingItem.name}
+                                </Title>
+                                <div className="mt-2 d-flex align-items-center gap-2">
+                                    <span className="text-danger fw-bold fs-5">{formatVND(matchingVariant?.price || editingItem.price)}</span>
+                                    {matchingVariant && matchingVariant.id !== editingItem.variantId && (
+                                        <Tag color="blue" size="small">Giá mới</Tag>
+                                    )}
+                                </div>
+                                <div className={`small mt-1 ${matchingVariant?.quantity ? (matchingVariant.quantity > 0 ? 'text-success' : 'text-danger') : 'text-muted'}`}>
+                                    {matchingVariant ? (
+                                        matchingVariant.quantity > 0 ? (
+                                            <><CheckCircleOutlined className="me-1" />Còn {matchingVariant.quantity} sản phẩm</>
+                                        ) : (
+                                            <><ExclamationCircleOutlined className="me-1" />Hết hàng</>
+                                        )
+                                    ) : (
+                                        <><InfoCircleOutlined className="me-1" />Vui lòng chọn phân loại</>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <Divider style={{ margin: '16px 0' }} />
+
+                        {/* Attribute Selectors */}
+                        {attrGroups.map(({ group, attrs }) => (
+                            <div key={group} className="mb-4">
+                                <label className="fw-semibold mb-2 d-block text-uppercase small text-muted">{group}</label>
+                                <div className="d-flex flex-wrap gap-2">
+                                    {attrs.map(attr => {
+                                        const isSelected = selectedAttrs[group] === attr.id;
+                                        const isColor = !!attr.color_code;
+
+                                        // Check availability
+                                        const isAvailable = editingItem?.availableVariants?.some(v => {
+                                            const hasThisAttr = v.attributes.some((a: any) => a.id === attr.id);
+                                            const otherGroupsMatch = Object.entries(selectedAttrs).every(
+                                                ([g, sid]) => g === group || v.attributes.some((a: any) => a.id === sid)
+                                            );
+                                            return hasThisAttr && otherGroupsMatch && v.quantity > 0;
+                                        });
+
+                                        return isColor ? (
+                                            <Tooltip title={attr.value}>
+                                                <button
+                                                    key={attr.id}
+                                                    onClick={() => isAvailable && setSelectedAttrs(p => ({ ...p, [group]: attr.id }))}
+                                                    style={{
+                                                        width: 32, height: 32, borderRadius: 16,
+                                                        background: attr.color_code,
+                                                        border: isSelected ? '3px solid #0d6efd' : '1px solid #ddd',
+                                                        cursor: isAvailable ? 'pointer' : 'not-allowed',
+                                                        opacity: isAvailable ? 1 : 0.3,
+                                                        transform: isSelected ? 'scale(1.15)' : 'scale(1)',
+                                                        transition: 'all 0.2s',
+                                                        boxShadow: isSelected ? '0 0 8px rgba(13,110,253,0.3)' : 'none'
+                                                    }}
+                                                />
+                                            </Tooltip>
+                                        ) : (
+                                            <button
+                                                key={attr.id}
+                                                className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                                style={{
+                                                    borderRadius: 8,
+                                                    padding: '6px 16px',
+                                                    fontWeight: isSelected ? 600 : 400,
+                                                    opacity: isAvailable ? 1 : 0.4,
+                                                    cursor: isAvailable ? 'pointer' : 'not-allowed',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                                onClick={() => isAvailable && setSelectedAttrs(p => ({ ...p, [group]: attr.id }))}
+                                            >
+                                                {attr.value}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </Modal>
+
+            <style>{`
+                .hover-primary:hover { color: #0d6efd !important; }
+                .hover-border-primary:hover { border-color: #0d6efd !important; color: #0d6efd !important; }
+                .cursor-pointer { cursor: pointer; }
+            `}</style>
         </div>
     );
 };

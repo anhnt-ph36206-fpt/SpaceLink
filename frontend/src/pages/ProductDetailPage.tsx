@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { axiosInstance } from "../api/axios";
 import { useCart } from "../context/CartContext";
 import { toast } from "react-toastify";
+import { Spin } from "antd";
 
 // ─── Types ───────────────────────────────────────────────────────────────
 interface AttrInfo {
@@ -174,6 +175,72 @@ const ProductDetailPage: React.FC = () => {
 
         if (goToCart) {
             navigate('/cart');
+        }
+    };
+
+    // ── Buy Now (Direct Checkout) ─────────────────────────────────────────
+    const [isChecking, setIsChecking] = useState(false);
+    const handleBuyNow = async () => {
+        if (!product || !selectedVariant) {
+            toast.warning('Vui lòng chọn các thuộc tính sản phẩm!');
+            return;
+        }
+
+        if (stock < qty) {
+            toast.error('Số lượng trong kho không đủ!');
+            return;
+        }
+
+        setIsChecking(true);
+        try {
+            // "Call data check như web bán hàng thực tế"
+            // Re-fetch latest data to ensure no stock changes or product deletions
+            const res = await axiosInstance.get(`/products/${id}`);
+            const latestProduct = res.data.data;
+
+            // Check if product is still active
+            if (!latestProduct.is_active) {
+                toast.error('Sản phẩm này hiện không còn kinh doanh.');
+                return;
+            }
+
+            // Find current selected variant in the latest data
+            const latestVariant = latestProduct.variants?.find((v: Variant) => v.id === selectedVariant.id);
+            if (!latestVariant) {
+                toast.error('Phân loại sản phẩm này không còn tồn tại.');
+                return;
+            }
+
+            if (latestVariant.quantity < qty) {
+                toast.error(`Số lượng tồn kho không đủ (còn ${latestVariant.quantity} sản phẩm)`);
+                // Update local state to reflect latest reality
+                setProduct(latestProduct);
+                return;
+            }
+
+            // If all good, navigate directly to checkout with this item (Buy Now flow)
+            // Passing state so checkout page knows to use this item instead of cart
+            navigate('/checkout', {
+                state: {
+                    buyNowItem: {
+                        productId: product.id,
+                        variantId: selectedVariant.id,
+                        name: product.name,
+                        image: varImgUrl(selectedVariant) || imgUrl(product.images?.[0]) || '',
+                        price: displayPrice,
+                        quantity: qty,
+                        attributes: selectedVariant.attributes.map(a => a.value).join(' / '),
+                        sku: selectedVariant.sku || product.sku,
+                        stock: latestVariant.quantity
+                    }
+                }
+            });
+
+        } catch (error: any) {
+            console.error('Buy Now Check Failed:', error);
+            toast.error('Không thể kiểm tra sản phẩm lúc này. Vui lòng thử lại.');
+        } finally {
+            setIsChecking(false);
         }
     };
 
@@ -398,10 +465,10 @@ const ProductDetailPage: React.FC = () => {
                                 <button
                                     className="btn btn-primary"
                                     style={{ borderRadius: 10, fontWeight: 700, padding: '10px 24px' }}
-                                    disabled={stock === 0}
-                                    onClick={() => handleAddToCart(true)}
+                                    disabled={stock === 0 || isChecking}
+                                    onClick={handleBuyNow}
                                 >
-                                    Mua Ngay →
+                                    {isChecking ? <Spin size="small" className="me-2" /> : 'Mua Ngay →'}
                                 </button>
                             </div>
                         </div>

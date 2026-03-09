@@ -9,6 +9,7 @@ import ShopPage from './pages/ShopPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
+import OrderSuccessPage from './pages/OrderSuccessPage';
 import BestsellerPage from './pages/BestsellerPage';
 import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -70,6 +71,7 @@ function App() {
                             <Route path="/cart" element={<CartPage />} />
                             <Route element={<PrivateRoute />}>
                                 <Route path="/checkout" element={<CheckoutPage />} />
+                                <Route path="/order/success/:orderCode" element={<OrderSuccessPage />} />
                                 <Route path="/profile" element={<ProfilePage />} />
                             </Route>
                             <Route path="/bestseller" element={<BestsellerPage />} />
