@@ -56,7 +56,7 @@ class CartController extends Controller
             'product:id,name,slug,price,sale_price',
             'product.images',
             'variant:id,product_id,sku,price,sale_price,image,quantity',
-            'variant.attributes',
+            'variant.attributes.attributeGroup',
         ]);
 
         if ($ctx['user_id']) {
@@ -70,6 +70,27 @@ class CartController extends Controller
         // Tính toán lại giá theo DB mới nhất
         $formattedItems = $cartItems->map(function (Cart $item) {
             $effectivePrice = $this->getEffectivePrice($item);
+
+            $availableVariants = ProductVariant::where('product_id', $item->product_id)
+                ->where('is_active', true)
+                ->with('attributes.attributeGroup')
+                ->get()
+                ->map(function ($v) {
+                    return [
+                        'id' => $v->id,
+                        'sku' => $v->sku,
+                        'price' => (float) ($v->sale_price ?? $v->price),
+                        'quantity' => $v->quantity,
+                        'image' => $v->image,
+                        'attributes' => $v->attributes->map(fn($a) => [
+                            'id' => $a->id,
+                            'group' => $a->attributeGroup?->name, // group name
+                            'value' => $a->value,
+                            'color_code' => $a->color_code
+                        ])
+                    ];
+                });
+
             return [
                 'cart_item_id'    => $item->id,
                 'product_id'      => $item->product_id,
@@ -80,14 +101,15 @@ class CartController extends Controller
                 'variant_image'   => $item->variant?->image,
                 'variant_attrs'   => $item->variant?->attributes->map(fn($a) => [
                     'id'   => $a->id,
-                    'name' => $a->name,
-                    'value' => $a->pivot->value ?? null,
+                    'name' => $a->attributeGroup?->name,
+                    'value' => $a->value,
                 ]),
                 'product_images'  => $item->product?->images,
                 'effective_price' => $effectivePrice,
                 'quantity'        => $item->quantity,
                 'line_total'      => $effectivePrice * $item->quantity,
                 'stock_available' => $item->variant?->quantity ?? 0,
+                'available_variants' => $availableVariants,
             ];
         });
 
@@ -200,20 +222,69 @@ class CartController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Không có quyền truy cập.'], 403);
         }
 
+        $newVariantId = $request->variant_id ?? $cartItem->variant_id;
+        $newQuantity = $request->quantity;
+
+        // Kiểm tra xem biến thể mới có tồn tại và đang hoạt động không
+        $variant = ProductVariant::where('id', $newVariantId)
+            ->where('product_id', $cartItem->product_id) // Phải cùng product
+            ->where('is_active', true)
+            ->first();
+
+        if (!$variant) {
+            return response()->json(['status' => 'error', 'message' => 'Biến thể không hợp lệ hoặc đã bị vô hiệu hóa.'], 400);
+        }
+
         // Kiểm tra tồn kho trước khi cập nhật
-        if ($cartItem->variant && $cartItem->variant->quantity < $request->quantity) {
+        if ($variant->quantity < $newQuantity) {
             return response()->json([
                 'status'  => 'error',
-                'message' => "Sản phẩm chỉ còn {$cartItem->variant->quantity} trong kho.",
+                'message' => "Sản phẩm chỉ còn {$variant->quantity} trong kho.",
             ], 409);
         }
 
-        $cartItem->update(['quantity' => $request->quantity]);
+        // Nếu thay đổi variant_id, kiểm tra xem variant mới đã có trong giỏ chưa (để merge)
+        if ($newVariantId != $cartItem->variant_id) {
+            $ctx = $this->getContext($request);
+            $query = Cart::where('product_id', $cartItem->product_id)
+                ->where('variant_id', $newVariantId)
+                ->where('id', '!=', $cartItem->id);
+
+            if ($ctx['user_id']) {
+                $query->where('user_id', $ctx['user_id']);
+            } else {
+                $query->where('session_id', $ctx['session_id'])->whereNull('user_id');
+            }
+
+            $alreadyInCart = $query->first();
+
+            if ($alreadyInCart) {
+                // Merge vào cái cũ
+                $totalNewQty = $alreadyInCart->quantity + $newQuantity;
+                if ($totalNewQty > $variant->quantity) {
+                    $totalNewQty = $variant->quantity; // Cap at stock
+                }
+                $alreadyInCart->update(['quantity' => $totalNewQty]);
+                $cartItem->delete();
+
+                return response()->json([
+                    'status'  => 'success',
+                    'message' => 'Đã gộp sản phẩm vào dòng hiện có.',
+                    'data'    => $alreadyInCart->load(['product', 'variant']),
+                    'merged'  => true
+                ]);
+            }
+        }
+
+        $cartItem->update([
+            'variant_id' => $newVariantId,
+            'quantity'   => $newQuantity
+        ]);
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Đã cập nhật số lượng.',
-            'data'    => $cartItem->load(['product', 'variant']),
+            'message' => 'Đã cập nhật giỏ hàng.',
+            'data'    => $cartItem->fresh(['product', 'variant']),
         ]);
     }
 

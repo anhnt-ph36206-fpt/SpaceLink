@@ -17,35 +17,144 @@ use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
-    // =========================================================================
-    // POST /api/client/checkout — Đặt hàng
-    // =========================================================================
+
+    #[OA\Post(
+        path: '/api/client/checkout',
+        summary: 'Đặt hàng từ giỏ hàng hiện tại',
+        tags: ['Client - Checkout'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['shipping_address_id', 'payment_method'],
+                properties: [
+                    new OA\Property(property: 'shipping_address_id', type: 'integer', description: 'ID địa chỉ giao hàng của user'),
+                    new OA\Property(property: 'payment_method', type: 'string', enum: ['cod', 'vnpay', 'momo', 'bank_transfer']),
+                    new OA\Property(property: 'voucher_code', type: 'string', nullable: true, description: 'Mã voucher (không bắt buộc)'),
+                    new OA\Property(property: 'note', type: 'string', nullable: true, description: 'Ghi chú đơn hàng'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Đặt hàng thành công'),
+            new OA\Response(response: 400, description: 'Giỏ hàng rỗng hoặc lỗi nghiệp vụ'),
+            new OA\Response(response: 403, description: 'Địa chỉ không thuộc về user này'),
+            new OA\Response(response: 409, description: 'Tồn kho không đủ'),
+            new OA\Response(response: 422, description: 'Dữ liệu không hợp lệ'),
+        ]
+    )]
+    public function checkVoucher(CheckoutRequest $request)
+    {
+        $user = auth('sanctum')->user();
+        if (!$request->filled('voucher_code')) {
+            return response()->json(['status' => 'error', 'message' => 'Vui lòng nhập mã voucher.'], 400);
+        }
+
+        // Calculate current subtotal to check min_order_amount
+        if ($request->filled('items')) {
+            $cartItems = collect($request->items)->map(function ($item) {
+                $variant = ProductVariant::with('product')->find($item['variant_id']);
+                if (!$variant) return null;
+                return (object)[
+                    'variant_id' => $variant->id,
+                    'quantity'   => (int) $item['quantity'],
+                    'product'    => $variant->product,
+                ];
+            })->filter();
+        } else {
+            if (!$user) {
+                return response()->json(['status' => 'error', 'message' => 'Vui lòng đăng nhập.'], 401);
+            }
+            $cartItems = Cart::with(['product', 'variant'])->where('user_id', $user->id)->get();
+        }
+
+        if ($cartItems->isEmpty()) {
+            return response()->json(['status' => 'error', 'message' => 'Giỏ hàng trống.'], 400);
+        }
+
+        $subtotal = $cartItems->sum(function ($item) {
+            if ($item instanceof Cart) {
+                 return (float)($item->variant?->sale_price ?? $item->variant?->price ?? $item->product->sale_price ?? $item->product->price) * $item->quantity;
+            }
+            $v = ProductVariant::find($item->variant_id);
+            return (float)($v?->sale_price ?? $v?->price ?? $item->product?->sale_price ?? $item->product?->price) * $item->quantity;
+        });
+
+        try {
+            [$voucher, $discount] = $this->applyVoucher($request->voucher_code, $subtotal, $user?->id);
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'code' => $voucher->code,
+                    'discount_amount' => $discount,
+                    'discount_type' => $voucher->discount_type,
+                    'discount_value' => $voucher->discount_value,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 400);
+        }
+    }
+
     public function checkout(CheckoutRequest $request)
     {
         $user = auth('sanctum')->user();
 
-        // ── 1. Lấy giỏ hàng của user (với eager load) ──────────────────────
-        $cartItems = Cart::with(['product', 'variant'])
-            ->where('user_id', $user->id)
-            ->get();
-
-        if ($cartItems->isEmpty()) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Giỏ hàng của bạn đang trống.',
-            ], 400);
+        // ── 1. Lấy danh sách item cần đặt (Giỏ hàng hoặc Mua ngay) ─────────
+        if ($request->filled('items')) {
+            $cartItems = collect($request->items)->map(function ($item) {
+                $variant = ProductVariant::with('product')->find($item['variant_id']);
+                if (!$variant) return null;
+                return (object)[
+                    'product_id' => $variant->product_id,
+                    'variant_id' => $variant->id,
+                    'quantity'   => (int) $item['quantity'],
+                    'product'    => $variant->product,
+                    'variant'    => $variant,
+                ];
+            })->filter();
+        } else {
+            $query = Cart::with(['product', 'variant']);
+            if ($user) {
+                $query->where('user_id', $user->id);
+            } else {
+                $sessionId = $request->header('X-Session-ID') ?? $request->input('session_id');
+                if (!$sessionId) {
+                    return response()->json(['status' => 'error', 'message' => 'Vui lòng đăng nhập hoặc cung cấp Session ID.'], 400);
+                }
+                $query->where('session_id', $sessionId)->whereNull('user_id');
+            }
+            $cartItems = $query->get();
         }
 
-        // ── 2. Kiểm tra địa chỉ thuộc về user này ──────────────────────────
-        $address = UserAddress::where('id', $request->shipping_address_id)
-            ->where('user_id', $user->id)
-            ->first();
+        if ($cartItems->isEmpty()) {
+            return response()->json([ 'status'  => 'error', 'message' => 'Danh sách sản phẩm trống.'], 400);
+        }
 
-        if (!$address) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Địa chỉ giao hàng không hợp lệ hoặc không thuộc về bạn.',
-            ], 403);
+        // ── 2. Xác định địa chỉ giao hàng ──────────────────────────────────
+        $address = null;
+        if ($request->filled('shipping_address_id')) {
+            if (!$user) {
+                return response()->json(['status' => 'error', 'message' => 'Vui lòng đăng nhập để sử dụng địa chỉ đã lưu.'], 401);
+            }
+            $address = UserAddress::where('id', $request->shipping_address_id)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if (!$address) {
+                return response()->json(['status' => 'error', 'message' => 'Địa chỉ không hợp lệ hoặc không thuộc quyền sở hữu.'], 403);
+            }
+        } else {
+            // Dùng địa chỉ mới gửi từ request
+            $address = (object)[
+                'fullname'       => $request->fullname,
+                'phone'          => $request->phone,
+                'email'          => $request->email,
+                'province'       => $request->province,
+                'district'       => $request->district,
+                'ward'           => $request->ward,
+                'address_detail' => $request->address_detail,
+            ];
         }
 
         try {
@@ -78,7 +187,7 @@ class CheckoutController extends Controller
                 }
 
                 // ── 4. Tính subtotal từ giá DB (KHÔNG tin Frontend) ────────
-                $subtotal = $cartItems->sum(function (Cart $item) use ($lockedVariants) {
+                $subtotal = $cartItems->sum(function ($item) use ($lockedVariants) {
                     $effectivePrice = $this->resolvePrice($item, $lockedVariants);
                     return $effectivePrice * $item->quantity;
                 });
@@ -95,7 +204,7 @@ class CheckoutController extends Controller
                     [$voucher, $voucherDiscount] = $this->applyVoucher(
                         $request->voucher_code,
                         $subtotal,
-                        $user->id
+                        $user?->id
                     );
                     $discountAmount = $voucherDiscount;
                 }
@@ -105,12 +214,12 @@ class CheckoutController extends Controller
 
                 // ── 8. Tạo Order ────────────────────────────────────────────
                 $order = Order::create([
-                    'user_id'          => $user->id,
+                    'user_id'          => $user?->id,
                     'order_code'       => $this->generateOrderCode(),
                     // Snapshot shipping từ UserAddress
                     'shipping_name'    => $address->fullname,
                     'shipping_phone'   => $address->phone,
-                    'shipping_email'   => $user->email,
+                    'shipping_email'   => $request->email ?? ($address->email ?? $user?->email),
                     'shipping_province'=> $address->province,
                     'shipping_district'=> $address->district,
                     'shipping_ward'    => $address->ward,
@@ -174,7 +283,7 @@ class CheckoutController extends Controller
                 if ($voucher) {
                     VoucherUsage::create([
                         'voucher_id' => $voucher->id,
-                        'user_id'    => $user->id,
+                        'user_id'    => $user?->id,
                         'order_id'   => $order->id,
                     ]);
                     $voucher->increment('used_count');
@@ -186,11 +295,26 @@ class CheckoutController extends Controller
                     'from_status' => null,
                     'to_status'   => 'pending',
                     'note'        => 'Đơn hàng được tạo.',
-                    'changed_by'  => $user->id,
+                    'changed_by'  => $user?->id,
                 ]);
 
-                // ── 12. Xóa giỏ hàng của user ──────────────────────────────
-                Cart::where('user_id', $user->id)->delete();
+                if ($user && !$request->filled('shipping_address_id') && $request->boolean('save_address')) {
+                    UserAddress::create([
+                        'user_id'        => $user->id,
+                        'fullname'       => $request->fullname,
+                        'phone'          => $request->phone,
+                        'email'          => $request->email,
+                        'province'       => $request->province,
+                        'district'       => $request->district,
+                        'ward'           => $request->ward,
+                        'address_detail' => $request->address_detail,
+                        'is_default'     => !UserAddress::where('user_id', $user->id)->exists(),
+                    ]);
+                }
+
+                if ($user && !$request->boolean('is_buy_now') && !$request->filled('items')) {
+                    Cart::where('user_id', $user->id)->delete();
+                }
 
                 return $order;
             });
@@ -235,11 +359,11 @@ class CheckoutController extends Controller
         // Tái sử dụng logic tạo Order ở trên (nhưng gọi ẩn hoặc copy một phần)
         // Dưới đây giả định ta gọi hàm checkout gốc để lấy response (JSON) chứa id đơn hàng,
         // Nhưng do checkout gốc trả về Response, ta cần lấy dữ liệu hoặc tách logic createOrder ra hàm riêng.
-        
+
         // --- 1. Copy logic check order tương tự hàm checkout() ---
         $cartItems = Cart::with(['product', 'variant'])->where('user_id', $user->id)->get();
         if ($cartItems->isEmpty()) return response()->json(['status' => 'error', 'message' => 'Giỏ hàng trống.'], 400);
-        
+
         $address = UserAddress::where('id', $request->shipping_address_id)->where('user_id', $user->id)->first();
         if (!$address) return response()->json(['status' => 'error', 'message' => 'Địa chỉ không hợp lệ.'], 403);
 
@@ -265,7 +389,7 @@ class CheckoutController extends Controller
                     if (!$voucher) throw new \Exception("Mã giảm giá không hợp lệ hoặc đã hết hạn.");
                     if ($subtotal < $voucher->min_order_amount) throw new \Exception("Đơn hàng chưa đạt mức tối thiểu.");
                     // Check usage... (giản lược trong IPN create)
-                    
+
                     if ($voucher->discount_type === 'percent') {
                         $discount = $subtotal * ($voucher->discount_value / 100);
                         if ($voucher->max_discount && $discount > $voucher->max_discount) $discount = $voucher->max_discount;
@@ -299,7 +423,7 @@ class CheckoutController extends Controller
                 foreach ($cartItems as $item) {
                     $effectivePrice = $this->resolvePrice($item, $lockedVariants);
                     $variant = $item->variant_id ? $lockedVariants->get($item->variant_id) : null;
-                    
+
                     if ($variant) {
                         if ($variant->quantity < $item->quantity) {
                             throw new \Exception("Sản phẩm {$item->product->name} (Biến thể ID: {$variant->id}) chỉ còn {$variant->quantity} trong kho.");
@@ -329,7 +453,7 @@ class CheckoutController extends Controller
 
                 OrderStatusHistory::create(['order_id' => $order->id, 'status' => 'pending', 'note' => 'Khởi tạo thanh toán VNPAY']);
                 Cart::where('user_id', $user->id)->delete();
-                
+
                 return $order;
             });
 
@@ -400,7 +524,7 @@ class CheckoutController extends Controller
     {
         $inputData = array();
         $returnData = array();
-        
+
         foreach ($request->all() as $key => $value) {
             if (substr($key, 0, 4) == "vnp_") {
                 $inputData[$key] = $value;
@@ -411,7 +535,7 @@ class CheckoutController extends Controller
         unset($inputData['vnp_SecureHash']);
         unset($inputData['vnp_SecureHashType']);
         ksort($inputData);
-        
+
         $i = 0;
         $hashData = "";
         foreach ($inputData as $key => $value) {
@@ -425,10 +549,10 @@ class CheckoutController extends Controller
 
         $vnp_HashSecret = config('vnpay.vnp_HashSecret');
         $secureHash = hash_hmac('sha512', $hashData, $vnp_HashSecret);
-        
-        $vnpTranId = $inputData['vnp_TransactionNo'] ?? ''; 
+
+        $vnpTranId = $inputData['vnp_TransactionNo'] ?? '';
         $vnp_Amount = ($inputData['vnp_Amount'] ?? 0) / 100;
-        
+
         try {
             if ($secureHash == $vnp_SecureHash) {
                 $orderCode = $inputData['vnp_TxnRef'];
@@ -445,10 +569,10 @@ class CheckoutController extends Controller
                                     'status' => $order->status,
                                     'note' => 'Đã thanh toán qua VNPAY thành công. Mã GD: ' . $vnpTranId
                                 ]);
-                                
+
                                 // GỬI MAIL (Optional - nếu muốn IPN gửi Mail)
                                 // if ($order->shipping_email) Mail::to($order->shipping_email)->send(new OrderPlacedMail($order));
-                                
+
                                 $returnData['RspCode'] = '00';
                                 $returnData['Message'] = 'Confirm Success';
                             } else {
@@ -459,7 +583,7 @@ class CheckoutController extends Controller
                                     'status' => $order->status,
                                     'note' => 'Thanh toán VNPAY thất bại. Giao dịch bị hủy.'
                                 ]);
-                                
+
                                 $returnData['RspCode'] = '00';
                                 $returnData['Message'] = 'Payment Failed';
                             }
@@ -535,7 +659,7 @@ class CheckoutController extends Controller
     /**
      * Lấy giá hiệu lực từ DB (variant > product, sale_price > price).
      */
-    private function resolvePrice(Cart $item, $lockedVariants): float
+    private function resolvePrice($item, $lockedVariants): float
     {
         if ($item->variant_id) {
             $variant = $lockedVariants->get($item->variant_id);
@@ -575,7 +699,7 @@ class CheckoutController extends Controller
      *
      * @throws \Exception nếu voucher không hợp lệ.
      */
-    private function applyVoucher(string $code, float $subtotal, int $userId): array
+    private function applyVoucher(string $code, float $subtotal, ?int $userId): array
     {
         $voucher = Voucher::where('code', strtoupper(trim($code)))->first();
 

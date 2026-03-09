@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, type ReactNode }
 import { axiosInstance } from '../api/axios';
 import { useAuth } from './AuthContext';
 import { toast } from 'react-toastify';
+// @ts-ignore
+import { debounce } from 'lodash';
 
 export interface CartItem {
     id: number; // mapped from cart_item_id
@@ -15,6 +17,8 @@ export interface CartItem {
     quantity: number;
     stock: number;
     lineTotal: number;
+    productSlug?: string;
+    availableVariants?: any[]; // for switching
 }
 
 interface CartContextType {
@@ -22,11 +26,12 @@ interface CartContextType {
     loading: boolean;
     addToCart: (variantId: number, quantity?: number) => Promise<void>;
     removeFromCart: (cartItemId: number) => Promise<void>;
-    updateQty: (cartItemId: number, qty: number) => Promise<void>;
+    updateQty: (cartItemId: number, qty: number, variantId?: number) => Promise<void>;
     clearCart: () => Promise<void>;
     totalItems: number;
     totalPrice: number;
     refreshCart: () => Promise<void>;
+    updatingItems: Set<number>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -45,6 +50,7 @@ const getOrSetSessionId = () => {
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [items, setItems] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(false);
+    const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
     const { isAuthenticated } = useAuth();
 
     // Khởi tạo session ID nếu chưa có
@@ -74,7 +80,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             attributes: attrs,
             quantity: item.quantity,
             stock: item.stock_available,
-            lineTotal: item.line_total
+            lineTotal: item.line_total,
+            productSlug: item.product_slug,
+            availableVariants: item.available_variants
         };
     };
 
@@ -133,24 +141,67 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const updateQty = async (cartItemId: number, qty: number) => {
+    const updateQty = async (cartItemId: number, qty: number, variantId?: number) => {
         if (qty <= 0) {
             await removeFromCart(cartItemId);
             return;
         }
-        setLoading(true);
-        try {
-            const res = await axiosInstance.put(`/client/cart/update/${cartItemId}`, {
-                quantity: qty
-            });
-            if (res.data.status === 'success') {
-                await refreshCart();
+
+        const originalItems = [...items];
+        const itemToUpdate = originalItems.find(i => i.id === cartItemId);
+        if (!itemToUpdate) return;
+
+        const isVariantChange = variantId !== undefined && variantId !== itemToUpdate.variantId;
+
+        // Optimistic UI update
+        setItems(prev => prev.map(item => {
+            if (item.id === cartItemId) {
+                return {
+                    ...item,
+                    quantity: qty,
+                    lineTotal: item.price * qty, // Optimistic line total
+                    variantId: variantId ?? item.variantId
+                };
             }
-        } catch (error: any) {
-            console.error('Failed to update quantity:', error);
-            toast.error(error.response?.data?.message || 'Không thể cập nhật số lượng');
-        } finally {
-            setLoading(false);
+            return item;
+        }));
+
+        const performUpdate = async (cid: number, q: number, vid?: number) => {
+            setUpdatingItems(prev => new Set(prev).add(cid));
+            try {
+                const res = await axiosInstance.put(`/client/cart/update/${cid}`, {
+                    quantity: q,
+                    variant_id: vid
+                });
+                if (res.data.status === 'success') {
+                    await refreshCart();
+                }
+            } catch (error: any) {
+                console.error('Failed to update quantity:', error);
+                toast.error(error.response?.data?.message || 'Không thể cập nhật số lượng');
+                setItems(originalItems);
+            } finally {
+                setUpdatingItems(prev => {
+                    const next = new Set(prev);
+                    next.delete(cid);
+                    return next;
+                });
+            }
+        };
+
+        if (isVariantChange) {
+            await performUpdate(cartItemId, qty, variantId);
+        } else {
+            if (!(window as any)._debouncedCartUpdates) (window as any)._debouncedCartUpdates = {};
+            if (!(window as any)._debouncedCartUpdates[cartItemId]) {
+                (window as any)._debouncedCartUpdates[cartItemId] = debounce(
+                    async (cid: number, q: number, vid?: number) => {
+                        await performUpdate(cid, q, vid);
+                    },
+                    500
+                );
+            }
+            (window as any)._debouncedCartUpdates[cartItemId](cartItemId, qty, variantId);
         }
     };
 
@@ -181,7 +232,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             clearCart,
             totalItems,
             totalPrice,
-            refreshCart
+            refreshCart,
+            updatingItems
         }}>
             {children}
         </CartContext.Provider>

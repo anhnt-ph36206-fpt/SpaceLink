@@ -12,7 +12,6 @@ use App\Http\Controllers\Api\Client\AddressController;
 use App\Http\Controllers\Api\Client\ProductController;
 use App\Http\Controllers\Api\Client\CartController;
 use App\Http\Controllers\Api\Client\CategoryController as ClientCategoryController;
-use App\Http\Controllers\Api\Client\CartController as ClientCartController;
 use App\Http\Controllers\Api\Client\CheckoutController;
 use App\Http\Controllers\Api\Client\BrandController;
 use App\Http\Controllers\Api\Client\BannerController as ClientBannerController;
@@ -106,13 +105,9 @@ Route::prefix('client')->name('client.')->group(function () {
 
     // --- Checkout & Payment ---
     Route::middleware('auth:sanctum')->group(function () {
-        Route::post(  'checkout',                 [ClientCheckoutController::class, 'checkout']);
-        Route::post(  'checkout/vnpay',           [ClientCheckoutController::class, 'createVnpayPayment']);
-    });
-
-    // --- Bắt buộc đăng nhập từ đây trở xuống ---
-    Route::middleware('auth:sanctum')->group(function () {
-
+        Route::post(  'checkout/vnpay',           [CheckoutController::class, 'createVnpayPayment']);
+        Route::post('/checkout', [CheckoutController::class, 'checkout']);
+        Route::post('/checkout/check-voucher', [CheckoutController::class, 'checkVoucher']);
         // Đơn hàng của client
         Route::get('/orders',                      [ClientOrderController::class, 'index']);
         Route::get('/orders/{id}',                 [ClientOrderController::class, 'show']);
@@ -126,6 +121,7 @@ Route::prefix('client')->name('client.')->group(function () {
         Route::get('/wishlist',            [ClientWishlistController::class, 'index']);
         Route::post('/wishlist',           [ClientWishlistController::class, 'store']);
         Route::delete('/wishlist/{id}',    [ClientWishlistController::class, 'destroy']);
+
     });
 });
 

@@ -222,12 +222,12 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({
                                     style={{
                                         width: 32, height: 32, borderRadius: '50%',
                                         background: attr.color_code,
-                                        border: isSelected ? '3px solid #0d6efd' : '2px solid #dee2e6',
+                                        border: isSelected ? '3px solid #F28B00' : '2px solid #dee2e6',
                                         cursor: isAvailable ? 'pointer' : 'not-allowed',
                                         opacity: isAvailable ? 1 : 0.35,
                                         transition: 'all .2s',
                                         transform: isSelected ? 'scale(1.15)' : 'scale(1)',
-                                        boxShadow: isSelected ? '0 0 8px rgba(13,110,253,0.3)' : 'none'
+                                        boxShadow: isSelected ? '0 0 8px rgba(242, 139, 0, 0.3)' : 'none'
                                     }}
                                 />
                             ) : (
