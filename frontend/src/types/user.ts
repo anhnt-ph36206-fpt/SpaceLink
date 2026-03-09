@@ -1,6 +1,6 @@
 export interface User {
   id: number | string;
-  name: string;        // backend trả về 'name' (map từ fullname)
+  fullname: string;        // backend trả về 'fullname' (map từ fullname)
   email: string;
   phone?: string;
   gender?: string;

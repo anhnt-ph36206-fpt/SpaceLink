@@ -24,7 +24,7 @@ const RegisterPage: React.FC = () => {
     try {
       // POST /api/auth/register → { status: true, data: { user, token, token_type } }
       const res = await axiosInstance.post('/auth/register', {
-        name: data.name,                   // backend field: 'name'
+        fullname: data.name,                   // backend field: 'FULLNAME'
         email: data.email,
         password: data.password,
         phone: data.phone,
