@@ -34,7 +34,7 @@ const ProfilePage: React.FC = () => {
     formState: { errors: errInfo, isSubmitting: submittingInfo },
   } = useForm<ProfileForm>({
     defaultValues: {
-      name:   user?.name   || '',
+      name:   user?.fullname   || '',
       phone:  user?.phone  || '',
       gender: user?.gender || '',
       email:  user?.email  || '',
@@ -477,7 +477,7 @@ const ProfilePage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="sidebar-username">{user.name}</div>
+                  <div className="sidebar-username">{user.fullname}</div>
                   <div className="sidebar-email">{user.email}</div>
                   <div className="text-center mb-2">
                     <span className="sidebar-role">{user.role}</span>
