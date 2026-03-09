@@ -401,5 +401,25 @@
       "created_at": "2024-02-08",
       "avatar": "https://i.pravatar.cc/150?img=8"
     }
+  ],
+  "users": [
+    {
+      "email": "123@gmail.com",
+      "password": "$2a$10$oofv6htIFMhlK8Hi.zRrTuT7Bcnk0pOP6lqUmmj5PsHbd9ZpVyhum",
+      "fullname": "Anh Thanh Niên",
+      "role": "customer",
+      "status": "banned",
+      "avatar": "",
+      "id": 1
+    },
+    {
+      "email": "admin@gmail.com",
+      "password": "$2a$10$7hRyuaHfRQYQ66IO6X548ejfq/JMAFdKX8.mV.bMoj6w4ofZu9mAu",
+      "fullname": "Admin",
+      "role": "admin",
+      "status": "active",
+      "avatar": "",
+      "id": 2
+    }
   ]
 }

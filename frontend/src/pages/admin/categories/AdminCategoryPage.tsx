@@ -11,9 +11,21 @@ import type { ColumnsType } from 'antd/es/table';
 import { axiosInstance } from "../../../api/axios.ts";
 import { toast } from "react-toastify";
 import type { UploadProps } from 'antd';
-import {categoryPrefix} from "../../../api/apiAdminPrefix.ts";
+import { categoryPrefix } from "../../../api/apiAdminPrefix.ts";
 
 const { Title, Text } = Typography;
+
+const convertToSlug = (text: string) => {
+    return text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, 'd')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+};
 
 interface Category {
     id: number;
@@ -23,9 +35,6 @@ interface Category {
     image?: string | null;
     description?: string | null;
     is_active?: boolean;
-    meta?: {
-        display_order?: number;
-    };
     children?: Category[];
 }
 
@@ -96,9 +105,7 @@ const AdminCategoryPage: React.FC = () => {
     };
 
     const sortByOrder = (arr: Category[]): Category[] => {
-        arr.sort((a, b) =>
-            (a.meta?.display_order || 0) - (b.meta?.display_order || 0)
-        );
+        arr.sort((a, b) => a.name.localeCompare(b.name));
 
         arr.forEach(item => {
             if (item.children?.length) {
@@ -140,7 +147,6 @@ const AdminCategoryPage: React.FC = () => {
         setEditingItem(item);
         form.setFieldsValue({
             ...item,
-            display_order: item.meta?.display_order
         });
 
         if (item.image) {
@@ -175,15 +181,12 @@ const AdminCategoryPage: React.FC = () => {
                 formData.append('parent_id', values.parent_id);
             }
 
-            if (values.display_order) {
-                formData.append('display_order', values.display_order);
-            }
-
             if (values.description) {
                 formData.append('description', values.description);
             }
 
             formData.append('is_active', values.is_active ? '1' : '0');
+            formData.append('display_order', '0');
 
             if (fileList.length > 0 && fileList[0].originFileObj) {
                 formData.append('image', fileList[0].originFileObj);
@@ -233,9 +236,24 @@ const AdminCategoryPage: React.FC = () => {
         },
     };
 
-    const parentOptions = categories
-        .filter(c => !c.parent_id)
-        .map(c => ({ value: c.id, label: c.name }));
+    const getFlatOptions = (items: Category[], depth = 0, excludeId?: number): { value: number; label: string }[] => {
+        let result: { value: number; label: string }[] = [];
+        items.forEach(item => {
+            if (item.id === excludeId) return;
+            result.push({
+                value: item.id,
+                label: `${'— '.repeat(depth)}${item.name}`
+            });
+            if (item.children && item.children.length > 0) {
+                // If we are excluding an ID, we also exclude all its children
+                result = [...result, ...getFlatOptions(item.children, depth + 1, excludeId)];
+            }
+        });
+        return result;
+    };
+
+    const parentOptions = getFlatOptions(treeData, 0, editingItem?.id);
+    const filterParentOptions = getFlatOptions(treeData);
 
     const columns: ColumnsType<Category> = [
         {
@@ -254,13 +272,6 @@ const AdminCategoryPage: React.FC = () => {
                     </div>
                 </Space>
             ),
-        },
-        {
-            title: 'Thứ tự',
-            key: 'order',
-            width: 100,
-            align: 'center',
-            render: (_, r) => r.meta?.display_order || 0,
         },
         {
             title: 'Trạng thái',
@@ -301,15 +312,15 @@ const AdminCategoryPage: React.FC = () => {
 
     return (
         <div style={{ padding: 24 }}>
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20}}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
                 <div>
-                    <Title level={4} style={{margin: 0, color: '#1a1a2e'}}>
-                        <AppstoreOutlined style={{marginRight: 10, color: '#0d6efd'}}/>
+                    <Title level={4} style={{ margin: 0, color: '#1a1a2e' }}>
+                        <AppstoreOutlined style={{ marginRight: 10, color: '#0d6efd' }} />
                         Quản lí Danh mục
                     </Title>
                 </div>
                 <Button
-                    type="primary" icon={<PlusOutlined/>} onClick={openAdd}
+                    type="primary" icon={<PlusOutlined />} onClick={openAdd}
                     style={{
                         background: 'linear-gradient(135deg,#0d6efd,#084298)',
                         border: 'none', borderRadius: 10, height: 40, fontWeight: 600,
@@ -353,7 +364,7 @@ const AdminCategoryPage: React.FC = () => {
                             onChange={setParentId}
                             allowClear
                             style={{ width: '100%' }}
-                            options={parentOptions}
+                            options={filterParentOptions}
                         />
                     </Col>
 
@@ -387,7 +398,7 @@ const AdminCategoryPage: React.FC = () => {
 
             <Modal
                 title={
-                    <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{
                             width: 32,
                             height: 32,
@@ -397,7 +408,7 @@ const AdminCategoryPage: React.FC = () => {
                             alignItems: 'center',
                             justifyContent: 'center'
                         }}>
-                            <AppstoreOutlined style={{color: '#fff', fontSize: 15}}/>
+                            <AppstoreOutlined style={{ color: '#fff', fontSize: 15 }} />
                         </div>
                         <span>{editingItem ? 'Sửa danh mục' : 'Thêm danh mục mới'}</span>
                     </div>
@@ -414,21 +425,29 @@ const AdminCategoryPage: React.FC = () => {
                         borderRadius: 8
                     }
                 }}
-                cancelButtonProps={{style: {borderRadius: 8}}}
+                cancelButtonProps={{ style: { borderRadius: 8 } }}
                 width={560}
-                style={{top: 40}}
+                style={{ top: 40 }}
             >
-                <Form form={form} layout="vertical" style={{marginTop: 16}}>
+                <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
                     <Row gutter={16}>
                         <Col span={12}>
                             <Form.Item name="name" label="Tên danh mục"
-                                       rules={[{required: true, message: 'Nhập tên danh mục'}]}>
-                                <Input placeholder="VD: SmartPhone" style={{borderRadius: 8}}/>
+                                rules={[{ required: true, message: 'Nhập tên danh mục' }]}>
+                                <Input
+                                    placeholder="VD: SmartPhone"
+                                    style={{ borderRadius: 8 }}
+                                    onChange={(e) => {
+                                        const name = e.target.value;
+                                        form.setFieldsValue({ slug: convertToSlug(name) });
+                                    }}
+                                />
                             </Form.Item>
                         </Col>
                         <Col span={12}>
-                            <Form.Item name="slug" label="Slug (URL)">
-                                <Input placeholder="VD: smartphone" style={{borderRadius: 8}}/>
+                            <Form.Item name="slug" label="Slug (URL)"
+                                rules={[{ required: true, message: 'Nhập slug' }]}>
+                                <Input placeholder="VD: smartphone" style={{ borderRadius: 8 }} />
                             </Form.Item>
                         </Col>
                     </Row>
@@ -440,17 +459,20 @@ const AdminCategoryPage: React.FC = () => {
                                     placeholder="Chọn danh mục cha (nếu có)"
                                     allowClear
                                     options={parentOptions}
-                                    style={{borderRadius: 8}}
+                                    style={{ borderRadius: 8 }}
                                 />
                             </Form.Item>
                         </Col>
                         <Col span={12}>
-                            <Form.Item name="display_order" label="Thứ tự hiển thị">
-                                <Input type="number" min={1} placeholder="1" style={{borderRadius: 8}}/>
+                            <Form.Item name="is_active" label="Trạng thái" valuePropName="checked">
+                                <Switch checkedChildren="Hoạt động" unCheckedChildren="Tắt" />
                             </Form.Item>
                         </Col>
                     </Row>
 
+                    <Form.Item name="description" label="Mô tả">
+                        <Input.TextArea rows={3} placeholder="Mô tả ngắn về danh mục..." style={{ borderRadius: 8 }} />
+                    </Form.Item>
                     <Form.Item label="Hình ảnh">
                         <Upload {...uploadProps}>
                             {fileList.length < 1 && (
@@ -460,14 +482,6 @@ const AdminCategoryPage: React.FC = () => {
                                 </div>
                             )}
                         </Upload>
-                    </Form.Item>
-
-                    <Form.Item name="description" label="Mô tả">
-                        <Input.TextArea rows={3} placeholder="Mô tả ngắn về danh mục..." style={{borderRadius: 8}}/>
-                    </Form.Item>
-
-                    <Form.Item name="is_active" label="Trạng thái" valuePropName="checked">
-                        <Switch checkedChildren="Hoạt động" unCheckedChildren="Tắt"/>
                     </Form.Item>
                 </Form>
             </Modal>

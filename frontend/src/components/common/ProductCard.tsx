@@ -14,10 +14,11 @@ interface ProductCardProps {
         isNew?: boolean;
         isSale?: boolean;
     };
-    index?: number; // <--- THÊM BIẾN NÀY ĐỂ NHẬN SỐ THỨ TỰ
+    index?: number;
+    onAddToCart?: (product: any) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCart }) => {
 
     // --- LOGIC TẠO HIỆU ỨNG SO LE GIỐNG HOME ---
     // Mỗi sản phẩm chậm hơn cái trước 0.1 giây.
@@ -36,7 +37,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
     };
 
     return (
-        <div className="col-md-6 col-lg-4 col-xl-3">
+        <div className="col-6 col-sm-6 col-md-4">
             {/* THAY ĐỔI Ở ĐÂY: Dùng biến delayTime đã tính toán */}
             <div
                 className="product-item rounded wow fadeInUp"
@@ -45,10 +46,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
                 <div className="product-item-inner border rounded">
                     <div className="product-item-inner-item position-relative overflow-hidden">
 
-                        <div className="rounded-top text-center p-3" style={{ height: '240px', backgroundColor: '#fff' }}>
+                        <div className="rounded-top text-center p-3" style={{ height: '200px', backgroundColor: '#fff' }}>
                             <Link to={`/product/${product.id}`} className="d-block h-100 w-100 position-relative">
                                 <img
-                                    src={product.image}
+                                    src={product.image || undefined}
                                     className="img-fluid"
                                     alt={product.name}
                                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
@@ -71,7 +72,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
                             {product.category || "Điện thoại"}
                         </Link>
 
-                        <Link to={`/product/${product.id}`} className="d-block h5 text-decoration-none text-dark text-truncate">
+                        <Link to={`/product/${product.id}`} className="d-block h6 text-decoration-none text-dark" title={product.name} style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.4' }}>
                             {product.name}
                         </Link>
 
@@ -92,6 +93,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
                     <button
                         className="btn btn-primary rounded-pill px-4 py-2 mb-4 fw-bold transition-all"
                         style={{ width: '100%', borderRadius: '50px' }}
+                        onClick={() => onAddToCart && onAddToCart(product)}
                     >
                         <i className="fas fa-shopping-bag me-2"></i> Thêm vào giỏ
                     </button>

@@ -10,6 +10,7 @@ use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
 
 class CategoryController extends Controller
@@ -17,49 +18,6 @@ class CategoryController extends Controller
     // =========================================================================
     // GET /api/admin/categories
     // =========================================================================
-    #[OA\Get(
-        path: '/api/admin/categories',
-        summary: 'Danh sách tất cả danh mục (Admin)',
-        description: 'Lấy danh sách toàn bộ danh mục kể cả inactive. Hỗ trợ filter theo `search`, `is_active`, `parent_id`.',
-        tags: ['Admin - Categories'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(
-                name: 'search',
-                in: 'query',
-                description: 'Tìm kiếm theo tên danh mục',
-                required: false,
-                schema: new OA\Schema(type: 'string', example: 'Điện thoại')
-            ),
-            new OA\Parameter(
-                name: 'is_active',
-                in: 'query',
-                description: 'Lọc theo trạng thái: 1 = đang hiện, 0 = đã ẩn',
-                required: false,
-                schema: new OA\Schema(type: 'integer', enum: [0, 1])
-            ),
-            new OA\Parameter(
-                name: 'parent_id',
-                in: 'query',
-                description: 'Lọc theo danh mục cha (0 = chỉ lấy root)',
-                required: false,
-                schema: new OA\Schema(type: 'integer', example: 1)
-            ),
-        ],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Danh sách danh mục',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
-                    ]
-                )
-            ),
-            new OA\Response(response: 401, description: 'Chưa xác thực'),
-            new OA\Response(response: 403, description: 'Không có quyền Admin'),
-        ]
-    )]
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = Category::withTrashed(false)   // Không lấy soft-deleted
@@ -93,31 +51,6 @@ class CategoryController extends Controller
     // =========================================================================
     // GET /api/admin/categories/{id}
     // =========================================================================
-    #[OA\Get(
-        path: '/api/admin/categories/{id}',
-        summary: 'Chi tiết danh mục (Admin)',
-        description: 'Lấy thông tin chi tiết một danh mục theo ID, kể cả inactive.',
-        tags: ['Admin - Categories'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                in: 'path',
-                description: 'ID của danh mục',
-                required: true,
-                schema: new OA\Schema(type: 'integer', example: 1)
-            ),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Chi tiết danh mục',
-                content: new OA\JsonContent(properties: [
-                    new OA\Property(property: 'data', type: 'object'),
-                ])
-            ),
-            new OA\Response(response: 404, description: 'Không tìm thấy danh mục'),
-            new OA\Response(response: 403, description: 'Không có quyền Admin'),
-        ]
-    )]
     public function show(string $id): CategoryResource
     {
         // Admin xem được cả inactive — không filter is_active
@@ -130,42 +63,15 @@ class CategoryController extends Controller
     // =========================================================================
     // POST /api/admin/categories
     // =========================================================================
-    #[OA\Post(
-        path: '/api/admin/categories',
-        summary: 'Tạo danh mục mới (Admin)',
-        tags: ['Admin - Categories'],
-        security: [['sanctum' => []]],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['name', 'slug'],
-                properties: [
-                    new OA\Property(property: 'name',          type: 'string',  example: 'Điện thoại'),
-                    new OA\Property(property: 'slug',          type: 'string',  example: 'dien-thoai'),
-                    new OA\Property(property: 'parent_id',     type: 'integer', nullable: true, example: null),
-                    new OA\Property(property: 'image',         type: 'string',  nullable: true, example: 'categories/phone.jpg'),
-                    new OA\Property(property: 'icon',          type: 'string',  nullable: true, example: 'icons/phone.svg'),
-                    new OA\Property(property: 'description',   type: 'string',  nullable: true, example: 'Danh mục điện thoại thông minh'),
-                    new OA\Property(property: 'display_order', type: 'integer', example: 1),
-                    new OA\Property(property: 'is_active',     type: 'boolean', example: true),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 201, description: 'Tạo thành công',
-                content: new OA\JsonContent(properties: [
-                    new OA\Property(property: 'status',  type: 'boolean', example: true),
-                    new OA\Property(property: 'message', type: 'string',  example: 'Tạo danh mục thành công'),
-                    new OA\Property(property: 'data',    type: 'object'),
-                ])
-            ),
-            new OA\Response(response: 422, description: 'Lỗi validation'),
-            new OA\Response(response: 403, description: 'Không có quyền Admin'),
-        ]
-    )]
     public function store(StoreCategoryRequest $request): JsonResponse
     {
-        $category = Category::create($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->store('categories', 'public');
+        }
+
+        $category = Category::create($data);
 
         return response()->json([
             'status'  => true,
@@ -177,52 +83,20 @@ class CategoryController extends Controller
     // =========================================================================
     // PUT /api/admin/categories/{id}
     // =========================================================================
-    #[OA\Put(
-        path: '/api/admin/categories/{id}',
-        summary: 'Cập nhật danh mục (Admin)',
-        tags: ['Admin - Categories'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                in: 'path',
-                required: true,
-                schema: new OA\Schema(type: 'integer', example: 1)
-            ),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['name', 'slug'],
-                properties: [
-                    new OA\Property(property: 'name',          type: 'string',  example: 'Điện thoại'),
-                    new OA\Property(property: 'slug',          type: 'string',  example: 'dien-thoai'),
-                    new OA\Property(property: 'parent_id',     type: 'integer', nullable: true, example: null),
-                    new OA\Property(property: 'image',         type: 'string',  nullable: true, example: 'categories/phone.jpg'),
-                    new OA\Property(property: 'icon',          type: 'string',  nullable: true, example: null),
-                    new OA\Property(property: 'description',   type: 'string',  nullable: true, example: 'Mô tả mới'),
-                    new OA\Property(property: 'display_order', type: 'integer', example: 2),
-                    new OA\Property(property: 'is_active',     type: 'boolean', example: false),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: 'Cập nhật thành công',
-                content: new OA\JsonContent(properties: [
-                    new OA\Property(property: 'status',  type: 'boolean', example: true),
-                    new OA\Property(property: 'message', type: 'string',  example: 'Cập nhật danh mục thành công'),
-                    new OA\Property(property: 'data',    type: 'object'),
-                ])
-            ),
-            new OA\Response(response: 404, description: 'Không tìm thấy danh mục'),
-            new OA\Response(response: 422, description: 'Lỗi validation'),
-            new OA\Response(response: 403, description: 'Không có quyền Admin'),
-        ]
-    )]
     public function update(UpdateCategoryRequest $request, string $id): JsonResponse
     {
         $category = Category::findOrFail($id);
-        $category->update($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('image')) {
+            // Xóa ảnh cũ nếu có
+            if ($category->image) {
+                Storage::disk('public')->delete($category->image);
+            }
+            $data['image'] = $request->file('image')->store('categories', 'public');
+        }
+
+        $category->update($data);
 
         return response()->json([
             'status'  => true,
@@ -234,31 +108,6 @@ class CategoryController extends Controller
     // =========================================================================
     // DELETE /api/admin/categories/{id}
     // =========================================================================
-    #[OA\Delete(
-        path: '/api/admin/categories/{id}',
-        summary: 'Xóa mềm danh mục (Admin)',
-        description: 'Soft delete — dữ liệu vẫn còn trong DB, chỉ đặt `deleted_at`. Có thể khôi phục sau.',
-        tags: ['Admin - Categories'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                in: 'path',
-                required: true,
-                schema: new OA\Schema(type: 'integer', example: 1)
-            ),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'Xóa thành công',
-                content: new OA\JsonContent(properties: [
-                    new OA\Property(property: 'status',  type: 'boolean', example: true),
-                    new OA\Property(property: 'message', type: 'string',  example: 'Xóa danh mục thành công'),
-                ])
-            ),
-            new OA\Response(response: 404, description: 'Không tìm thấy danh mục'),
-            new OA\Response(response: 403, description: 'Không có quyền Admin'),
-        ]
-    )]
     public function destroy(string $id): JsonResponse
     {
         $category = Category::findOrFail($id);

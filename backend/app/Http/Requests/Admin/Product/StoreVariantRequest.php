@@ -17,9 +17,11 @@ class StoreVariantRequest extends FormRequest
             'sku'        => 'nullable|string|max:100|unique:product_variants,sku',
             'price'      => 'required|numeric|min:0',
             'sale_price' => 'nullable|numeric|min:0|lt:price',
-            'quantity'   => 'nullable|integer|min:0',
-            'image'      => 'nullable|string|max:255',
-            'is_active'  => 'nullable|boolean',
+            'quantity'       => 'nullable|integer|min:0',
+            'image'          => 'nullable', // supports file or string
+            'is_active'      => 'nullable|boolean',
+            'attribute_ids'  => 'nullable|array',
+            'attribute_ids.*' => 'integer|exists:attributes,id',
         ];
     }
 
