@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Client\CategoryController as ClientCategoryControll
 use App\Http\Controllers\Api\Client\CartController as ClientCartController;
 use App\Http\Controllers\Api\Client\CheckoutController;
 use App\Http\Controllers\Api\Client\BrandController;
+use App\Http\Controllers\Api\Client\BannerController as ClientBannerController;
 
 // Admin Controllers
 use App\Http\Controllers\Api\Admin\CategoryController as AdminCategoryController;
@@ -31,6 +32,7 @@ use App\Http\Controllers\Api\Client\ContactController as ClientContactController
 use App\Http\Controllers\Api\Admin\ContactController as AdminContactController;
 use App\Http\Controllers\Api\Admin\AttributeGroupController;
 use App\Http\Controllers\Api\Admin\AttributeController;
+use App\Http\Controllers\Api\Admin\BannerController as AdminBannerController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 
 
@@ -55,6 +57,9 @@ Route::prefix('auth')->group(function () {
 
 // --- Brands ---
 Route::get('/brands', [BrandController::class, 'index']);
+
+// --- Banners (public) ---
+Route::get('/banners', [ClientBannerController::class, 'index']);
 
 // --- Categories (public) ---
 Route::get('/categories', [ClientCategoryController::class, 'index']);
@@ -210,6 +215,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     // --- Admin Attributes ---
     Route::apiResource('attribute-groups', AttributeGroupController::class);
     Route::apiResource('attributes',       AttributeController::class);
+
+    // --- Admin Banners ---
+    Route::apiResource('banners', AdminBannerController::class);
+    Route::patch('banners/{banner}/toggle', [AdminBannerController::class, 'toggle']);
 
     // --- Admin Dashboard ---
     Route::get('dashboard/stats',   [DashboardController::class, 'stats']);
