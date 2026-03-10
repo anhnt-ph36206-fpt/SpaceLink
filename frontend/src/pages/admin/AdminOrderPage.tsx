@@ -1,201 +1,413 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Table, Button, Modal, Space, Tag, Typography, message, Card,
-  Row, Col, Select, Input, Descriptions, Badge,
+  Row, Col, Select, Input, Descriptions, Badge, Tooltip, Form,
+  Divider, Timeline, DatePicker, Drawer, Spin, Image,
 } from 'antd';
 import {
   SearchOutlined, ShoppingCartOutlined, EyeOutlined, ReloadOutlined,
   CheckCircleOutlined, ClockCircleOutlined, CarOutlined, CloseCircleOutlined,
+  DollarOutlined, FilterOutlined, HistoryOutlined, SendOutlined,
+  SyncOutlined, GiftOutlined, RollbackOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { Order } from '../../types/index';
+import { axiosInstance } from '../../api/axios';
+
 
 const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
+
+// ============================================================
+// Types
+// ============================================================
+interface OrderItem {
+  id: number;
+  product_id: number;
+  variant_id?: number;
+  product_name: string;
+  product_image?: string;
+  product_sku?: string;
+  variant_info?: Record<string, string>;
+  price: number;
+  quantity: number;
+  total: number;
+}
+
+interface StatusHistory {
+  from: string;
+  to: string;
+  note?: string;
+  changed_by?: number;
+  created_at: string;
+}
+
+interface ShippingInfo {
+  fullname?: string;
+  phone?: string;
+  email?: string;
+  province?: string;
+  district?: string;
+  ward?: string;
+  address?: string;
+}
+
+interface OrderUser {
+  id: number;
+  fullname?: string;
+  email?: string;
+  phone?: string;
+}
+
+interface Order {
+  id: number;
+  order_code: string;
+  user?: OrderUser;
+  shipping: ShippingInfo;
+  subtotal: number;
+  discount_amount: number;
+  shipping_fee: number;
+  total_amount: number;
+  status: string;
+  payment_status: string;
+  payment_method?: string;
+  voucher_code?: string;
+  voucher_discount?: number;
+  note?: string;
+  admin_note?: string;
+  cancelled_reason?: string;
+  cancelled_at?: string;
+  tracking_code?: string;
+  shipping_partner?: string;
+  estimated_delivery?: string;
+  confirmed_at?: string;
+  shipped_at?: string;
+  delivered_at?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at?: string;
+  items?: OrderItem[];
+  status_history?: StatusHistory[];
+}
+
+interface PaginationMeta {
+  total: number;
+  per_page: number;
+  current_page: number;
+  last_page: number;
+}
+
+// ============================================================
+// Config
+// ============================================================
+const ORDER_STATUS_CONFIG: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
+  pending:    { color: 'orange',   label: 'Chờ xác nhận',   icon: <ClockCircleOutlined /> },
+  confirmed:  { color: 'blue',     label: 'Đã xác nhận',    icon: <CheckCircleOutlined /> },
+  processing: { color: 'purple',   label: 'Đang xử lí',     icon: <SyncOutlined spin /> },
+  shipping:   { color: 'geekblue', label: 'Đang giao hàng', icon: <CarOutlined /> },
+  delivered:  { color: 'cyan',     label: 'Đã giao hàng',   icon: <CheckCircleOutlined /> },
+  completed:  { color: 'success',  label: 'Hoàn thành',     icon: <CheckCircleOutlined /> },
+  cancelled:  { color: 'error',    label: 'Đã hủy',         icon: <CloseCircleOutlined /> },
+  returned:   { color: 'default',  label: 'Hoàn trả',       icon: <RollbackOutlined /> },
+};
+
+const PAYMENT_STATUS_CONFIG: Record<string, { color: string; label: string }> = {
+  pending:  { color: 'orange',  label: 'Chưa thanh toán' },
+  paid:     { color: 'success', label: 'Đã thanh toán' },
+  failed:   { color: 'error',   label: 'Thất bại' },
+  refunded: { color: 'default', label: 'Đã hoàn tiền' },
+};
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  cod:     'COD',
+  vnpay:   'VNPay',
+  banking: 'Chuyển khoản',
+};
 
 const formatVND = (v: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
-const STATUS_CONFIG: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
-  pending: { color: 'orange', label: 'Chờ xác nhận', icon: <ClockCircleOutlined /> },
-  confirmed: { color: 'blue', label: 'Đã xác nhận', icon: <CheckCircleOutlined /> },
-  shipping: { color: 'geekblue', label: 'Đang giao hàng', icon: <CarOutlined /> },
-  delivered: { color: 'success', label: 'Đã giao hàng', icon: <CheckCircleOutlined /> },
-  cancelled: { color: 'error', label: 'Đã hủy', icon: <CloseCircleOutlined /> },
+const API_BASE = '/admin/orders';
+
+// ============================================================
+// Status Tag helper
+// ============================================================
+const StatusTag: React.FC<{ status: string; config: Record<string, { color: string; label: string; icon?: React.ReactNode }> }> = ({
+  status, config,
+}) => {
+  const cfg = config[status] ?? { color: 'default', label: status };
+  return (
+    <Tag color={cfg.color} icon={cfg.icon} style={{ borderRadius: 20, margin: 0 }}>
+      {cfg.label}
+    </Tag>
+  );
 };
 
-const MOCK_ORDERS: Order[] = [
-  {
-    id: 'ORD-2026-001', userId: '2', customerName: 'Nguyễn Văn An',
-    customerEmail: 'user@gmail.com', customerPhone: '0901234567',
-    address: '123 Nguyễn Huệ, Q1, TP.HCM',
-    items: [
-      { productId: '1', productName: 'iPhone 15 Pro Max', quantity: 1, price: 34990000, image: '' },
-    ],
-    totalAmount: 34990000, status: 'delivered', paymentMethod: 'COD',
-    createdAt: '2026-02-25T10:00:00Z', updatedAt: '2026-02-27T15:00:00Z',
-  },
-  {
-    id: 'ORD-2026-002', userId: '17c2', customerName: 'Anh Thanh Niên',
-    customerEmail: 'abc@gmail.com', customerPhone: '0912345678',
-    address: '45 Lê Lợi, Q3, TP.HCM',
-    items: [
-      { productId: '2', productName: 'Samsung Galaxy S24 Ultra', quantity: 1, price: 31990000 },
-    ],
-    totalAmount: 31990000, status: 'shipping', paymentMethod: 'Banking',
-    createdAt: '2026-02-26T11:30:00Z',
-  },
-  {
-    id: 'ORD-2026-003', userId: '3ddb', customerName: 'Nguyễn Duy Mạnh',
-    customerEmail: '123@gmail.com', customerPhone: '0987654321',
-    address: '78 Trần Hưng Đạo, Q5, TP.HCM',
-    items: [
-      { productId: '1', productName: 'iPhone 15 Pro Max', quantity: 1, price: 32990000 },
-    ],
-    totalAmount: 32990000, status: 'pending', paymentMethod: 'COD',
-    createdAt: '2026-02-28T08:00:00Z',
-  },
-  {
-    id: 'ORD-2026-004', userId: 'VtKwh8e', customerName: 'Doãn Chí Bình',
-    customerEmail: 'duybinh123@gmail.com', customerPhone: '0934567890',
-    address: '12 Võ Thị Sáu, Q3, TP.HCM',
-    items: [
-      { productId: '2', productName: 'Samsung Galaxy S24 Ultra', quantity: 1, price: 29990000 },
-    ],
-    totalAmount: 29990000, status: 'confirmed', paymentMethod: 'Banking',
-    createdAt: '2026-02-27T14:00:00Z',
-  },
-  {
-    id: 'ORD-2026-005', userId: 'af3d', customerName: 'Nguyễn Duy Hùng',
-    customerEmail: 'nguyenduyhung123@gmail.com', customerPhone: '0956789012',
-    address: '34 Đinh Tiên Hoàng, Q1, TP.HCM',
-    items: [
-      { productId: '1', productName: 'iPhone 15 Pro Max', quantity: 1, price: 34990000 },
-    ],
-    totalAmount: 34990000, status: 'cancelled', paymentMethod: 'COD',
-    createdAt: '2026-02-24T16:00:00Z',
-  },
-];
-
+// ============================================================
+// Main Component
+// ============================================================
 const AdminOrderPage: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [detailOrder, setDetailOrder] = useState<Order | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
+  const [meta, setMeta] = useState<PaginationMeta>({ total: 0, per_page: 15, current_page: 1, last_page: 1 });
 
-  const fetchOrders = async () => {
+  // Filters
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
+  const [dateRange, setDateRange] = useState<[string, string] | null>(null);
+
+  // Detail drawer
+  const [detailOrder, setDetailOrder] = useState<Order | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  // Status update modal
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [updatingOrder, setUpdatingOrder] = useState<Order | null>(null);
+  const [statusForm] = Form.useForm();
+  const [savingStatus, setSavingStatus] = useState(false);
+
+  // Payment status modal
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentForm] = Form.useForm();
+  const [savingPayment, setSavingPayment] = useState(false);
+
+  // --------------------------------------------------------
+  // Fetch orders list
+  // --------------------------------------------------------
+  const fetchOrders = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3000/orders');
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) setOrders(data);
-      else setOrders(MOCK_ORDERS);
-    } catch {
-      setOrders(MOCK_ORDERS);
+      const params: Record<string, string | number> = { per_page: 15, page };
+      if (search)               params.search         = search;
+      if (statusFilter)         params.status         = statusFilter;
+      if (paymentStatusFilter)  params.payment_status = paymentStatusFilter;
+      if (paymentMethodFilter)  params.payment_method = paymentMethodFilter;
+      if (dateRange) {
+        params.date_from = dateRange[0];
+        params.date_to   = dateRange[1];
+      }
+
+      const res = await axiosInstance.get(API_BASE, { params });
+      const payload = res.data;
+
+      // Laravel pagination: { data: [], meta: {}, links: {} } or { data: { data: [], ... } }
+      const list: Order[] = payload?.data?.data ?? payload?.data ?? [];
+      const m = payload?.data?.meta ?? payload?.meta ?? {};
+      setOrders(list);
+      setMeta({
+        total:        m.total        ?? list.length,
+        per_page:     m.per_page     ?? 15,
+        current_page: m.current_page ?? page,
+        last_page:    m.last_page    ?? 1,
+      });
+    } catch (err: any) {
+      console.error(err);
+      message.error(err?.response?.data?.message ?? 'Không thể tải danh sách đơn hàng');
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, statusFilter, paymentStatusFilter, paymentMethodFilter, dateRange]);
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
-    setOrders(prev =>
-      prev.map(o => o.id === orderId ? { ...o, status: newStatus as Order['status'] } : o)
-    );
-    message.success(`Đã cập nhật trạng thái đơn hàng!`);
+  // --------------------------------------------------------
+  // Fetch single order detail
+  // --------------------------------------------------------
+  const openDetail = async (order: Order) => {
+    setDrawerOpen(true);
+    setDetailOrder(order);
+    setDetailLoading(true);
     try {
-      await fetch(`http://localhost:3000/orders/${orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus, updatedAt: new Date().toISOString() }),
-      });
-    } catch { /* silent */ }
+      const res = await axiosInstance.get(`${API_BASE}/${order.id}`);
+      const d: Order = res.data?.data ?? res.data;
+      setDetailOrder(d);
+    } catch {
+      // fallback: keep the list row data
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
-  const filtered = orders.filter(o => {
-    const matchSearch =
-      o.id.toLowerCase().includes(search.toLowerCase()) ||
-      o.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      o.customerEmail.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter ? o.status === statusFilter : true;
-    return matchSearch && matchStatus;
-  });
+  // --------------------------------------------------------
+  // Update order status
+  // --------------------------------------------------------
+  const openStatusModal = (order: Order) => {
+    setUpdatingOrder(order);
+    statusForm.resetFields();
+    statusForm.setFieldsValue({ status: order.status });
+    setStatusModalOpen(true);
+  };
 
-  const totalRevenue = orders
-    .filter(o => o.status === 'delivered')
-    .reduce((sum, o) => sum + o.totalAmount, 0);
+  const handleStatusSave = async () => {
+    if (!updatingOrder) return;
+    try {
+      const values = await statusForm.validateFields();
+      setSavingStatus(true);
+      await axiosInstance.patch(`${API_BASE}/${updatingOrder.id}/status`, values);
+      message.success('Đã cập nhật trạng thái đơn hàng!');
+      setStatusModalOpen(false);
+      fetchOrders(meta.current_page);
+      // Reload drawer if open
+      if (drawerOpen && detailOrder?.id === updatingOrder.id) {
+        openDetail(updatingOrder);
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.response?.data?.errors?.status?.[0] ?? 'Có lỗi xảy ra';
+      message.error(msg);
+    } finally {
+      setSavingStatus(false);
+    }
+  };
 
+  // --------------------------------------------------------
+  // Update payment status
+  // --------------------------------------------------------
+  const openPaymentModal = (order: Order) => {
+    setUpdatingOrder(order);
+    paymentForm.resetFields();
+    paymentForm.setFieldsValue({ payment_status: order.payment_status });
+    setPaymentModalOpen(true);
+  };
+
+  const handlePaymentSave = async () => {
+    if (!updatingOrder) return;
+    try {
+      const values = await paymentForm.validateFields();
+      setSavingPayment(true);
+      await axiosInstance.patch(`${API_BASE}/${updatingOrder.id}/payment-status`, values);
+      message.success('Đã cập nhật trạng thái thanh toán!');
+      setPaymentModalOpen(false);
+      fetchOrders(meta.current_page);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Có lỗi xảy ra';
+      message.error(msg);
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
+  // --------------------------------------------------------
+  // Statistics (from current fetched page – for quick summary)
+  // --------------------------------------------------------
+  const stats = Object.keys(ORDER_STATUS_CONFIG).map((key) => ({
+    key,
+    ...ORDER_STATUS_CONFIG[key],
+    count: orders.filter((o) => o.status === key).length,
+  }));
+
+  const deliveredRevenue = orders
+    .filter((o) => o.status === 'delivered' || o.status === 'completed')
+    .reduce((s, o) => s + o.total_amount, 0);
+
+  // --------------------------------------------------------
+  // Table columns
+  // --------------------------------------------------------
   const columns: ColumnsType<Order> = [
     {
-      title: 'Mã đơn hàng', dataIndex: 'id', key: 'id', width: 160,
+      title: 'Mã đơn hàng',
+      dataIndex: 'order_code',
+      key: 'order_code',
+      width: 160,
       render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text>,
     },
     {
-      title: 'Khách hàng', key: 'customer',
+      title: 'Khách hàng',
+      key: 'customer',
+      render: (_: unknown, r: Order) => {
+        const name = r.shipping?.fullname ?? r.user?.fullname ?? '—';
+        const email = r.user?.email ?? r.shipping?.email ?? '—';
+        const phone = r.shipping?.phone ?? r.user?.phone ?? '—';
+        return (
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{name}</div>
+            <Text type="secondary" style={{ fontSize: 12 }}>{email}</Text>
+            <div><Text type="secondary" style={{ fontSize: 12 }}>{phone}</Text></div>
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Thanh toán',
+      key: 'payment',
+      width: 140,
       render: (_: unknown, r: Order) => (
-        <div>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>{r.customerName}</div>
-          <Text type="secondary" style={{ fontSize: 12 }}>{r.customerEmail}</Text>
-        </div>
+        <Space direction="vertical" size={4}>
+          <Tag color={r.payment_method === 'vnpay' ? 'blue' : r.payment_method === 'banking' ? 'geekblue' : 'orange'}
+            style={{ borderRadius: 20, margin: 0, fontSize: 11 }}>
+            {PAYMENT_METHOD_LABELS[r.payment_method ?? ''] ?? r.payment_method ?? '—'}
+          </Tag>
+          <StatusTag status={r.payment_status} config={PAYMENT_STATUS_CONFIG} />
+        </Space>
       ),
     },
     {
-      title: 'Thanh toán', dataIndex: 'paymentMethod', key: 'paymentMethod', width: 110,
-      render: (v: string) => (
-        <Tag color={v === 'Banking' ? 'blue' : 'orange'} style={{ borderRadius: 20 }}>{v}</Tag>
-      ),
-    },
-    {
-      title: 'Tổng tiền', dataIndex: 'totalAmount', key: 'totalAmount', width: 150, align: 'right',
+      title: 'Tổng tiền',
+      dataIndex: 'total_amount',
+      key: 'total_amount',
+      width: 145,
+      align: 'right',
       render: (v: number) => <Text strong style={{ color: '#0d6efd', fontSize: 14 }}>{formatVND(v)}</Text>,
-      sorter: (a: Order, b: Order) => a.totalAmount - b.totalAmount,
+      sorter: (a: Order, b: Order) => a.total_amount - b.total_amount,
     },
     {
-      title: 'Trạng thái', dataIndex: 'status', key: 'status', width: 180,
+      title: 'Trạng thái đơn',
+      dataIndex: 'status',
+      key: 'status',
+      width: 170,
       render: (v: string, r: Order) => (
-        <Select
-          value={v}
-          size="small"
-          style={{ width: 165 }}
-          onChange={(newVal) => handleStatusChange(r.id, newVal)}
-          options={Object.entries(STATUS_CONFIG).map(([k, cfg]) => ({
-            value: k,
-            label: (
-              <Space size={4}>
-                <Tag color={cfg.color} style={{ margin: 0, borderRadius: 20, fontSize: 12 }}>
-                  {cfg.label}
-                </Tag>
-              </Space>
-            ),
-          }))}
-        />
+        <Tooltip title="Nhấn để cập nhật trạng thái">
+          <div
+            style={{ cursor: 'pointer' }}
+            onClick={() => openStatusModal(r)}
+          >
+            <StatusTag status={v} config={ORDER_STATUS_CONFIG} />
+          </div>
+        </Tooltip>
       ),
     },
     {
-      title: 'Ngày đặt', dataIndex: 'createdAt', key: 'createdAt', width: 115,
+      title: 'Ngày đặt',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: 115,
       render: (v: string) => (
-        <Text type="secondary" style={{ fontSize: 13 }}>
-          {new Date(v).toLocaleDateString('vi-VN')}
-        </Text>
+        <Text type="secondary" style={{ fontSize: 13 }}>{v ?? '—'}</Text>
       ),
-      sorter: (a: Order, b: Order) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     },
     {
-      title: '', key: 'action', width: 60, align: 'center',
+      title: '',
+      key: 'action',
+      width: 90,
+      align: 'center',
       render: (_: unknown, r: Order) => (
-        <Button
-          type="text" icon={<EyeOutlined style={{ color: '#0d6efd' }} />}
-          onClick={() => { setDetailOrder(r); setDetailOpen(true); }}
-        />
+        <Space>
+          <Tooltip title="Xem chi tiết">
+            <Button
+              type="text"
+              icon={<EyeOutlined style={{ color: '#0d6efd' }} />}
+              onClick={() => openDetail(r)}
+            />
+          </Tooltip>
+          <Tooltip title="Cập nhật thanh toán">
+            <Button
+              type="text"
+              icon={<DollarOutlined style={{ color: '#198754' }} />}
+              onClick={() => openPaymentModal(r)}
+            />
+          </Tooltip>
+        </Space>
       ),
     },
   ];
 
+  // ============================================================
+  // Render
+  // ============================================================
   return (
     <div style={{ padding: 24 }}>
-      {/* Header */}
+      {/* ── Header ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <Title level={4} style={{ margin: 0, color: '#1a1a2e' }}>
@@ -203,146 +415,468 @@ const AdminOrderPage: React.FC = () => {
             Quản lí Đơn hàng
           </Title>
           <Text type="secondary" style={{ fontSize: 13 }}>
-            Hiển thị {filtered.length} / {orders.length} đơn hàng
+            Tổng cộng {meta.total} đơn hàng
           </Text>
         </div>
-        <Button icon={<ReloadOutlined />} onClick={fetchOrders} style={{ borderRadius: 10, height: 40 }}>
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={() => fetchOrders(1)}
+          style={{ borderRadius: 10, height: 40 }}
+        >
           Làm mới
         </Button>
       </div>
 
-      {/* Summary Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
-          const count = orders.filter(o => o.status === key).length;
-          return (
-            <Col key={key} xs={12} sm={8} lg={4}>
-              <Card
-                style={{
-                  borderRadius: 12, border: '1px solid #f0f0f0', textAlign: 'center',
-                  cursor: 'pointer', transition: 'all 0.2s',
-                  boxShadow: statusFilter === key ? '0 4px 16px rgba(13,110,253,0.2)' : '0 2px 8px rgba(0,0,0,0.05)',
-                  borderColor: statusFilter === key ? '#0d6efd' : undefined,
-                }}
-                bodyStyle={{ padding: '14px 12px' }}
-                onClick={() => setStatusFilter(statusFilter === key ? '' : key)}
-              >
-                <Badge color={cfg.color} text="" />
-                <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e' }}>{count}</div>
-                <div style={{ fontSize: 12, color: '#868e96', marginTop: 2 }}>{cfg.label}</div>
-              </Card>
-            </Col>
-          );
-        })}
-        <Col xs={12} sm={8} lg={4}>
+      {/* ── Summary Cards ── */}
+      <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
+        {stats.map((s) => (
+          <Col key={s.key} xs={12} sm={8} md={6} lg={3}>
+            <Card
+              style={{
+                borderRadius: 12,
+                border: '1px solid #f0f0f0',
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: statusFilter === s.key
+                  ? '0 4px 16px rgba(13,110,253,0.2)'
+                  : '0 2px 8px rgba(0,0,0,0.05)',
+                borderColor: statusFilter === s.key ? '#0d6efd' : '#f0f0f0',
+              }}
+              styles={{ body: { padding: '12px 8px' } }}
+              onClick={() => setStatusFilter(statusFilter === s.key ? '' : s.key)}
+            >
+              <Badge color={s.color} text="" />
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e' }}>{s.count}</div>
+              <div style={{ fontSize: 11, color: '#868e96', marginTop: 2, lineHeight: 1.3 }}>{s.label}</div>
+            </Card>
+          </Col>
+        ))}
+        <Col xs={12} sm={8} md={6} lg={3}>
           <Card
             style={{ borderRadius: 12, border: '1px solid #f0f0f0', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
-            bodyStyle={{ padding: '14px 12px' }}
+            styles={{ body: { padding: '12px 8px' } }}
           >
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#0d6efd' }}>
-              {(totalRevenue / 1000000).toFixed(1)}M
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#198754' }}>
+              {(deliveredRevenue / 1_000_000).toFixed(1)}M
             </div>
-            <div style={{ fontSize: 12, color: '#868e96', marginTop: 2 }}>Doanh thu</div>
+            <div style={{ fontSize: 11, color: '#868e96', marginTop: 2 }}>Doanh thu (trang)</div>
           </Card>
         </Col>
       </Row>
 
-      {/* Search & Filter */}
-      <Card style={{ borderRadius: 14, border: '1px solid #f0f0f0', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }} bodyStyle={{ padding: '14px 20px' }}>
-        <Row gutter={12} align="middle">
-          <Col flex="auto">
+      {/* ── Filters ── */}
+      <Card
+        style={{ borderRadius: 14, border: '1px solid #f0f0f0', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+        styles={{ body: { padding: '14px 20px' } }}
+      >
+        <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} sm={10} md={8}>
             <Input
-              placeholder="Tìm mã đơn, tên khách hàng, email..."
+              placeholder="Tìm mã đơn, tên KH, SĐT, email..."
               prefix={<SearchOutlined style={{ color: '#adb5bd' }} />}
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
+              onPressEnter={() => fetchOrders(1)}
               style={{ borderRadius: 10, height: 38 }}
               allowClear
             />
           </Col>
-          <Col>
+          <Col xs={12} sm={7} md={4}>
             <Select
-              placeholder="Lọc trạng thái"
-              style={{ width: 170, borderRadius: 10 }}
+              placeholder="Trạng thái đơn"
+              style={{ width: '100%' }}
               allowClear
               value={statusFilter || undefined}
-              onChange={v => setStatusFilter(v || '')}
-              options={Object.entries(STATUS_CONFIG).map(([k, cfg]) => ({
+              onChange={(v) => { setStatusFilter(v || ''); }}
+              options={Object.entries(ORDER_STATUS_CONFIG).map(([k, cfg]) => ({
                 value: k,
                 label: <Tag color={cfg.color} style={{ margin: 0, borderRadius: 20 }}>{cfg.label}</Tag>,
               }))}
             />
           </Col>
+          <Col xs={12} sm={7} md={4}>
+            <Select
+              placeholder="Thanh toán"
+              style={{ width: '100%' }}
+              allowClear
+              value={paymentStatusFilter || undefined}
+              onChange={(v) => { setPaymentStatusFilter(v || ''); }}
+              options={Object.entries(PAYMENT_STATUS_CONFIG).map(([k, cfg]) => ({
+                value: k,
+                label: <Tag color={cfg.color} style={{ margin: 0, borderRadius: 20 }}>{cfg.label}</Tag>,
+              }))}
+            />
+          </Col>
+          <Col xs={12} sm={7} md={4}>
+            <Select
+              placeholder="Phương thức"
+              style={{ width: '100%' }}
+              allowClear
+              value={paymentMethodFilter || undefined}
+              onChange={(v) => { setPaymentMethodFilter(v || ''); }}
+              options={[
+                { value: 'cod',     label: 'COD' },
+                { value: 'vnpay',   label: 'VNPay' },
+                { value: 'banking', label: 'Chuyển khoản' },
+              ]}
+            />
+          </Col>
+          <Col xs={12} sm={10} md={6}>
+            <RangePicker
+              style={{ width: '100%', borderRadius: 10 }}
+              format="YYYY-MM-DD"
+              onChange={(_, ds) => setDateRange(ds[0] && ds[1] ? [ds[0], ds[1]] : null)}
+            />
+          </Col>
+          <Col>
+            <Button
+              type="primary"
+              icon={<FilterOutlined />}
+              onClick={() => fetchOrders(1)}
+              style={{ borderRadius: 10, height: 38, background: 'linear-gradient(135deg,#0d6efd,#084298)', border: 'none' }}
+            >
+              Lọc
+            </Button>
+          </Col>
         </Row>
       </Card>
 
-      {/* Table */}
-      <Card style={{ borderRadius: 14, border: '1px solid #f0f0f0', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }} bodyStyle={{ padding: 0 }}>
+      {/* ── Table ── */}
+      <Card
+        style={{ borderRadius: 14, border: '1px solid #f0f0f0', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+        styles={{ body: { padding: 0 } }}
+      >
         <Table
           columns={columns}
-          dataSource={filtered}
+          dataSource={orders}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 900 }}
-          pagination={{ pageSize: 8, showSizeChanger: false, showTotal: t => `Tổng ${t} đơn hàng` }}
+          scroll={{ x: 980 }}
+          pagination={{
+            total: meta.total,
+            pageSize: meta.per_page,
+            current: meta.current_page,
+            showSizeChanger: false,
+            showTotal: (t) => `Tổng ${t} đơn hàng`,
+            onChange: (page) => fetchOrders(page),
+          }}
         />
       </Card>
 
-      {/* Detail Modal */}
-      <Modal
+      {/* ── Order Detail Drawer ── */}
+      <Drawer
         title={
           <Space>
             <ShoppingCartOutlined style={{ color: '#0d6efd' }} />
-            <span>Chi tiết đơn hàng – <Text code>{detailOrder?.id}</Text></span>
+            <span>
+              Chi tiết đơn hàng –{' '}
+              <Text code>{detailOrder?.order_code}</Text>
+            </span>
           </Space>
         }
-        open={detailOpen}
-        onCancel={() => setDetailOpen(false)}
-        footer={null}
-        width={640}
-        style={{ top: 40 }}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        width={680}
+        extra={
+          detailOrder && (
+            <Space>
+              <Button
+                size="small"
+                icon={<SendOutlined />}
+                onClick={() => { setDrawerOpen(false); openStatusModal(detailOrder); }}
+                style={{ borderRadius: 8 }}
+              >
+                Đổi trạng thái
+              </Button>
+              <Button
+                size="small"
+                icon={<DollarOutlined />}
+                onClick={() => { setDrawerOpen(false); openPaymentModal(detailOrder); }}
+                style={{ borderRadius: 8 }}
+              >
+                Đổi thanh toán
+              </Button>
+            </Space>
+          )
+        }
       >
-        {detailOrder && (
+        {detailLoading ? (
+          <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" /></div>
+        ) : detailOrder ? (
           <div>
-            <Descriptions column={2} size="small" style={{ marginBottom: 16 }}>
+            {/* Status badges */}
+            <Space style={{ marginBottom: 16 }} wrap>
+              <StatusTag status={detailOrder.status} config={ORDER_STATUS_CONFIG} />
+              <StatusTag status={detailOrder.payment_status} config={PAYMENT_STATUS_CONFIG} />
+              {detailOrder.payment_method && (
+                <Tag color="blue" style={{ borderRadius: 20, margin: 0 }}>
+                  {PAYMENT_METHOD_LABELS[detailOrder.payment_method] ?? detailOrder.payment_method}
+                </Tag>
+              )}
+            </Space>
+
+            {/* Customer & Shipping */}
+            <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
               <Descriptions.Item label="Khách hàng" span={2}>
-                <Text strong>{detailOrder.customerName}</Text>
+                <Text strong>{detailOrder.shipping?.fullname ?? detailOrder.user?.fullname ?? '—'}</Text>
               </Descriptions.Item>
-              <Descriptions.Item label="Email">{detailOrder.customerEmail}</Descriptions.Item>
-              <Descriptions.Item label="SĐT">{detailOrder.customerPhone || '—'}</Descriptions.Item>
-              <Descriptions.Item label="Địa chỉ" span={2}>{detailOrder.address || '—'}</Descriptions.Item>
-              <Descriptions.Item label="Thanh toán">{detailOrder.paymentMethod}</Descriptions.Item>
-              <Descriptions.Item label="Ngày đặt">
-                {new Date(detailOrder.createdAt).toLocaleString('vi-VN')}
+              <Descriptions.Item label="Email">
+                {detailOrder.user?.email ?? detailOrder.shipping?.email ?? '—'}
               </Descriptions.Item>
+              <Descriptions.Item label="SĐT">
+                {detailOrder.shipping?.phone ?? detailOrder.user?.phone ?? '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Địa chỉ giao" span={2}>
+                {[
+                  detailOrder.shipping?.address,
+                  detailOrder.shipping?.ward,
+                  detailOrder.shipping?.district,
+                  detailOrder.shipping?.province,
+                ].filter(Boolean).join(', ') || '—'}
+              </Descriptions.Item>
+              {detailOrder.note && (
+                <Descriptions.Item label="Ghi chú KH" span={2}>{detailOrder.note}</Descriptions.Item>
+              )}
+              {detailOrder.admin_note && (
+                <Descriptions.Item label="Ghi chú admin" span={2}>
+                  <Text type="warning">{detailOrder.admin_note}</Text>
+                </Descriptions.Item>
+              )}
+              {detailOrder.tracking_code && (
+                <Descriptions.Item label="Mã vận đơn">{detailOrder.tracking_code}</Descriptions.Item>
+              )}
+              {detailOrder.shipping_partner && (
+                <Descriptions.Item label="Đơn vị giao">{detailOrder.shipping_partner}</Descriptions.Item>
+              )}
+              {detailOrder.cancelled_reason && (
+                <Descriptions.Item label="Lý do hủy" span={2}>
+                  <Text type="danger">{detailOrder.cancelled_reason}</Text>
+                </Descriptions.Item>
+              )}
             </Descriptions>
 
-            <Card style={{ borderRadius: 10, marginBottom: 16, background: '#f8f9fa' }} bodyStyle={{ padding: 16 }}>
-              <Text strong style={{ marginBottom: 10, display: 'block' }}>Sản phẩm đặt mua:</Text>
-              {detailOrder.items.map((item, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < detailOrder.items.length - 1 ? '1px solid #e9ecef' : 'none' }}>
-                  <Text>{item.productName} × {item.quantity}</Text>
-                  <Text strong style={{ color: '#0d6efd' }}>{formatVND(item.price * item.quantity)}</Text>
-                </div>
-              ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: '2px solid #dee2e6' }}>
-                <Text strong style={{ fontSize: 15 }}>Tổng cộng</Text>
-                <Text strong style={{ fontSize: 15, color: '#0d6efd' }}>{formatVND(detailOrder.totalAmount)}</Text>
-              </div>
-            </Card>
+            {/* Items */}
+            {detailOrder.items && detailOrder.items.length > 0 && (
+              <>
+                <Divider orientation="left" style={{ fontSize: 13, color: '#495057', margin: '12px 0' }}>
+                  <GiftOutlined style={{ marginRight: 6 }} />Sản phẩm ({detailOrder.items.length})
+                </Divider>
+                <div style={{ marginBottom: 16 }}>
+                  {detailOrder.items.map((item, i) => (
+                    <div
+                      key={item.id ?? i}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '10px 0',
+                        borderBottom: i < detailOrder.items!.length - 1 ? '1px solid #f0f0f0' : 'none',
+                      }}
+                    >
+                      {item.product_image ? (
+                        <Image
+                          src={item.product_image}
+                          width={54} height={54}
+                          style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid #f0f0f0' }}
+                          fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                        />
+                      ) : (
+                        <div style={{ width: 54, height: 54, borderRadius: 8, background: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #f0f0f0' }}>
+                          <ShoppingCartOutlined style={{ color: '#adb5bd', fontSize: 20 }} />
+                        </div>
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{item.product_name}</div>
+                        {item.product_sku && (
+                          <Text type="secondary" style={{ fontSize: 12 }}>SKU: {item.product_sku}</Text>
+                        )}
+                        {item.variant_info && Object.keys(item.variant_info).length > 0 && (
+                          <div style={{ marginTop: 2 }}>
+                            {Object.entries(item.variant_info).map(([k, v]) => (
+                              <Tag key={k} style={{ fontSize: 11, borderRadius: 12, margin: '0 4px 0 0' }}>{k}: {v}</Tag>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ color: '#6c757d', fontSize: 12 }}>
+                          {formatVND(item.price)} × {item.quantity}
+                        </div>
+                        <Text strong style={{ color: '#0d6efd' }}>{formatVND(item.total)}</Text>
+                      </div>
+                    </div>
+                  ))}
 
-            <div>
-              <Text strong style={{ marginBottom: 10, display: 'block' }}>Trạng thái:</Text>
-              <Tag
-                color={STATUS_CONFIG[detailOrder.status]?.color}
-                style={{ borderRadius: 20, padding: '4px 14px', fontSize: 13 }}
-                icon={STATUS_CONFIG[detailOrder.status]?.icon}
-              >
-                &nbsp;{STATUS_CONFIG[detailOrder.status]?.label}
-              </Tag>
-            </div>
+                  {/* Totals */}
+                  <div style={{ background: '#f8f9fa', borderRadius: 10, padding: '12px 16px', marginTop: 12 }}>
+                    {detailOrder.discount_amount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <Text type="secondary">Giảm giá</Text>
+                        <Text type="success">– {formatVND(detailOrder.discount_amount)}</Text>
+                      </div>
+                    )}
+                    {detailOrder.voucher_code && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <Text type="secondary">Voucher ({detailOrder.voucher_code})</Text>
+                        <Text type="success">– {formatVND(detailOrder.voucher_discount ?? 0)}</Text>
+                      </div>
+                    )}
+                    {detailOrder.shipping_fee > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <Text type="secondary">Phí giao hàng</Text>
+                        <Text>{formatVND(detailOrder.shipping_fee)}</Text>
+                      </div>
+                    )}
+                    <Divider style={{ margin: '8px 0' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Text strong style={{ fontSize: 15 }}>Tổng cộng</Text>
+                      <Text strong style={{ fontSize: 15, color: '#0d6efd' }}>{formatVND(detailOrder.total_amount)}</Text>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Status History */}
+            {detailOrder.status_history && detailOrder.status_history.length > 0 && (
+              <>
+                <Divider orientation="left" style={{ fontSize: 13, color: '#495057', margin: '12px 0' }}>
+                  <HistoryOutlined style={{ marginRight: 6 }} />Lịch sử trạng thái
+                </Divider>
+                <Timeline
+                  items={detailOrder.status_history.map((h) => ({
+                    color: ORDER_STATUS_CONFIG[h.to]?.color ?? 'gray',
+                    children: (
+                      <div>
+                        <Space wrap>
+                          <Tag color={ORDER_STATUS_CONFIG[h.from]?.color} style={{ borderRadius: 20, margin: 0, fontSize: 11 }}>
+                            {ORDER_STATUS_CONFIG[h.from]?.label ?? h.from}
+                          </Tag>
+                          <span style={{ color: '#adb5bd' }}>→</span>
+                          <Tag color={ORDER_STATUS_CONFIG[h.to]?.color} style={{ borderRadius: 20, margin: 0, fontSize: 11 }}>
+                            {ORDER_STATUS_CONFIG[h.to]?.label ?? h.to}
+                          </Tag>
+                        </Space>
+                        {h.note && <div style={{ color: '#6c757d', fontSize: 12, marginTop: 4 }}>{h.note}</div>}
+                        <div style={{ color: '#adb5bd', fontSize: 11, marginTop: 2 }}>{h.created_at}</div>
+                      </div>
+                    ),
+                  }))}
+                />
+              </>
+            )}
           </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: 60, color: '#adb5bd' }}>Không có dữ liệu</div>
         )}
+      </Drawer>
+
+      {/* ── Update Status Modal ── */}
+      <Modal
+        title={
+          <Space>
+            <SendOutlined style={{ color: '#0d6efd' }} />
+            <span>Cập nhật trạng thái – <Text code>{updatingOrder?.order_code}</Text></span>
+          </Space>
+        }
+        open={statusModalOpen}
+        onOk={handleStatusSave}
+        onCancel={() => setStatusModalOpen(false)}
+        okText="Lưu thay đổi"
+        cancelText="Hủy"
+        confirmLoading={savingStatus}
+        okButtonProps={{ style: { background: 'linear-gradient(135deg,#0d6efd,#084298)', border: 'none', borderRadius: 8 } }}
+        cancelButtonProps={{ style: { borderRadius: 8 } }}
+        width={480}
+        style={{ top: 60 }}
+      >
+        <Form form={statusForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="status" label="Trạng thái đơn hàng" rules={[{ required: true, message: 'Chọn trạng thái' }]}>
+            <Select
+              options={Object.entries(ORDER_STATUS_CONFIG).map(([k, cfg]) => ({
+                value: k,
+                label: (
+                  <Tag color={cfg.color} icon={cfg.icon} style={{ borderRadius: 20, margin: 0 }}>
+                    {cfg.label}
+                  </Tag>
+                ),
+              }))}
+              style={{ borderRadius: 8 }}
+            />
+          </Form.Item>
+
+          {/* Conditional fields */}
+          <Form.Item shouldUpdate={(prev, cur) => prev.status !== cur.status} noStyle>
+            {({ getFieldValue }) => {
+              const st = getFieldValue('status');
+              return (
+                <>
+                  {st === 'cancelled' && (
+                    <Form.Item
+                      name="cancelled_reason"
+                      label="Lý do hủy"
+                      rules={[{ required: true, message: 'Nhập lý do hủy đơn' }]}
+                    >
+                      <Input.TextArea rows={3} placeholder="Nhập lý do hủy đơn..." style={{ borderRadius: 8 }} />
+                    </Form.Item>
+                  )}
+                  {st === 'shipping' && (
+                    <Row gutter={12}>
+                      <Col span={12}>
+                        <Form.Item name="tracking_code" label="Mã vận đơn">
+                          <Input placeholder="VD: GHN12345678" style={{ borderRadius: 8 }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item name="shipping_partner" label="Đơn vị giao hàng">
+                          <Input placeholder="VD: GHN, GHTK, Viettel Post" style={{ borderRadius: 8 }} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  )}
+                </>
+              );
+            }}
+          </Form.Item>
+
+          <Form.Item name="note" label="Ghi chú nội bộ (tuỳ chọn)">
+            <Input.TextArea rows={2} placeholder="Ghi chú cho admin..." style={{ borderRadius: 8 }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* ── Update Payment Status Modal ── */}
+      <Modal
+        title={
+          <Space>
+            <DollarOutlined style={{ color: '#198754' }} />
+            <span>Cập nhật thanh toán – <Text code>{updatingOrder?.order_code}</Text></span>
+          </Space>
+        }
+        open={paymentModalOpen}
+        onOk={handlePaymentSave}
+        onCancel={() => setPaymentModalOpen(false)}
+        okText="Lưu thay đổi"
+        cancelText="Hủy"
+        confirmLoading={savingPayment}
+        okButtonProps={{ style: { background: 'linear-gradient(135deg,#198754,#0f5132)', border: 'none', borderRadius: 8 } }}
+        cancelButtonProps={{ style: { borderRadius: 8 } }}
+        width={420}
+        style={{ top: 60 }}
+      >
+        <Form form={paymentForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="payment_status" label="Trạng thái thanh toán" rules={[{ required: true, message: 'Chọn trạng thái' }]}>
+            <Select
+              options={Object.entries(PAYMENT_STATUS_CONFIG).map(([k, cfg]) => ({
+                value: k,
+                label: <Tag color={cfg.color} style={{ borderRadius: 20, margin: 0 }}>{cfg.label}</Tag>,
+              }))}
+              style={{ borderRadius: 8 }}
+            />
+          </Form.Item>
+          <Form.Item name="note" label="Ghi chú (tuỳ chọn)">
+            <Input.TextArea rows={2} placeholder="Ghi chú..." style={{ borderRadius: 8 }} />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

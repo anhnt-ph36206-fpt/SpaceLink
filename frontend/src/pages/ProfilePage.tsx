@@ -1,10 +1,73 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import type { User } from '../types/user';
 import { axiosInstance } from '../api/axios';
 import type { AxiosError } from 'axios';
+
+// ── Order types ──────────────────────────────────────────────
+interface OrderItem {
+  id: number;
+  product_name: string;
+  product_image?: string;
+  product_sku?: string;
+  variant_info?: Record<string, string>;
+  price: number;
+  quantity: number;
+  total: number;
+}
+interface StatusHistory {
+  from: string;
+  to: string;
+  note?: string;
+  created_at: string;
+}
+interface ClientOrder {
+  id: number;
+  order_code: string;
+  shipping: { fullname?: string; phone?: string; address?: string; ward?: string; district?: string; province?: string };
+  subtotal: number;
+  discount_amount: number;
+  shipping_fee: number;
+  total_amount: number;
+  status: string;
+  payment_status: string;
+  payment_method?: string;
+  voucher_code?: string;
+  voucher_discount?: number;
+  note?: string;
+  cancelled_reason?: string;
+  cancelled_at?: string;
+  tracking_code?: string;
+  created_at: string;
+  items?: OrderItem[];
+  status_history?: StatusHistory[];
+}
+
+const ORDER_STATUS_CFG: Record<string, { color: string; bg: string; label: string; icon: string }> = {
+  pending:    { color: '#b45309', bg: '#fffbeb', label: 'Chờ xác nhận',   icon: 'fa-clock' },
+  confirmed:  { color: '#1d4ed8', bg: '#eff6ff', label: 'Đã xác nhận',    icon: 'fa-check-circle' },
+  processing: { color: '#7c3aed', bg: '#f5f3ff', label: 'Đang xử lí',     icon: 'fa-spinner' },
+  shipping:   { color: '#0369a1', bg: '#f0f9ff', label: 'Đang giao',       icon: 'fa-truck' },
+  delivered:  { color: '#0f766e', bg: '#f0fdfa', label: 'Đã giao',         icon: 'fa-box-open' },
+  completed:  { color: '#15803d', bg: '#f0fdf4', label: 'Hoàn thành',      icon: 'fa-check-double' },
+  cancelled:  { color: '#b91c1c', bg: '#fef2f2', label: 'Đã hủy',          icon: 'fa-times-circle' },
+  returned:   { color: '#64748b', bg: '#f8fafc', label: 'Hoàn trả',        icon: 'fa-undo' },
+};
+
+const PAYMENT_STATUS_CFG: Record<string, { color: string; label: string }> = {
+  pending:  { color: '#d97706', label: 'Chưa TT' },
+  paid:     { color: '#16a34a', label: 'Đã TT' },
+  unpaid:   { color: '#d97706', label: 'Chưa TT' },
+  failed:   { color: '#dc2626', label: 'Thất bại' },
+  refunded: { color: '#6b7280', label: 'Hoàn tiền' },
+};
+
+const formatVND = (v: number) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
+
+const canCancel = (status: string) => status === 'pending';
 
 type ProfileForm = {
   name: string;     // khớp với backend field 'fullname' (mapped)
@@ -22,7 +85,21 @@ type PasswordForm = {
 const ProfilePage: React.FC = () => {
   const { user, updateUser, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'info' | 'password'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'password' | 'orders'>('info');
+
+  // ── Orders state ─────────────────────────────────────────────
+  const [orders, setOrders] = useState<ClientOrder[]>([]);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderStatusFilter, setOrderStatusFilter] = useState('');
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderTotal, setOrderTotal] = useState(0);
+  const [selectedOrder, setSelectedOrder] = useState<ClientOrder | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [cancelModalOrder, setCancelModalOrder] = useState<ClientOrder | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [orderError, setOrderError] = useState('');
+  const [orderSuccess, setOrderSuccess] = useState('');
   const [avatarPreview, setAvatarPreview] = useState<string>(user?.avatar || '');
   const [saveSuccess, setSaveSuccess] = useState<string>('');
   const [saveError, setSaveError] = useState<string>('');
@@ -55,6 +132,71 @@ const ProfilePage: React.FC = () => {
     if (type === 'success') { setSaveSuccess(msg); setSaveError(''); }
     else { setSaveError(msg); setSaveSuccess(''); }
     setTimeout(() => { setSaveSuccess(''); setSaveError(''); }, 3500);
+  };
+
+  const showOrderToast = (msg: string, type: 'success' | 'error') => {
+    if (type === 'success') { setOrderSuccess(msg); setOrderError(''); }
+    else { setOrderError(msg); setOrderSuccess(''); }
+    setTimeout(() => { setOrderSuccess(''); setOrderError(''); }, 3500);
+  };
+
+  // ── Fetch orders ─────────────────────────────────────────────
+  const fetchOrders = useCallback(async (page = 1, statusFilter = orderStatusFilter) => {
+    setOrderLoading(true);
+    try {
+      const params: Record<string, string | number> = { per_page: 5, page };
+      if (statusFilter) params.status = statusFilter;
+      const res = await axiosInstance.get('/client/orders', { params });
+      const payload = res.data;
+      const list: ClientOrder[] = payload?.data?.data ?? payload?.data ?? [];
+      const meta = payload?.data?.meta ?? payload?.meta ?? {};
+      setOrders(list);
+      setOrderTotal(meta.total ?? list.length);
+      setOrderPage(page);
+    } catch {
+      showOrderToast('Không thể tải danh sách đơn hàng', 'error');
+    } finally {
+      setOrderLoading(false);
+    }
+  }, [orderStatusFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'orders') fetchOrders(1);
+  }, [activeTab, fetchOrders]);
+
+  // ── Fetch order detail ────────────────────────────────────────
+  const openOrderDetail = async (order: ClientOrder) => {
+    setSelectedOrder(order);
+    setDetailLoading(true);
+    try {
+      const res = await axiosInstance.get(`/client/orders/${order.id}`);
+      const d: ClientOrder = res.data?.data ?? res.data;
+      setSelectedOrder(d);
+    } catch { /* keep list data */ }
+    finally { setDetailLoading(false); }
+  };
+
+  // ── Cancel order ─────────────────────────────────────────────
+  const handleCancelOrder = async () => {
+    if (!cancelModalOrder) return;
+    setCancelLoading(true);
+    try {
+      await axiosInstance.post(`/client/orders/${cancelModalOrder.id}/cancel`, {
+        reason: cancelReason || 'Khách hàng tự hủy.',
+      });
+      showOrderToast('Đã hủy đơn hàng thành công!', 'success');
+      setCancelModalOrder(null);
+      setCancelReason('');
+      fetchOrders(orderPage);
+      if (selectedOrder?.id === cancelModalOrder.id) {
+        openOrderDetail(cancelModalOrder);
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Không thể hủy đơn hàng';
+      showOrderToast(msg, 'error');
+    } finally {
+      setCancelLoading(false);
+    }
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -433,6 +575,151 @@ const ProfilePage: React.FC = () => {
           font-weight: 600;
         }
         .gender-radio-label:hover { border-color: #0d6efd33; }
+
+        /* ── Orders tab ── */
+        .orders-filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+        .order-filter-btn {
+          border:2px solid #eaecf0; background:#f8f9fc; color:#5a6275;
+          border-radius:20px; padding:5px 14px; font-size:12px; font-weight:600;
+          cursor:pointer; transition:all 0.2s;
+        }
+        .order-filter-btn:hover { border-color:#0d6efd44; color:#0d6efd; }
+        .order-filter-btn.active { background:#0d6efd; border-color:#0d6efd; color:#fff; }
+
+        .order-card {
+          border:1.5px solid #eaecf0; border-radius:14px; margin-bottom:14px;
+          background:#fff; transition:box-shadow 0.2s;
+          overflow:hidden;
+        }
+        .order-card:hover { box-shadow:0 4px 20px rgba(13,110,253,0.1); border-color:#0d6efd33; }
+        .order-card-head {
+          display:flex; justify-content:space-between; align-items:center;
+          padding:12px 18px; background:#f8f9fc; border-bottom:1px solid #eaecf0;
+          flex-wrap:wrap; gap:8px;
+        }
+        .order-code { font-size:13px; font-weight:700; color:#2d3748; }
+        .order-date { font-size:11px; color:#8590a3; }
+        .order-status-badge {
+          display:inline-flex; align-items:center; gap:5px;
+          padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;
+        }
+        .order-card-body { padding:14px 18px; }
+        .order-items-preview { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+        .order-item-img {
+          width:48px; height:48px; object-fit:cover; border-radius:8px;
+          border:1px solid #eaecf0; background:#f1f3f7; flex-shrink:0;
+        }
+        .order-item-img-placeholder {
+          width:48px; height:48px; border-radius:8px; border:1px solid #eaecf0;
+          background:#f1f3f7; display:flex; align-items:center; justify-content:center;
+          color:#adb5bd; font-size:18px; flex-shrink:0;
+        }
+        .order-card-foot {
+          display:flex; justify-content:space-between; align-items:center;
+          padding:10px 18px; border-top:1px solid #f0f2f7; gap:10px; flex-wrap:wrap;
+        }
+        .order-total { font-size:15px; font-weight:700; color:#0d6efd; }
+        .order-actions { display:flex; gap:8px; }
+        .btn-order-detail {
+          background:#fff; border:1.5px solid #0d6efd; color:#0d6efd;
+          border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600;
+          cursor:pointer; transition:all 0.2s;
+        }
+        .btn-order-detail:hover { background:#0d6efd; color:#fff; }
+        .btn-order-cancel {
+          background:#fff5f5; border:1.5px solid #dc3545; color:#dc3545;
+          border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600;
+          cursor:pointer; transition:all 0.2s;
+        }
+        .btn-order-cancel:hover { background:#dc3545; color:#fff; }
+        .btn-order-cancel:disabled { opacity:0.45; cursor:not-allowed; }
+
+        /* Order detail panel */
+        .order-detail-panel {
+          background:#fff; border-radius:16px; border:1.5px solid #eaecf0;
+          padding:22px; margin-top:4px;
+        }
+        .order-detail-items .od-item {
+          display:flex; gap:12px; align-items:flex-start;
+          padding:10px 0; border-bottom:1px solid #f0f2f7;
+        }
+        .order-detail-items .od-item:last-child { border-bottom:none; }
+        .od-item-info { flex:1; }
+        .od-item-name { font-size:13px; font-weight:600; color:#2d3748; }
+        .od-item-sku { font-size:11px; color:#8590a3; margin-top:1px; }
+        .od-item-price { font-size:13px; font-weight:700; color:#0d6efd; white-space:nowrap; }
+
+        .order-timeline { list-style:none; padding:0; margin:0; }
+        .order-timeline li {
+          position:relative; padding:0 0 14px 26px;
+          font-size:12px; color:#5a6275;
+        }
+        .order-timeline li::before {
+          content:''; position:absolute; left:7px; top:7px;
+          bottom:-1px; width:2px; background:#e5e7eb;
+        }
+        .order-timeline li:last-child::before { display:none; }
+        .order-timeline li::after {
+          content:''; position:absolute; left:4px; top:4px;
+          width:8px; height:8px; border-radius:50%;
+          background:#0d6efd; border:2px solid #fff;
+          box-shadow:0 0 0 2px #0d6efd44;
+        }
+        .tl-label { font-weight:600; color:#2d3748; }
+        .tl-time { color:#adb5bd; font-size:11px; margin-top:2px; }
+        .tl-note { color:#8590a3; font-style:italic; }
+
+        /* Overlay modal */
+        .cancel-overlay {
+          position:fixed; inset:0; background:rgba(0,0,0,0.45);
+          display:flex; align-items:center; justify-content:center; z-index:9999;
+          animation:fadeIn 0.15s ease;
+        }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        .cancel-modal {
+          background:#fff; border-radius:20px; padding:28px; width:420px;
+          max-width:92vw; box-shadow:0 20px 60px rgba(0,0,0,0.18);
+          animation:slideUp 0.2s ease;
+        }
+        @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+        .cancel-modal h6 { font-size:16px; font-weight:700; color:#1a1d23; margin:0 0 6px; }
+        .cancel-modal p { font-size:13px; color:#6c757d; margin:0 0 16px; }
+        .cancel-textarea {
+          width:100%; border:2px solid #eaecf0; border-radius:10px;
+          padding:10px 12px; font-size:13px; resize:vertical;
+          min-height:80px; outline:none; transition:border-color 0.2s;
+          font-family:inherit; background:#f8f9fc; box-sizing:border-box;
+        }
+        .cancel-textarea:focus { border-color:#dc3545; background:#fff; }
+        .cancel-modal-btns { display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
+        .btn-cancel-cancel {
+          background:#f8f9fa; border:1.5px solid #dee2e6; color:#5a6275;
+          border-radius:8px; padding:9px 20px; font-size:13px; font-weight:600;
+          cursor:pointer; transition:all 0.2s;
+        }
+        .btn-cancel-cancel:hover { background:#e9ecef; }
+        .btn-cancel-confirm {
+          background:linear-gradient(135deg,#dc3545,#b02a37);
+          border:none; color:#fff; border-radius:8px;
+          padding:9px 20px; font-size:13px; font-weight:600;
+          cursor:pointer; transition:all 0.2s;
+        }
+        .btn-cancel-confirm:disabled { opacity:0.65; cursor:not-allowed; }
+        .order-empty {
+          text-align:center; padding:50px 20px; color:#adb5bd;
+        }
+        .order-empty i { font-size:48px; margin-bottom:12px; display:block; }
+        .order-pagination { display:flex; justify-content:center; gap:6px; margin-top:16px; }
+        .order-page-btn {
+          width:34px; height:34px; border-radius:8px;
+          border:1.5px solid #eaecf0; background:#fff;
+          font-size:13px; font-weight:600; color:#5a6275;
+          cursor:pointer; transition:all 0.2s;
+          display:flex; align-items:center; justify-content:center;
+        }
+        .order-page-btn:hover { border-color:#0d6efd; color:#0d6efd; }
+        .order-page-btn.active { background:#0d6efd; border-color:#0d6efd; color:#fff; }
+        .order-page-btn:disabled { opacity:0.4; cursor:not-allowed; }
       `}</style>
 
       <div className="profile-page">
@@ -504,6 +791,15 @@ const ProfilePage: React.FC = () => {
                     >
                       <i className="fas fa-lock" />
                       Đổi mật khẩu
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className={`sidebar-nav-btn ${activeTab === 'orders' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('orders')}
+                    >
+                      <i className="fas fa-shopping-bag" />
+                      Đơn hàng của tôi
                     </button>
                   </li>
                   <li>
@@ -818,11 +1114,330 @@ const ProfilePage: React.FC = () => {
                   </>
                 )}
 
+                {/* ── Tab: Đơn hàng ── */}
+                {activeTab === 'orders' && (
+                  <>
+                    <div className="profile-card-header">
+                      <h5><i className="fas fa-shopping-bag me-2 text-primary" style={{ fontSize:'16px' }} />Đơn hàng của tôi</h5>
+                      <p>Theo dõi và quản lý tất cả đơn hàng bạn đã đặt</p>
+                    </div>
+                    <div className="profile-card-body">
+
+                      {/* Toasts */}
+                      {orderSuccess && <div className="pf-toast success"><i className="fas fa-check-circle" />{orderSuccess}</div>}
+                      {orderError   && <div className="pf-toast error"><i className="fas fa-exclamation-circle" />{orderError}</div>}
+
+                      {/* Filter bar */}
+                      <div className="orders-filter-bar">
+                        {[{ key:'', label:'Tất cả' }, ...Object.entries(ORDER_STATUS_CFG).map(([k,v]) => ({ key:k, label:v.label }))]
+                          .map(f => (
+                            <button
+                              key={f.key}
+                              className={`order-filter-btn ${orderStatusFilter === f.key ? 'active' : ''}`}
+                              onClick={() => { setOrderStatusFilter(f.key); fetchOrders(1, f.key); }}
+                            >{f.label}</button>
+                          ))}
+                      </div>
+
+                      {/* Loading */}
+                      {orderLoading ? (
+                        <div style={{ textAlign:'center', padding:'40px 0' }}>
+                          <span className="spinner-border text-primary" />
+                        </div>
+                      ) : orders.length === 0 ? (
+                        <div className="order-empty">
+                          <i className="fas fa-box-open" />
+                          <div style={{ fontWeight:600, fontSize:15, color:'#5a6275' }}>Chưa có đơn hàng nào</div>
+                          <div style={{ fontSize:13, marginTop:4 }}>Hãy khám phá các sản phẩm và đặt hàng ngay!</div>
+                          <Link to="/" style={{ display:'inline-block', marginTop:14 }}>
+                            <button className="btn-pf-save" style={{ padding:'10px 24px', fontSize:13 }}>
+                              <i className="fas fa-shopping-cart me-2" />Mua sắm ngay
+                            </button>
+                          </Link>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Two-column layout on large screen */}
+                          <div className={selectedOrder ? 'row g-3' : ''}>
+                            <div className={selectedOrder ? 'col-lg-5' : ''}>
+                              {orders.map(order => {
+                                const cfg = ORDER_STATUS_CFG[order.status] ?? { color:'#64748b', bg:'#f8fafc', label: order.status, icon:'fa-circle' };
+                                return (
+                                  <div key={order.id} className="order-card">
+                                    <div className="order-card-head">
+                                      <div>
+                                        <div className="order-code">#{order.order_code}</div>
+                                        <div className="order-date">{order.created_at}</div>
+                                      </div>
+                                      <span className="order-status-badge" style={{ color: cfg.color, background: cfg.bg }}>
+                                        <i className={`fas ${cfg.icon}`} />{cfg.label}
+                                      </span>
+                                    </div>
+                                    <div className="order-card-body">
+                                      <div className="order-items-preview">
+                                        {(order.items ?? []).slice(0, 4).map((item, i) =>
+                                          item.product_image
+                                            ? <img key={i} src={item.product_image} alt={item.product_name} className="order-item-img" />
+                                            : <div key={i} className="order-item-img-placeholder"><i className="fas fa-box" /></div>
+                                        )}
+                                        {(order.items?.length ?? 0) > 4 && (
+                                          <div className="order-item-img-placeholder" style={{ fontSize:12, fontWeight:700 }}>
+                                            +{(order.items?.length ?? 0) - 4}
+                                          </div>
+                                        )}
+                                      </div>
+                                      {order.cancelled_reason && (
+                                        <div style={{ fontSize:12, color:'#b91c1c', marginTop:4 }}>
+                                          <i className="fas fa-info-circle me-1" />Lý do: {order.cancelled_reason}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="order-card-foot">
+                                      <span className="order-total">{formatVND(order.total_amount)}</span>
+                                      <div className="order-actions">
+                                        <button
+                                          className="btn-order-detail"
+                                          onClick={() => openOrderDetail(order)}
+                                        >
+                                          <i className="fas fa-eye me-1" />Chi tiết
+                                        </button>
+                                        {canCancel(order.status) && (
+                                          <button
+                                            className="btn-order-cancel"
+                                            onClick={() => { setCancelModalOrder(order); setCancelReason(''); }}
+                                          >
+                                            <i className="fas fa-times me-1" />Hủy đơn
+                                          </button>
+                                        )}
+                                        {['confirmed','processing','shipping'].includes(order.status) && (
+                                          <span style={{ fontSize:11, color:'#8590a3', alignSelf:'center' }}>
+                                            <i className="fas fa-lock me-1" />Không thể hủy
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {/* Pagination */}
+                              {orderTotal > 5 && (
+                                <div className="order-pagination">
+                                  <button
+                                    className="order-page-btn"
+                                    disabled={orderPage <= 1}
+                                    onClick={() => fetchOrders(orderPage - 1)}
+                                  ><i className="fas fa-chevron-left" /></button>
+                                  {Array.from({ length: Math.ceil(orderTotal / 5) }, (_, i) => i + 1).map(p => (
+                                    <button
+                                      key={p}
+                                      className={`order-page-btn ${p === orderPage ? 'active' : ''}`}
+                                      onClick={() => fetchOrders(p)}
+                                    >{p}</button>
+                                  ))}
+                                  <button
+                                    className="order-page-btn"
+                                    disabled={orderPage >= Math.ceil(orderTotal / 5)}
+                                    onClick={() => fetchOrders(orderPage + 1)}
+                                  ><i className="fas fa-chevron-right" /></button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Detail panel */}
+                            {selectedOrder && (
+                              <div className="col-lg-7">
+                                <div className="order-detail-panel">
+                                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                                    <div>
+                                      <div style={{ fontWeight:700, fontSize:15, color:'#1a1d23' }}>#{selectedOrder.order_code}</div>
+                                      <div style={{ fontSize:12, color:'#8590a3' }}>{selectedOrder.created_at}</div>
+                                    </div>
+                                    <button
+                                      style={{ background:'none', border:'none', cursor:'pointer', color:'#8590a3', fontSize:18 }}
+                                      onClick={() => setSelectedOrder(null)}
+                                    ><i className="fas fa-times" /></button>
+                                  </div>
+
+                                  {detailLoading ? (
+                                    <div style={{ textAlign:'center', padding:30 }}><span className="spinner-border text-primary" /></div>
+                                  ) : (
+                                    <>
+                                      {/* Shipping */}
+                                      <div style={{ background:'#f8f9fc', borderRadius:10, padding:'12px 14px', marginBottom:14 }}>
+                                        <div style={{ fontSize:12, fontWeight:700, color:'#3d4555', marginBottom:8 }}>
+                                          <i className="fas fa-map-marker-alt me-2 text-primary" />Địa chỉ giao hàng
+                                        </div>
+                                        <div style={{ fontSize:13, fontWeight:600 }}>{selectedOrder.shipping?.fullname}</div>
+                                        <div style={{ fontSize:12, color:'#6c757d' }}>{selectedOrder.shipping?.phone}</div>
+                                        <div style={{ fontSize:12, color:'#6c757d', marginTop:2 }}>
+                                          {[selectedOrder.shipping?.address, selectedOrder.shipping?.ward, selectedOrder.shipping?.district, selectedOrder.shipping?.province].filter(Boolean).join(', ')}
+                                        </div>
+                                      </div>
+
+                                      {/* Items */}
+                                      {selectedOrder.items && selectedOrder.items.length > 0 && (
+                                        <div className="order-detail-items" style={{ marginBottom:14 }}>
+                                          <div style={{ fontSize:12, fontWeight:700, color:'#3d4555', marginBottom:8 }}>
+                                            <i className="fas fa-box me-2 text-primary" />Sản phẩm ({selectedOrder.items.length})
+                                          </div>
+                                          {selectedOrder.items.map((item, i) => (
+                                            <div key={i} className="od-item">
+                                              {item.product_image
+                                                ? <img src={item.product_image} alt={item.product_name} className="order-item-img" />
+                                                : <div className="order-item-img-placeholder"><i className="fas fa-box" /></div>
+                                              }
+                                              <div className="od-item-info">
+                                                <div className="od-item-name">{item.product_name}</div>
+                                                {item.product_sku && <div className="od-item-sku">SKU: {item.product_sku}</div>}
+                                                {item.variant_info && Object.entries(item.variant_info).map(([k,v]) => (
+                                                  <span key={k} style={{ fontSize:11, background:'#eaecf0', borderRadius:10, padding:'1px 7px', marginRight:4 }}>{k}: {v}</span>
+                                                ))}
+                                                <div style={{ fontSize:12, color:'#8590a3', marginTop:3 }}>
+                                                  {formatVND(item.price)} × {item.quantity}
+                                                </div>
+                                              </div>
+                                              <div className="od-item-price">{formatVND(item.total)}</div>
+                                            </div>
+                                          ))}
+                                          {/* Tổng */}
+                                          <div style={{ background:'#f0f4ff', borderRadius:10, padding:'10px 14px', marginTop:10 }}>
+                                            {selectedOrder.discount_amount > 0 && (
+                                              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:4 }}>
+                                                <span style={{ color:'#6c757d' }}>Giảm giá</span>
+                                                <span style={{ color:'#16a34a' }}>– {formatVND(selectedOrder.discount_amount)}</span>
+                                              </div>
+                                            )}
+                                            {selectedOrder.voucher_code && (
+                                              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:4 }}>
+                                                <span style={{ color:'#6c757d' }}>Voucher ({selectedOrder.voucher_code})</span>
+                                                <span style={{ color:'#16a34a' }}>– {formatVND(selectedOrder.voucher_discount ?? 0)}</span>
+                                              </div>
+                                            )}
+                                            {selectedOrder.shipping_fee > 0 && (
+                                              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:4 }}>
+                                                <span style={{ color:'#6c757d' }}>Phí giao hàng</span>
+                                                <span>{formatVND(selectedOrder.shipping_fee)}</span>
+                                              </div>
+                                            )}
+                                            <div style={{ display:'flex', justifyContent:'space-between', fontWeight:700, fontSize:14, borderTop:'1px solid #dde3f2', paddingTop:8, marginTop:4 }}>
+                                              <span>Tổng cộng</span>
+                                              <span style={{ color:'#0d6efd' }}>{formatVND(selectedOrder.total_amount)}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Payment & status */}
+                                      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14 }}>
+                                        {(() => {
+                                          const cfg = ORDER_STATUS_CFG[selectedOrder.status] ?? { color:'#64748b', bg:'#f8fafc', label:selectedOrder.status, icon:'fa-circle' };
+                                          return (
+                                            <span className="order-status-badge" style={{ color:cfg.color, background:cfg.bg }}>
+                                              <i className={`fas ${cfg.icon}`} />{cfg.label}
+                                            </span>
+                                          );
+                                        })()}
+                                        {(() => {
+                                          const pc = PAYMENT_STATUS_CFG[selectedOrder.payment_status] ?? { color:'#6b7280', label: selectedOrder.payment_status };
+                                          return (
+                                            <span style={{ fontSize:11, fontWeight:700, color:pc.color, background:'#f8f9fa', border:`1.5px solid ${pc.color}44`, borderRadius:20, padding:'4px 10px' }}>
+                                              {pc.label}
+                                            </span>
+                                          );
+                                        })()}
+                                        {selectedOrder.tracking_code && (
+                                          <span style={{ fontSize:11, color:'#5a6275', background:'#f0f4ff', border:'1.5px solid #d0dcff', borderRadius:20, padding:'4px 10px' }}>
+                                            <i className="fas fa-truck me-1" />{selectedOrder.tracking_code}
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {/* Cancel button in detail */}
+                                      {canCancel(selectedOrder.status) && (
+                                        <button
+                                          className="btn-order-cancel"
+                                          style={{ width:'100%', marginBottom:14 }}
+                                          onClick={() => { setCancelModalOrder(selectedOrder); setCancelReason(''); }}
+                                        >
+                                          <i className="fas fa-times-circle me-2" />Hủy đơn hàng này
+                                        </button>
+                                      )}
+
+                                      {/* Status history timeline */}
+                                      {selectedOrder.status_history && selectedOrder.status_history.length > 0 && (
+                                        <div>
+                                          <div style={{ fontSize:12, fontWeight:700, color:'#3d4555', marginBottom:10 }}>
+                                            <i className="fas fa-history me-2 text-primary" />Lịch sử trạng thái
+                                          </div>
+                                          <ul className="order-timeline">
+                                            {selectedOrder.status_history.map((h, i) => {
+                                              const toCfg = ORDER_STATUS_CFG[h.to];
+                                              return (
+                                                <li key={i}>
+                                                  <span className="tl-label">
+                                                    {ORDER_STATUS_CFG[h.from]?.label ?? h.from} → {toCfg?.label ?? h.to}
+                                                  </span>
+                                                  {h.note && <div className="tl-note">{h.note}</div>}
+                                                  <div className="tl-time">{h.created_at}</div>
+                                                </li>
+                                              );
+                                            })}
+                                          </ul>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </>
+                )}
+
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── Cancel Confirmation Modal ── */}
+      {cancelModalOrder && (
+        <div className="cancel-overlay" onClick={(e) => { if (e.target === e.currentTarget) setCancelModalOrder(null); }}>
+          <div className="cancel-modal">
+            <h6><i className="fas fa-exclamation-triangle me-2" style={{ color:'#dc3545' }} />Xác nhận hủy đơn hàng</h6>
+            <p>Đơn hàng <strong>#{cancelModalOrder.order_code}</strong> sẽ bị hủy và không thể khôi phục. Hàng sẽ được hoàn lại tồn kho.</p>
+            <textarea
+              className="cancel-textarea"
+              placeholder="Lý do hủy (không bắt buộc)..."
+              value={cancelReason}
+              onChange={e => setCancelReason(e.target.value)}
+            />
+            <div className="cancel-modal-btns">
+              <button
+                className="btn-cancel-cancel"
+                onClick={() => setCancelModalOrder(null)}
+                disabled={cancelLoading}
+              >
+                Không hủy
+              </button>
+              <button
+                className="btn-cancel-confirm"
+                onClick={handleCancelOrder}
+                disabled={cancelLoading}
+              >
+                {cancelLoading
+                  ? <><span className="spinner-border spinner-border-sm me-2" />Đang hủy...</>
+                  : <><i className="fas fa-times-circle me-2" />Xác nhận hủy</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
