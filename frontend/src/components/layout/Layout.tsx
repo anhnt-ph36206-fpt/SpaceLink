@@ -4,6 +4,7 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import BackToTop from '../common/BackToTop';
 import Spinner from '../common/Spinner';
+import CompareBar from '../common/CompareBar';
 
 interface LayoutProps {
     children: ReactNode;
@@ -20,6 +21,7 @@ const Layout: React.FC<LayoutProps> = ({ children, showSpinner = false }) => {
             <main>{children}</main>
             <Footer />
             <BackToTop />
+            <CompareBar />
         </>
     );
 };
