@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { CompareProvider } from './context/CompareContext';
 import PrivateRoute from './components/layout/PrivateRoute';
 import Layout from './components/layout/Layout';
 import AdminLayout from './components/admin/AdminLayout';
@@ -28,6 +29,7 @@ import AdminAttributeGroupPage from "./pages/admin/attribute-groups/AdminAttribu
 import AdminBrandPage from './pages/admin/brands/AdminBrandPage';
 import AdminBannerPage from './pages/admin/banners/AdminBannerPage';
 import SearchPage from './components/home/SearchPage';
+import ComparePage from './pages/ComparePage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -43,49 +45,52 @@ function App() {
         <BrowserRouter>
             <AuthProvider>
                 <CartProvider>
-                    <ToastContainer position="top-right" autoClose={3000} />
-                    <Routes>
+                    <CompareProvider>
+                        <ToastContainer position="top-right" autoClose={3000} />
+                        <Routes>
 
-                        {/* ADMIN */}
-                        <Route path="/admin" element={<AdminLayout />}>
-                            <Route index element={<AdminDashboardPage />} />
-                            <Route path="categories" element={<AdminCategoryPage />} />
-                            <Route path="brands" element={<AdminBrandPage />} />
-                            <Route path="banners" element={<AdminBannerPage />} />
-                            <Route path="attribute-groups" element={<AdminAttributeGroupPage />} />
+                            {/* ADMIN */}
+                            <Route path="/admin" element={<AdminLayout />}>
+                                <Route index element={<AdminDashboardPage />} />
+                                <Route path="categories" element={<AdminCategoryPage />} />
+                                <Route path="brands" element={<AdminBrandPage />} />
+                                <Route path="banners" element={<AdminBannerPage />} />
+                                <Route path="attribute-groups" element={<AdminAttributeGroupPage />} />
 
-                            <Route path="products">
-                                <Route index element={<ProductList />} />
-                                <Route path="create" element={<ProductCreate />} />
-                                <Route path="edit/:id" element={<ProductEdit />} />
-                                <Route path="detail/:id" element={<ProductDetail />} />
+                                <Route path="products">
+                                    <Route index element={<ProductList />} />
+                                    <Route path="create" element={<ProductCreate />} />
+                                    <Route path="edit/:id" element={<ProductEdit />} />
+                                    <Route path="detail/:id" element={<ProductDetail />} />
+                                </Route>
+
+                                <Route path="orders" element={<AdminOrderPage />} />
+                                <Route path="users" element={<AdminUserPage />} />
                             </Route>
 
-                            <Route path="orders" element={<AdminOrderPage />} />
-                            <Route path="users" element={<AdminUserPage />} />
-                        </Route>
-
-                        {/* Public routes */}
-                        <Route element={<PublicRoot />}>
-                            <Route path="/" element={<HomePage />} />
-                            <Route path="/shop" element={<ShopPage />} />
-                            <Route path="/product/:id" element={<ProductDetailPage />} />
-                            <Route path="/cart" element={<CartPage />} />
-                            <Route element={<PrivateRoute />}>
-                                <Route path="/checkout" element={<CheckoutPage />} />
-                                <Route path="/order/success/:orderCode" element={<OrderSuccessPage />} />
-                                <Route path="/profile" element={<ProfilePage />} />
+                            {/* Public routes */}
+                            <Route element={<PublicRoot />}>
+                                <Route path="/" element={<HomePage />} />
+                                <Route path="/shop" element={<ShopPage />} />
+                                <Route path="/product/:id" element={<ProductDetailPage />} />
+                                <Route path="/cart" element={<CartPage />} />
+                                <Route element={<PrivateRoute />}>
+                                    <Route path="/checkout" element={<CheckoutPage />} />
+                                    <Route path="/order/success/:orderCode" element={<OrderSuccessPage />} />
+                                    <Route path="/profile" element={<ProfilePage />} />
+                                </Route>
+                                <Route path="/bestseller" element={<BestsellerPage />} />
+                                <Route path="/contact" element={<ContactPage />} />
+                                <Route path="/search" element={<SearchPage />} />
+                                <Route path="/compare" element={<ComparePage />} />
+                                <Route path="*" element={<NotFoundPage />} />
                             </Route>
-                            <Route path="/bestseller" element={<BestsellerPage />} />
-                            <Route path="/contact" element={<ContactPage />} />
-                            <Route path="/search" element={<SearchPage />} />
-                            <Route path="*" element={<NotFoundPage />} />
-                        </Route>
 
-                        <Route path="/login" element={<LoginPage />} />
-                        <Route path="/register" element={<RegisterPage />} />
+                            <Route path="/login" element={<LoginPage />} />
+                            <Route path="/register" element={<RegisterPage />} />
 
-                    </Routes>
+                        </Routes>
+                    </CompareProvider>
                 </CartProvider>
             </AuthProvider>
         </BrowserRouter>
