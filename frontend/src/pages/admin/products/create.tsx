@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
     Form, Input, InputNumber, Switch, Button, Row, Col,
     Typography, Select, Card, Tabs, Tag, Space, Divider,
-    Popconfirm, Table, Tooltip, Upload, Modal, TreeSelect,
+    Popconfirm, Table, Tooltip, Upload, Modal, TreeSelect, Alert,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -10,6 +10,7 @@ import {
     ArrowLeftOutlined, LinkOutlined,
     PictureOutlined, TagsOutlined, UploadOutlined, CloseCircleOutlined
 } from '@ant-design/icons';
+import MDEditor from '@uiw/react-md-editor';
 import { axiosInstance } from '../../../api/axios';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -86,6 +87,9 @@ const ProductCreate: React.FC = () => {
     // Gallery
     const [gallery, setGallery] = useState<GalleryImage[]>([]);
 
+    // MDEditor content
+    const [contentValue, setContentValue] = useState<string>('');
+
     // Variant builder
     const [selectedAttrs, setSelectedAttrs] = useState<SelectedAttr[]>([]);
     const [variants, setVariants] = useState<VariantRow[]>([]);
@@ -144,9 +148,9 @@ const ProductCreate: React.FC = () => {
         const load = async () => {
             try {
                 const [catRes, brandRes, attrRes] = await Promise.all([
-                    axiosInstance.get(`${categoryPrefix}`),
-                    axiosInstance.get(`${brandPrefix}`),
-                    axiosInstance.get(`${attributeGroupPrefix}`),
+                    axiosInstance.get(`${categoryPrefix}`, { params: { all: 1 } }),
+                    axiosInstance.get(`${brandPrefix}`, { params: { all: 1 } }),
+                    axiosInstance.get(`${attributeGroupPrefix}`, { params: { all: 1 } }),
                 ]);
                 const buildTree = (data: any[]) => {
                     const map = new Map<number, any>();
@@ -294,6 +298,21 @@ const ProductCreate: React.FC = () => {
     const handleSubmit = async () => {
         try {
             const values = await form.validateFields();
+
+            // Validate: tổng SL biến thể = SL tồn kho (nếu có biến thể)
+            if (variants.length > 0) {
+                const totalStock = Number(values.quantity) || 0;
+                const totalVariantQty = variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
+                if (totalVariantQty !== totalStock) {
+                    toast.error(
+                        `Tổng số lượng biến thể (${totalVariantQty}) phải bằng số lượng tồn kho (${totalStock}). Vui lòng kiểm tra lại!`,
+                        { autoClose: 5000 }
+                    );
+                    setActiveTab('variants');
+                    return;
+                }
+            }
+
             setSubmitting(true);
 
             // Gửi 1 FormData duy nhất chứa: product fields + images[] + variants[]
@@ -301,9 +320,12 @@ const ProductCreate: React.FC = () => {
 
             // ── Product fields ──
             Object.entries(values).forEach(([key, val]) => {
+                if (key === 'content') return; // handled separately
                 if (val === null || val === undefined) return;
                 fd.append(key, typeof val === 'boolean' ? (val ? '1' : '0') : String(val));
             });
+            // Append markdown content
+            fd.append('content', contentValue || '');
 
             // ── Gallery images ──
             gallery.forEach((img, index) => {
@@ -509,8 +531,15 @@ const ProductCreate: React.FC = () => {
                             <Form.Item name="description" label="Mô tả ngắn">
                                 <TextArea rows={3} placeholder="Mô tả ngắn gọn về sản phẩm..." />
                             </Form.Item>
-                            <Form.Item name="content" label="Nội dung chi tiết">
-                                <TextArea rows={6} placeholder="Nội dung chi tiết, thông số kỹ thuật..." />
+                            <Form.Item label="Nội dung chi tiết (Markdown)">
+                                <div data-color-mode="light">
+                                    <MDEditor
+                                        value={contentValue}
+                                        onChange={v => setContentValue(v || '')}
+                                        height={300}
+                                        preview="live"
+                                    />
+                                </div>
                             </Form.Item>
                         </Card>
                         <Card title="SEO">
@@ -538,7 +567,15 @@ const ProductCreate: React.FC = () => {
                                     addonAfter="₫"
                                 />
                             </Form.Item>
-                            <Form.Item name="quantity" label="Số lượng tồn kho">
+                            <Form.Item
+                                name="quantity"
+                                label="Số lượng tồn kho"
+                                rules={[{ required: true, message: 'Nhập số lượng tồn kho' }]}
+                                extra={variants.length > 0
+                                    ? `Tổng biến thể: ${variants.reduce((s, v) => s + (v.quantity || 0), 0)} / ${form.getFieldValue('quantity') ?? 0}`
+                                    : undefined
+                                }
+                            >
                                 <InputNumber style={{ width: '100%' }} min={0} />
                             </Form.Item>
                         </Card>
@@ -731,7 +768,24 @@ const ProductCreate: React.FC = () => {
                         ) : (
                             <>
                                 <div style={{ marginBottom: 8 }}>
-                                    <Text type="secondary">
+                                    {(() => {
+                                        const totalStock = form.getFieldValue('quantity') ?? 0;
+                                        const totalVariantQty = variants.reduce((s, v) => s + (v.quantity || 0), 0);
+                                        const match = totalVariantQty === Number(totalStock);
+                                        return (
+                                            <Alert
+                                                type={match ? 'success' : 'warning'}
+                                                showIcon
+                                                style={{ marginBottom: 8 }}
+                                                message={
+                                                    match
+                                                        ? `✓ Tổng số lượng biến thể khớp với tồn kho: ${totalVariantQty}`
+                                                        : `Tổng số lượng biến thể: ${totalVariantQty} / Tồn kho: ${totalStock} — Cần điều chỉnh để khớp`
+                                                }
+                                            />
+                                        );
+                                    })()}
+                                <Text type="secondary">
                                         {variants.length} biến thể · Chỉnh sửa trực tiếp trong bảng
                                     </Text>
                                 </div>

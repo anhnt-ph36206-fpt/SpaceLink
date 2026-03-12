@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import ProductCard from "../components/common/ProductCard";
 import { toast } from "react-toastify";
 import { Spin } from "antd";
+import MDEditor from '@uiw/react-md-editor';
 
 // ─── Types ───────────────────────────────────────────────────────────────
 interface AttrInfo {
@@ -683,15 +684,20 @@ const ProductDetailPage: React.FC = () => {
                     </ul>
 
                     {activeTab === 'desc' && (
-                        <div className="lh-lg text-muted" style={{ whiteSpace: 'pre-wrap' }}>
-                            {product.description || 'Chưa có mô tả.'}
+                        <div data-color-mode="light" style={{ padding: '8px 0' }}>
+                            {product.description
+                                ? <MDEditor.Markdown source={product.description} />
+                                : <p className="text-muted">Chưa có mô tả.</p>
+                            }
                         </div>
                     )}
                     {activeTab === 'content' && (
-                        <div
-                            className="lh-lg"
-                            dangerouslySetInnerHTML={{ __html: product.content || '<p>Chưa có nội dung chi tiết.</p>' }}
-                        />
+                        <div data-color-mode="light" style={{ padding: '8px 0' }}>
+                            {product.content
+                                ? <MDEditor.Markdown source={product.content} />
+                                : <p className="text-muted">Chưa có nội dung chi tiết.</p>
+                            }
+                        </div>
                     )}
                     {activeTab === 'specs' && selectedVariant && (
                         <table className="table table-bordered w-auto">

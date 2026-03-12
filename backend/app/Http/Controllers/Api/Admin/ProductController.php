@@ -51,7 +51,12 @@ class ProductController extends Controller
             $query->where('is_featured', filter_var($request->is_featured, FILTER_VALIDATE_BOOLEAN));
         }
 
-        $perPage = min((int) $request->get('per_page', 15), 100);
+        $perPage = min((int) $request->get('per_page', 10), 100);
+        
+        if ($request->has('all')) {
+            return ProductResource::collection($query->get());
+        }
+
         $products = $query->paginate($perPage);
 
         return ProductResource::collection($products);
@@ -323,4 +328,99 @@ class ProductController extends Controller
             'data'    => new ProductResource($product),
         ]);
     }
+
+    // =========================================================================
+    // PATCH /api/admin/products/{id}/toggle-active — Bật/tắt trạng thái hiển thị
+    // =========================================================================
+    public function toggleActive(string $id): JsonResponse
+    {
+        $product = Product::findOrFail($id);
+        $product->update(['is_active' => !$product->is_active]);
+
+        return response()->json([
+            'status'    => true,
+            'message'   => $product->is_active ? 'Sản phẩm đã được bật.' : 'Sản phẩm đã được tắt.',
+            'is_active' => $product->is_active,
+        ]);
+    }
+
+    // =========================================================================
+    // POST /api/admin/products/bulk-action — Thao tác hàng loạt
+    // =========================================================================
+    public function bulkAction(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $request->validate([
+            'action' => 'required|in:delete,restore,set_active,set_inactive,set_featured,unset_featured,set_variants_active,set_variants_inactive',
+            'ids'    => 'required|array|min:1',
+            'ids.*'  => 'integer|exists:products,id',
+        ]);
+
+        $ids    = $request->ids;
+        $action = $request->action;
+        $count  = count($ids);
+
+        switch ($action) {
+            case 'delete':
+                Product::whereIn('id', $ids)->delete();
+                return response()->json([
+                    'status'  => true,
+                    'message' => "Đã xóa {$count} sản phẩm.",
+                ]);
+
+            case 'restore':
+                Product::withTrashed()->whereIn('id', $ids)->restore();
+                return response()->json([
+                    'status'  => true,
+                    'message' => "Đã khôi phục {$count} sản phẩm.",
+                ]);
+
+            case 'set_active':
+                Product::whereIn('id', $ids)->update(['is_active' => true]);
+                return response()->json([
+                    'status'  => true,
+                    'message' => "Đã bật hiển thị {$count} sản phẩm.",
+                ]);
+
+            case 'set_inactive':
+                Product::whereIn('id', $ids)->update(['is_active' => false]);
+                return response()->json([
+                    'status'  => true,
+                    'message' => "Đã tắt hiển thị {$count} sản phẩm.",
+                ]);
+
+            case 'set_featured':
+                Product::whereIn('id', $ids)->update(['is_featured' => true]);
+                return response()->json([
+                    'status'  => true,
+                    'message' => "Đã đặt {$count} sản phẩm thành nổi bật.",
+                ]);
+
+            case 'unset_featured':
+                Product::whereIn('id', $ids)->update(['is_featured' => false]);
+                return response()->json([
+                    'status'  => true,
+                    'message' => "Đã bỏ nổi bật {$count} sản phẩm.",
+                ]);
+
+            case 'set_variants_active':
+                // Bật tất cả biến thể của các sản phẩm đã chọn
+                \App\Models\ProductVariant::whereIn('product_id', $ids)->update(['is_active' => true]);
+                return response()->json([
+                    'status'  => true,
+                    'message' => "Đã bật tất cả biến thể của {$count} sản phẩm.",
+                ]);
+
+            case 'set_variants_inactive':
+                // Tắt tất cả biến thể của các sản phẩm đã chọn
+                \App\Models\ProductVariant::whereIn('product_id', $ids)->update(['is_active' => false]);
+                return response()->json([
+                    'status'  => true,
+                    'message' => "Đã tắt tất cả biến thể của {$count} sản phẩm.",
+                ]);
+
+            default:
+                return response()->json(['status' => false, 'message' => 'Hành động không hợp lệ.'], 422);
+        }
+    }
 }
+

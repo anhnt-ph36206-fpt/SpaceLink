@@ -167,8 +167,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     Route::apiResource('attribute-groups', AdminAttributeGroupController::class);
 
     // --- Admin Products ---
+    Route::post('products/bulk-action',          [\App\Http\Controllers\Api\Admin\ProductController::class, 'bulkAction']);
+    Route::patch('products/{product}/toggle-active', [\App\Http\Controllers\Api\Admin\ProductController::class, 'toggleActive']);
+    Route::post('products/{product}/restore',    [\App\Http\Controllers\Api\Admin\ProductController::class, 'restore']);
     Route::apiResource('products', \App\Http\Controllers\Api\Admin\ProductController::class);
-    Route::post('products/{product}/restore', [\App\Http\Controllers\Api\Admin\ProductController::class, 'restore']);
 
     // --- Admin Product Variants (nested) ---
     Route::get(    'products/{product}/variants',             [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'index']);

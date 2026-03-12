@@ -10,13 +10,27 @@ use Illuminate\Support\Str;
 
 class BrandController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request)
     {
-        $brands = Brand::orderBy('display_order')->orderBy('name')->get();
-        return response()->json([
-            'status' => true,
-            'data'   => $brands
-        ]);
+        $query = Brand::query();
+
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        if ($request->has('is_active')) {
+            $query->where('is_active', filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN));
+        }
+
+        $query->orderBy('display_order')->orderBy('name');
+
+        $perPage = (int) $request->get('per_page', 10);
+
+        if ($request->has('all')) {
+            return \App\Http\Resources\BrandResource::collection($query->get());
+        }
+
+        return \App\Http\Resources\BrandResource::collection($query->paginate($perPage));
     }
 
     public function store(Request $request): JsonResponse
