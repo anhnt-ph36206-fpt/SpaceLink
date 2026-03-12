@@ -69,6 +69,17 @@ function buildVariantLabel(attrs: any[]): string {
     return attrs.map(a => a.value).join(' / ') || 'Không có thuộc tính';
 }
 
+function hasDuplicateVariants(variantList: VariantRow[]): boolean {
+    const attributeSets = new Set<string>();
+    for (const v of variantList) {
+        // Sort IDs to ensure order doesn't matter (e.g., [1,2] is same as [2,1])
+        const key = [...v.attribute_ids].sort((a, b) => a - b).join(',');
+        if (attributeSets.has(key)) return true;
+        attributeSets.add(key);
+    }
+    return false;
+}
+
 /* ─────────────────────────── Component ─────────────────────────── */const removeAccents = (str: string) => {
     return str.normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -319,6 +330,13 @@ const ProductCreate: React.FC = () => {
     const handleSubmit = async () => {
         try {
             const values = await form.validateFields();
+
+            // Validate duplicate variants
+            if (variants.length > 0 && hasDuplicateVariants(variants)) {
+                toast.error('Có các biến thể bị trùng lặp bộ thuộc tính. Vui lòng kiểm tra lại!');
+                setActiveTab('variants');
+                return;
+            }
 
             // Validate: tổng SL biến thể = SL tồn kho (nếu có biến thể)
             if (variants.length > 0) {

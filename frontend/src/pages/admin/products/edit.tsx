@@ -94,6 +94,17 @@ function buildVariantLabel(attrs: VariantAttr[]): string {
     return attrs.map(a => a.value).join(' / ') || 'Không có thuộc tính';
 }
 
+function hasDuplicateVariants(variantList: VariantRow[]): boolean {
+    const attributeSets = new Set<string>();
+    for (const v of variantList) {
+        if (v._deleted) continue;
+        const key = [...v.attribute_ids].sort((a, b) => a - b).join(',');
+        if (attributeSets.has(key)) return true;
+        attributeSets.add(key);
+    }
+    return false;
+}
+
 const ProductEdit: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [form] = Form.useForm();
@@ -309,6 +320,15 @@ const ProductEdit: React.FC = () => {
 
     const saveExistingVariant = async (row: VariantRow) => {
         if (!row.id) return;
+        
+        // Check duplicate
+        const otherVariants = variants.filter(v => v._key !== row._key && !v._deleted);
+        const currentKey = [...row.attribute_ids].sort((a, b) => a - b).join(',');
+        if (otherVariants.some(v => [...v.attribute_ids].sort((a, b) => a - b).join(',') === currentKey)) {
+            toast.error('Bộ thuộc tính này đã tồn tại ở biến thể khác');
+            return;
+        }
+
         setVariants(prev => prev.map(v => v._key === row._key ? { ...v, _saving: true } : v));
         try {
             const fd = new FormData();
@@ -431,6 +451,14 @@ const ProductEdit: React.FC = () => {
     };
 
     const saveNewVariant = async (row: VariantRow) => {
+        // Check duplicate
+        const otherVariants = variants.filter(v => v._key !== row._key && !v._deleted);
+        const currentKey = [...row.attribute_ids].sort((a, b) => a - b).join(',');
+        if (otherVariants.some(v => [...v.attribute_ids].sort((a, b) => a - b).join(',') === currentKey)) {
+            toast.error('Bộ thuộc tính này đã tồn tại ở biến thể khác');
+            return;
+        }
+
         setVariants(prev => prev.map(v => v._key === row._key ? { ...v, _saving: true } : v));
         try {
             const fd = new FormData();
@@ -467,6 +495,13 @@ const ProductEdit: React.FC = () => {
     const handleSave = async () => {
         try {
             const values = await form.validateFields();
+
+            // Validate duplicate variants
+            if (variants.length > 0 && hasDuplicateVariants(variants)) {
+                toast.error('Có các biến thể bị trùng lặp bộ thuộc tính. Vui lòng kiểm tra lại!');
+                setActiveTab('variants');
+                return;
+            }
 
             // Validate: tổng SL biến thể = SL tồn kho (nếu có biến thể)
             if (variants.length > 0) {
