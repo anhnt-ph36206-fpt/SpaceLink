@@ -65,6 +65,10 @@ function cartesian<T>(arrays: T[][]): T[][] {
     );
 }
 
+function buildVariantLabel(attrs: any[]): string {
+    return attrs.map(a => a.value).join(' / ') || 'Không có thuộc tính';
+}
+
 /* ─────────────────────────── Component ─────────────────────────── */const removeAccents = (str: string) => {
     return str.normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -94,6 +98,9 @@ const ProductCreate: React.FC = () => {
     const [selectedAttrs, setSelectedAttrs] = useState<SelectedAttr[]>([]);
     const [variants, setVariants] = useState<VariantRow[]>([]);
     const [addGroupId, setAddGroupId] = useState<number | null>(null);
+
+    // Attribute groups currently active for this product's variants
+    const [variantGroups, setVariantGroups] = useState<number[]>([]);
 
     // Quick add attribute group
     const [attrModalVisible, setAttrModalVisible] = useState(false);
@@ -214,6 +221,19 @@ const ProductCreate: React.FC = () => {
     };
 
     /* ───────────────── Variant builder helpers ───────────────── */
+    const addGroupToVariants = (groupId: number) => {
+        if (!variantGroups.includes(groupId)) {
+            setVariantGroups(prev => [...prev, groupId]);
+        }
+    };
+
+    const removeGroupFromVariants = (groupId: number) => {
+        setVariantGroups(prev => prev.filter(id => id !== groupId));
+    };
+
+    // Helper to get attribute group object
+    const getGroupById = (id: number) => attrGroups.find(g => g.id === id);
+
     const addAttrGroup = () => {
         if (!addGroupId) return;
         const group = attrGroups.find(g => g.id === addGroupId);
@@ -223,12 +243,13 @@ const ProductCreate: React.FC = () => {
             return;
         }
         setSelectedAttrs(prev => [...prev, { groupId: group.id, groupName: group.display_name || group.name, values: [] }]);
+        addGroupToVariants(group.id); // Also add to active groups
         setAddGroupId(null);
     };
 
     const removeAttrGroup = (groupId: number) => {
         setSelectedAttrs(prev => prev.filter(a => a.groupId !== groupId));
-        setVariants([]);
+        // We don't necessarily remove it from variantGroups here unless user explicitly closes it
     };
 
     const toggleAttrValue = (groupId: number, attr: AttrValue) => {
@@ -376,21 +397,41 @@ const ProductCreate: React.FC = () => {
 
     /* ───────────────── Variants table columns ───────────────── */
     const variantColumns: ColumnsType<VariantRow> = [
-        {
-            title: 'Biến thể',
-            dataIndex: 'label',
-            width: 160,
-            render: (v, r) => (
-                <Input
-                    value={v}
-                    size="small"
-                    onChange={e => updateVariant(r._key, 'label', e.target.value)}
-                />
-            ),
-        },
+        ...variantGroups.map(groupId => {
+            const group = getGroupById(groupId);
+            return {
+                title: group?.display_name || group?.name || 'Thuộc tính',
+                width: 140,
+                render: (_: any, r: VariantRow) => (
+                    <Select
+                        placeholder="Chọn..."
+                        style={{ width: '100%' }}
+                        size="small"
+                        value={r.attribute_ids.find(aid => group?.attributes.some(a => a.id === aid))}
+                        onChange={val => {
+                            const others = r.attribute_ids.filter(aid => !group?.attributes.some(a => a.id === aid));
+                            const nextIds = val ? [...others, val] : others;
+                            updateVariant(r._key, 'attribute_ids', nextIds);
+                            
+                            // Update label automatically
+                            const updatedAttrs: any[] = [];
+                            nextIds.forEach(id => {
+                                for(const g of attrGroups) {
+                                    const found = g.attributes.find(a => a.id === id);
+                                    if(found) updatedAttrs.push(found);
+                                }
+                            });
+                            updateVariant(r._key, 'label', buildVariantLabel(updatedAttrs));
+                        }}
+                        options={group?.attributes.map(a => ({ value: a.id, label: a.value }))}
+                        allowClear
+                    />
+                )
+            };
+        }),
         {
             title: 'SKU',
-            width: 120,
+            width: 150,
             render: (_, r) => (
                 <Input
                     value={r.sku} size="small" placeholder="SKU biến thể"
@@ -656,116 +697,78 @@ const ProductCreate: React.FC = () => {
             label: <span><TagsOutlined />Biến thể ({variants.length})</span>,
             children: (
                 <div>
-                    {/* Step 1: Choose attribute groups */}
                     <Card
-                        title={<>Bước 1 — Chọn nhóm thuộc tính</>}
-                        style={{ marginBottom: 16 }}
+                        title={<><TagsOutlined style={{ color: '#1677ff' }} /> Quản lý biến thể</>}
                         extra={
                             <Space>
-                                <Select
-                                    placeholder="Chọn nhóm thuộc tính..."
-                                    style={{ width: 220 }}
-                                    value={addGroupId}
-                                    onChange={v => setAddGroupId(v)}
-                                    options={attrGroups
-                                        .filter(g => !selectedAttrs.some(a => a.groupId === g.id))
-                                        .map(g => ({ value: g.id, label: g.display_name || g.name }))}
-                                />
-                                <Button type="default" onClick={() => setAttrModalVisible(true)} icon={<PlusOutlined />}>
-                                    Tạo mới
+                                <Button
+                                    type="primary" icon={<PlusOutlined />}
+                                    style={{ background: '#fa8c16', borderColor: '#fa8c16' }}
+                                    onClick={generateVariants}
+                                >
+                                    Tạo tự động
                                 </Button>
-                                <Button type="primary" onClick={addAttrGroup} icon={<PlusOutlined />}>
-                                    Thêm nhóm
+                                <Button icon={<PlusOutlined />} onClick={addManualVariant}>
+                                    Thêm lẻ
                                 </Button>
                             </Space>
                         }
                     >
-                        {selectedAttrs.length === 0 ? (
-                            <Text type="secondary">Chưa chọn nhóm thuộc tính. Hãy chọn và thêm ở góc phải.</Text>
-                        ) : (
-                            <Space direction="vertical" style={{ width: '100%' }}>
-                                {selectedAttrs.map(group => (
-                                    <Card
-                                        key={group.groupId}
-                                        size="small"
-                                        title={<Text strong>{group.groupName}</Text>}
-                                        extra={
-                                            <Button
-                                                danger size="small" type="text"
-                                                icon={<DeleteOutlined />}
-                                                onClick={() => removeAttrGroup(group.groupId)}
-                                            >
-                                                Xóa nhóm
-                                            </Button>
-                                        }
-                                        style={{ background: '#fafafa' }}
-                                    >
-                                        <Space wrap>
-                                            {attrGroups
-                                                .find(g => g.id === group.groupId)
-                                                ?.attributes.map(attr => {
-                                                    const selected = group.values.some(v => v.id === attr.id);
+                        <div style={{ background: '#f0f7ff', border: '1px dashed #1677ff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+                            <Title level={5} style={{ marginBottom: 12 }}>Bộ tạo biến thể</Title>
+                            <Space style={{ marginBottom: 12 }} wrap>
+                                <Select
+                                    placeholder="Chọn nhóm thuộc tính thêm vào..." style={{ width: 300 }}
+                                    value={addGroupId} onChange={v => setAddGroupId(v)}
+                                    options={attrGroups.map(g => ({ 
+                                        value: g.id, 
+                                        label: g.display_name || g.name,
+                                        disabled: selectedAttrs.some(a => a.groupId === g.id)
+                                    }))}
+                                />
+                                <Button type="default" onClick={addAttrGroup} icon={<PlusOutlined />}>Thêm vào bộ sinh</Button>
+                                <Button type="dashed" onClick={() => setAttrModalVisible(true)} icon={<PlusOutlined />}>Tạo nhóm mới</Button>
+                            </Space>
+
+                            <div style={{ marginBottom: 12 }}>
+                                <Text type="secondary">Cấu trúc biến thể hiện tại: </Text>
+                                {variantGroups.length === 0 ? <Tag>Chưa có</Tag> : variantGroups.map(gid => (
+                                    <Tag key={gid} color="blue" closable onClose={() => removeGroupFromVariants(gid)}>
+                                        {getGroupById(gid)?.display_name || getGroupById(gid)?.name}
+                                    </Tag>
+                                ))}
+                            </div>
+
+                            {selectedAttrs.length > 0 && (
+                                <Space direction="vertical" style={{ width: '100%', marginBottom: 12 }}>
+                                    {selectedAttrs.map(group => (
+                                        <Card
+                                            key={group.groupId} size="small"
+                                            title={<Text strong>{group.groupName}</Text>}
+                                            extra={<Button danger size="small" type="text" icon={<DeleteOutlined />} onClick={() => removeAttrGroup(group.groupId)}>Xóa</Button>}
+                                        >
+                                            <Space wrap>
+                                                {attrGroups.find(g => g.id === group.groupId)?.attributes.map(attr => {
+                                                    const sel = group.values.some(v => v.id === attr.id);
                                                     return (
                                                         <Tag
                                                             key={attr.id}
-                                                            color={selected ? 'blue' : 'default'}
-                                                            style={{
-                                                                cursor: 'pointer',
-                                                                borderRadius: 20,
-                                                                padding: '2px 12px',
-                                                                fontSize: 13,
-                                                                border: selected ? '1.5px solid #1677ff' : '1.5px solid #d9d9d9',
-                                                            }}
+                                                            color={sel ? 'blue' : 'default'}
+                                                            style={{ cursor: 'pointer', borderRadius: 20, padding: '2px 12px', border: sel ? '1.5px solid #1677ff' : '1.5px solid #d9d9d9' }}
                                                             onClick={() => toggleAttrValue(group.groupId, attr)}
                                                         >
-                                                            {attr.color_code && (
-                                                                <span style={{
-                                                                    display: 'inline-block',
-                                                                    width: 10, height: 10,
-                                                                    borderRadius: '50%',
-                                                                    background: attr.color_code,
-                                                                    marginRight: 6,
-                                                                    border: '1px solid #ccc',
-                                                                }} />
-                                                            )}
                                                             {attr.value}
                                                         </Tag>
                                                     );
                                                 })}
-                                        </Space>
-                                    </Card>
-                                ))}
-                            </Space>
-                        )}
-                    </Card>
+                                            </Space>
+                                        </Card>
+                                    ))}
+                                </Space>
+                            )}
+                        </div>
 
-                    {/* Step 2: Generate */}
-                    <Card
-                        title={<>Bước 2 — Tạo & quản lý biến thể</>}
-                        style={{ marginBottom: 16 }}
-                        extra={
-                            <Space>
-                                <Button
-                                    type="primary"
-                                    onClick={generateVariants}
-                                    disabled={selectedAttrs.every(a => a.values.length === 0)}
-                                    style={{ background: '#fa8c16', borderColor: '#fa8c16' }}
-                                >
-                                    Tạo biến thể tự động
-                                </Button>
-                                <Button icon={<PlusOutlined />} onClick={addManualVariant}>
-                                    Thêm thủ công
-                                </Button>
-                            </Space>
-                        }
-                    >
-                        {variants.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-                                <TagsOutlined style={{ fontSize: 36, marginBottom: 12 }} />
-                                <div>Chọn thuộc tính ở Bước 1 rồi bấm <strong>"Tạo biến thể tự động"</strong></div>
-                                <div>hoặc bấm <strong>"Thêm thủ công"</strong> để tạo từng biến thể</div>
-                            </div>
-                        ) : (
+                        {variants.length > 0 ? (
                             <>
                                 <div style={{ marginBottom: 8 }}>
                                     {(() => {
@@ -785,7 +788,7 @@ const ProductCreate: React.FC = () => {
                                             />
                                         );
                                     })()}
-                                <Text type="secondary">
+                                    <Text type="secondary">
                                         {variants.length} biến thể · Chỉnh sửa trực tiếp trong bảng
                                     </Text>
                                 </div>
@@ -796,9 +799,13 @@ const ProductCreate: React.FC = () => {
                                     pagination={false}
                                     size="small"
                                     scroll={{ x: 900 }}
-                                    bordered
                                 />
                             </>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                                <TagsOutlined style={{ fontSize: 40, marginBottom: 12 }} />
+                                <div>Chưa có biến thể nào được tạo</div>
+                            </div>
                         )}
                     </Card>
                 </div>
