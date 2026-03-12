@@ -76,9 +76,9 @@ const ProductList: React.FC = () => {
     const [isActive, setIsActive] = useState<string | undefined>();
     const [isFeatured, setIsFeatured] = useState<string | undefined>();
     const [trashed, setTrashed] = useState<boolean>(false);
-    const [perPage] = useState<number>(15);
+    const [perPage] = useState<number>(10);
 
-    const [pagination, setPagination] = useState({ current: 1, total: 0, pageSize: 15 });
+    const [pagination, setPagination] = useState({ current: 1, total: 0, pageSize: 10 });
     const [categoryOptions, setCategoryOptions] = useState<any[]>([]);
     const [brandOptions, setBrandOptions] = useState<any[]>([]);
 
@@ -119,8 +119,8 @@ const ProductList: React.FC = () => {
     const fetchFilters = async () => {
         try {
             const [catRes, brandRes] = await Promise.all([
-                axiosInstance.get(`${categoryPrefix}`),
-                axiosInstance.get(`${brandPrefix}`),
+                axiosInstance.get(`${categoryPrefix}`, { params: { all: 1 } }),
+                axiosInstance.get(`${brandPrefix}`, { params: { all: 1 } }),
             ]);
 
             const buildTree = (data: any[]) => {

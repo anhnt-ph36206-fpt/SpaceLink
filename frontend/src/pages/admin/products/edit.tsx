@@ -174,9 +174,9 @@ const ProductEdit: React.FC = () => {
                     brandRes,
                     attrRes] = await Promise.all([
                         axiosInstance.get(`${productPrefix}/${id}`),
-                        axiosInstance.get(`${categoryPrefix}`),
-                        axiosInstance.get(`${brandPrefix}`),
-                        axiosInstance.get(attributeGroupPrefix),
+                        axiosInstance.get(`${categoryPrefix}`, { params: { all: 1 } }),
+                        axiosInstance.get(`${brandPrefix}`, { params: { all: 1 } }),
+                        axiosInstance.get(attributeGroupPrefix, { params: { all: 1 } }),
                     ]);
 
                 const p = productRes.data.data;

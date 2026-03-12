@@ -48,12 +48,27 @@ const AdminBrandPage: React.FC = () => {
     const [search, setSearch] = useState('');
     const [isActive, setIsActive] = useState<number | undefined>(undefined);
     const [fileList, setFileList] = useState<UploadFile[]>([]);
+    const [pagination, setPagination] = useState({ current: 1, total: 0, pageSize: 10 });
 
-    const fetchBrands = async () => {
+    const fetchBrands = async (page = 1) => {
         setLoading(true);
         try {
-            const res = await axiosInstance.get(brandPrefix);
+            const res = await axiosInstance.get(brandPrefix, {
+                params: {
+                    page,
+                    search: search || undefined,
+                    is_active: isActive === undefined ? undefined : isActive,
+                    per_page: 10,
+                }
+            });
             setBrands(res.data.data);
+            if (res.data.meta) {
+                setPagination({
+                    current: res.data.meta.current_page,
+                    total: res.data.meta.total,
+                    pageSize: res.data.meta.per_page,
+                });
+            }
         } catch {
             toast.error('Không thể tải thương hiệu');
         } finally {
@@ -156,11 +171,15 @@ const AdminBrandPage: React.FC = () => {
         onRemove: () => setFileList([]),
     };
 
-    const filteredBrands = brands.filter(b => {
-        const matchSearch = b.name.toLowerCase().includes(search.toLowerCase());
-        const matchActive = isActive === undefined || (b.is_active ? 1 : 0) === isActive;
-        return matchSearch && matchActive;
-    });
+    const handleSearch = () => {
+        fetchBrands(1);
+    };
+
+    const handleReset = () => {
+        setSearch('');
+        setIsActive(undefined);
+        setTimeout(() => fetchBrands(1), 0);
+    };
 
     const columns: ColumnsType<Brand> = [
         {
@@ -246,6 +265,7 @@ const AdminBrandPage: React.FC = () => {
                             prefix={<SearchOutlined />}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
+                            onPressEnter={handleSearch}
                             allowClear
                         />
                     </Col>
@@ -262,14 +282,26 @@ const AdminBrandPage: React.FC = () => {
                             ]}
                         />
                     </Col>
+                    <Col span={8}>
+                        <Space>
+                            <Button type="primary" onClick={handleSearch} icon={<SearchOutlined />}>Lọc</Button>
+                            <Button onClick={handleReset}>Reset</Button>
+                        </Space>
+                    </Col>
                 </Row>
             </Card>
 
             <Table
                 columns={columns}
-                dataSource={filteredBrands}
+                dataSource={brands}
                 rowKey="id"
                 loading={loading}
+                pagination={{
+                    current: pagination.current,
+                    total: pagination.total,
+                    pageSize: pagination.pageSize,
+                    onChange: (page) => fetchBrands(page),
+                }}
             />
 
             <Modal

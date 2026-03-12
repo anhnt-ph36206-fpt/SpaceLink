@@ -148,9 +148,9 @@ const ProductCreate: React.FC = () => {
         const load = async () => {
             try {
                 const [catRes, brandRes, attrRes] = await Promise.all([
-                    axiosInstance.get(`${categoryPrefix}`),
-                    axiosInstance.get(`${brandPrefix}`),
-                    axiosInstance.get(`${attributeGroupPrefix}`),
+                    axiosInstance.get(`${categoryPrefix}`, { params: { all: 1 } }),
+                    axiosInstance.get(`${brandPrefix}`, { params: { all: 1 } }),
+                    axiosInstance.get(`${attributeGroupPrefix}`, { params: { all: 1 } }),
                 ]);
                 const buildTree = (data: any[]) => {
                     const map = new Map<number, any>();

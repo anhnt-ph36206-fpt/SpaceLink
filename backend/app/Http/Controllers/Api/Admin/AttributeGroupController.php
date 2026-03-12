@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AttributeGroup\StoreAttributeGroupRequest;
 use App\Http\Requests\Admin\AttributeGroup\UpdateAttributeGroupRequest;
+use App\Http\Resources\AttributeGroupResource;
 use App\Models\AttributeGroup;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use OpenApi\Attributes as OA;
 
@@ -25,33 +27,28 @@ class AttributeGroupController extends Controller
             new OA\Response(response: 200, description: 'Danh sách nhóm thuộc tính')
         ]
     )]
-    public function index(): JsonResponse
+    public function index(Request $request)
     {
-        $groups = AttributeGroup::with(['attributes' => function ($q) {
+        $query = AttributeGroup::query()->with(['attributes' => function ($q) {
             $q->orderBy('display_order')->orderBy('id');
-        }])
-        ->orderBy('display_order')
-        ->orderBy('id')
-        ->get()
-        ->map(function ($group) {
-            return [
-                'id'            => $group->id,
-                'name'          => $group->name,
-                'display_name'  => $group->display_name,
-                'display_order' => $group->display_order,
-                'attributes'    => $group->attributes->map(fn($a) => [
-                    'id'            => $a->id,
-                    'value'         => $a->value,
-                    'color_code'    => $a->color_code,
-                    'display_order' => $a->display_order,
-                ]),
-            ];
-        });
+        }]);
 
-        return response()->json([
-            'status' => true,
-            'data'   => $groups,
-        ]);
+        if ($request->filled('search')) {
+            $query->where(function($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('display_name', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        $query->orderBy('display_order')->orderBy('id');
+
+        $perPage = (int) $request->get('per_page', 10);
+
+        if ($request->has('all')) {
+            return AttributeGroupResource::collection($query->get());
+        }
+
+        return AttributeGroupResource::collection($query->paginate($perPage));
     }
 
     /**

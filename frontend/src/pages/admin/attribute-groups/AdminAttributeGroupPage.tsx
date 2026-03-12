@@ -35,6 +35,7 @@ const AdminAttributeGroupPage: React.FC = () => {
     const [groups, setGroups] = useState<AttributeGroup[]>([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
+    const [pagination, setPagination] = useState({ current: 1, total: 0, pageSize: 10 });
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -44,11 +45,24 @@ const AdminAttributeGroupPage: React.FC = () => {
 
     const [form] = Form.useForm();
 
-    const fetchGroups = async () => {
+    const fetchGroups = async (page = 1) => {
         try {
             setLoading(true);
-            const res = await axiosInstance.get(attributeGroupPrefix);
+            const res = await axiosInstance.get(attributeGroupPrefix, {
+                params: {
+                    page,
+                    search: search || undefined,
+                    per_page: 10,
+                }
+            });
             setGroups(res.data.data);
+            if (res.data.meta) {
+                setPagination({
+                    current: res.data.meta.current_page,
+                    total: res.data.meta.total,
+                    pageSize: res.data.meta.per_page,
+                });
+            }
         } catch (error: any) {
             toast.error(error?.response?.data?.message || 'Lỗi tải danh sách nhóm thuộc tính');
         } finally {
@@ -139,10 +153,14 @@ const AdminAttributeGroupPage: React.FC = () => {
         }
     };
 
-    const filteredGroups = groups.filter(g =>
-        g.name.toLowerCase().includes(search.toLowerCase()) ||
-        (g.display_name && g.display_name.toLowerCase().includes(search.toLowerCase()))
-    );
+    const handleSearch = () => {
+        fetchGroups(1);
+    };
+
+    const handleReset = () => {
+        setSearch('');
+        setTimeout(() => fetchGroups(1), 0);
+    };
 
     const columns: ColumnsType<AttributeGroup> = [
         {
@@ -232,22 +250,32 @@ const AdminAttributeGroupPage: React.FC = () => {
                             prefix={<SearchOutlined />}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
+                            onPressEnter={handleSearch}
                             allowClear
                         />
                     </Col>
                     <Col>
-                        <Button icon={<ReloadOutlined />} onClick={fetchGroups}>Làm mới</Button>
+                        <Space>
+                            <Button type="primary" onClick={handleSearch} icon={<SearchOutlined />}>Lọc</Button>
+                            <Button icon={<ReloadOutlined />} onClick={handleReset}>Reset</Button>
+                        </Space>
                     </Col>
                 </Row>
             </Card>
 
             <Table
                 columns={columns}
-                dataSource={filteredGroups}
+                dataSource={groups}
                 rowKey="id"
                 loading={loading}
                 style={{ background: '#fff', borderRadius: 10 }}
-                pagination={{ defaultPageSize: 15, showTotal: (t) => `Tổng ${t} nhóm` }}
+                pagination={{
+                    current: pagination.current,
+                    total: pagination.total,
+                    pageSize: pagination.pageSize,
+                    showTotal: (t) => `Tổng ${t} nhóm`,
+                    onChange: (page) => fetchGroups(page),
+                }}
             />
 
             {/* Modal Add/Edit */}

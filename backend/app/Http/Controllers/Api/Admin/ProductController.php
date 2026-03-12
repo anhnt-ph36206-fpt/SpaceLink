@@ -51,7 +51,12 @@ class ProductController extends Controller
             $query->where('is_featured', filter_var($request->is_featured, FILTER_VALIDATE_BOOLEAN));
         }
 
-        $perPage = min((int) $request->get('per_page', 15), 100);
+        $perPage = min((int) $request->get('per_page', 10), 100);
+        
+        if ($request->has('all')) {
+            return ProductResource::collection($query->get());
+        }
+
         $products = $query->paginate($perPage);
 
         return ProductResource::collection($products);
