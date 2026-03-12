@@ -11,11 +11,14 @@ const HomePage: React.FC = () => {
             {/* Hero Carousel */}
             <HeroSlider />
 
+            {/* Banner quảng cáo (dynamic từ API) */}
+            <ProductBanner />
+
             {/* Services Section */}
             <ServicesSection />
 
-            {/* Banner quảng cáo (dynamic từ API) */}
-            <ProductBanner />
+    
+          
 
             {/* Product Offers */}
             <ProductOffers />
