@@ -365,6 +365,14 @@ const ProductList: React.FC = () => {
             ),
         },
         {
+            title: 'Đã bán',
+            dataIndex: 'sold_count',
+            align: 'center',
+            render: (v: number) => (
+                <Text strong>{v || 0}</Text>
+            ),
+        },
+        {
             title: 'Trạng thái',
             align: 'center',
             render: (_, r) => (
@@ -612,7 +620,7 @@ const ProductList: React.FC = () => {
                                 size="small"
                                 type="text"
                                 onClick={() => setSelectedRowKeys([])}
-            >
+                            >
                                 Bỏ chọn
                             </Button>
                         </Col>
