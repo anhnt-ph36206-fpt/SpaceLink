@@ -8,9 +8,12 @@ use App\Http\Requests\Admin\Order\UpdatePaymentStatusRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
+use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -93,43 +96,56 @@ class OrderController extends Controller
         $newStatus  = $request->status;
         $admin      = $request->user();
 
-        // Build update payload
-        $updateData = ['status' => $newStatus];
+        $order = DB::transaction(function () use ($order, $oldStatus, $newStatus, $admin, $request) {
+            // Build update payload
+            $updateData = ['status' => $newStatus];
 
-        // Ghi timestamp tương ứng với trạng thái mới
-        $tsField = self::STATUS_TIMESTAMPS[$newStatus] ?? null;
-        if ($tsField && !$order->{$tsField}) {
-            $updateData[$tsField] = now();
-        }
+            // Ghi timestamp tương ứng với trạng thái mới
+            $tsField = self::STATUS_TIMESTAMPS[$newStatus] ?? null;
+            if ($tsField && !$order->{$tsField}) {
+                $updateData[$tsField] = now();
+            }
 
-        // Xử lý riêng khi hủy đơn
-        if ($newStatus === 'cancelled') {
-            $updateData['cancelled_reason'] = $request->cancelled_reason;
-            $updateData['cancelled_by']     = $admin->id;
-        }
+            // Xử lý riêng khi hủy đơn
+            if ($newStatus === 'cancelled') {
+                $updateData['cancelled_reason'] = $request->cancelled_reason;
+                $updateData['cancelled_by']     = $admin->id;
 
-        // Thông tin vận chuyển (khi chuyển sang shipping)
-        if ($request->filled('tracking_code'))     $updateData['tracking_code']     = $request->tracking_code;
-        if ($request->filled('shipping_partner'))  $updateData['shipping_partner']  = $request->shipping_partner;
-        if ($request->filled('estimated_delivery')) $updateData['estimated_delivery'] = $request->estimated_delivery;
+                // Khôi phục tồn kho: variant + product
+                foreach ($order->items()->with('variant')->get() as $item) {
+                    if ($item->variant_id && $item->variant) {
+                        $item->variant->increment('quantity', $item->quantity);
+                    }
+                    Product::where('id', $item->product_id)
+                        ->increment('quantity', $item->quantity);
+                }
+            }
 
-        // Ghi admin note nếu có
-        if ($request->filled('note')) {
-            $updateData['admin_note'] = $request->note;
-        }
+            // Thông tin vận chuyển (khi chuyển sang shipping)
+            if ($request->filled('tracking_code'))     $updateData['tracking_code']     = $request->tracking_code;
+            if ($request->filled('shipping_partner'))  $updateData['shipping_partner']  = $request->shipping_partner;
+            if ($request->filled('estimated_delivery')) $updateData['estimated_delivery'] = $request->estimated_delivery;
 
-        $order->update($updateData);
+            // Ghi admin note nếu có
+            if ($request->filled('note')) {
+                $updateData['admin_note'] = $request->note;
+            }
 
-        // Ghi lịch sử chuyển trạng thái
-        OrderStatusHistory::create([
-            'order_id'   => $order->id,
-            'from_status'=> $oldStatus,
-            'to_status'  => $newStatus,
-            'note'       => $request->note,
-            'changed_by' => $admin->id,
-        ]);
+            $order->update($updateData);
 
-        $order->load(['user:id,fullname,email', 'items', 'statusHistory']);
+            // Ghi lịch sử chuyển trạng thái
+            OrderStatusHistory::create([
+                'order_id'   => $order->id,
+                'from_status'=> $oldStatus,
+                'to_status'  => $newStatus,
+                'note'       => $request->note,
+                'changed_by' => $admin->id,
+            ]);
+
+            $order->load(['user:id,fullname,email', 'items', 'statusHistory']);
+
+            return $order;
+        });
 
         return response()->json([
             'status'  => true,
