@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
+const formatVND = (v: number) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
+
 interface Category {
     id: number;
     name: string;
@@ -243,10 +246,10 @@ const Header: React.FC = () => {
                                                     </div>
 
                                                     <div className="small text-danger">
-                                                        {prod.sale_price.toLocaleString('vi-VN')}đ
+                                                        {formatVND(prod.sale_price || prod.price)}
                                                         {prod.price > prod.sale_price && (
                                                             <del className="text-muted ms-2">
-                                                                {prod.price.toLocaleString('vi-VN')}đ
+                                                                {formatVND(prod.price)}
                                                             </del>
                                                         )}
                                                     </div>

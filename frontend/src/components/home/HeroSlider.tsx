@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+const formatVND = (v: number) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
+
 // Định nghĩa kiểu dữ liệu hiển thị
 interface SliderProduct {
     id: string;
@@ -129,7 +132,7 @@ const HeroSlider: React.FC = () => {
                                             </Link>
                                             {discount > 0 && (
                                                 <span className="d-flex align-items-center fs-5 fw-bold text-danger">
-                                                    Giảm {discount.toLocaleString('vi-VN')}đ
+                                                    Giảm {formatVND(discount)}
                                                 </span>
                                             )}
                                         </div>
@@ -174,13 +177,13 @@ const HeroSlider: React.FC = () => {
                                 <div className="d-flex align-items-end mb-3">
                                     {/* 2. GIÁ BÁN: Đen đậm & To */}
                                     <span className="text-black fw-bold fs-4 me-2">
-                                        {rightBanner.sale_price.toLocaleString('vi-VN')}đ
+                                        {formatVND(rightBanner.sale_price)}
                                     </span>
 
                                     {/* Giá gốc: Màu xám */}
                                     {rightBanner.price > rightBanner.sale_price && (
                                         <del className="text-secondary small">
-                                            {rightBanner.price.toLocaleString('vi-VN')}đ
+                                            {formatVND(rightBanner.price)}
                                         </del>
                                     )}
                                 </div>

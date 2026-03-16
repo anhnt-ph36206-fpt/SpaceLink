@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom'
 import { ShoppingCart, Eye, Shuffle, Heart, Star } from 'lucide-react'
 
+const formatVND = (v: number) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
+
 export interface ProductCardProps {
   id: string
   name: string
@@ -43,11 +46,11 @@ export function ProductCard({
           <Link to={`/product/${id}`} className="d-block h4 text-dark text-decoration-none">{name}</Link>
           {salePrice ? (
             <>
-              <del className="me-2 fs-5 text-muted">${price.toLocaleString()}</del>
-              <span className="text-primary fs-5">${salePrice.toLocaleString()}</span>
+              <del className="me-2 fs-6 text-muted">{formatVND(price)}</del>
+              <span className="text-danger fw-bold fs-6">{formatVND(salePrice)}</span>
             </>
           ) : (
-            <span className="text-primary fs-5">${price.toLocaleString()}</span>
+            <span className="text-danger fw-bold fs-6">{formatVND(price)}</span>
           )}
         </div>
       </div>

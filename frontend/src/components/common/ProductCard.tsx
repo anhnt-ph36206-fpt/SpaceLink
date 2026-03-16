@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { useCompare } from '../../context/CompareContext';
 import { toast } from 'react-toastify';
 
+const formatPrice = (value: number) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+
 interface ProductCardProps {
     product: {
         id: string;
@@ -104,12 +107,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
 
                         <div className="mt-2">
                             {product.oldPrice && product.oldPrice > product.price && (
-                                <del className="me-2 text-muted" style={{ fontSize: '0.9rem' }}>
-                                    {product.oldPrice.toLocaleString('vi-VN')} đ
+                                <del className="me-2 text-muted" style={{ fontSize: '0.85rem' }}>
+                                    {formatPrice(product.oldPrice)}
                                 </del>
                             )}
-                            <span className="text-danger fw-bold fs-5">
-                                {product.price.toLocaleString('vi-VN')} đ
+                            <span className="text-danger fw-bold" style={{ fontSize: '1.05rem' }}>
+                                {formatPrice(product.price)}
                             </span>
                         </div>
                     </div>

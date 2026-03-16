@@ -3,6 +3,9 @@ import ProductCard from "../components/common/ProductCard";
 import { axiosInstance } from "../api/axios";
 import type { Product } from "../types";
 
+const formatVND = (v: number) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
+
 /* =======================
    TYPES
 ======================= */
@@ -229,7 +232,7 @@ const ShopPage: React.FC = () => {
                         />
 
                         <p className="mt-2 fw-bold">
-                            0đ - {priceRange.toLocaleString()}đ
+                            0₫ — {formatVND(priceRange)}
                         </p>
 
                     </div>

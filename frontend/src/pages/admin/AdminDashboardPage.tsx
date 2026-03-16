@@ -1,67 +1,91 @@
 import React, { useEffect, useState } from 'react';
 import {
   Row, Col, Card, Table, Tag, Typography,
-  Progress, Spin
+  Progress, Spin, Statistic
 } from 'antd';
 import {
   ShoppingOutlined, AppstoreOutlined, ShoppingCartOutlined,
-  TeamOutlined, RiseOutlined, ArrowUpOutlined,
+  TeamOutlined, RiseOutlined, ArrowUpOutlined, CheckCircleOutlined,
+  ClockCircleOutlined, DollarOutlined,
 } from '@ant-design/icons';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer,
+  ResponsiveContainer, BarChart, Bar, Legend,
 } from 'recharts';
-import type { Product, Category, Order } from '../../types/index';
-import type { User } from '../../types/user';
+import { axiosInstance } from '../../api/axios';
 
 const { Title, Text } = Typography;
 
-const revenueData = [
-  { month: 'T1', revenue: 12000000 },
-  { month: 'T2', revenue: 19000000 },
-  { month: 'T3', revenue: 15000000 },
-  { month: 'T4', revenue: 25000000 },
-  { month: 'T5', revenue: 22000000 },
-  { month: 'T6', revenue: 30000000 },
-  { month: 'T7', revenue: 28000000 },
-];
+// ─── Types ──────────────────────────────────────────────────────────────────
+interface DashboardStats {
+  total_revenue: number;
+  total_orders: number;
+  pending_orders: number;
+  completed_orders: number;
+  incomplete_orders: number;
+  total_products: number;
+  total_customers: number;
+  pending_contacts: number;
+  recent_orders: RecentOrder[];
+}
 
-const mockOrders: Order[] = [
-  { id: 'ORD001', userId: '2', customerName: 'User Test', customerEmail: 'user@gmail.com', items: [], totalAmount: 34990000, status: 'delivered', createdAt: '2026-02-25T10:00:00Z' },
-  { id: 'ORD002', userId: '17c2', customerName: 'Anh Thanh Niên', customerEmail: 'abc@gmail.com', items: [], totalAmount: 31990000, status: 'shipping', createdAt: '2026-02-26T11:30:00Z' },
-  { id: 'ORD003', userId: '3ddb', customerName: 'Nguyễn Duy Mạnh', customerEmail: '123@gmail.com', items: [], totalAmount: 29990000, status: 'pending', createdAt: '2026-02-28T08:00:00Z' },
-  { id: 'ORD004', userId: 'VtKwh8e', customerName: 'Doãn Chí Bình', customerEmail: 'duybinh123@gmail.com', items: [], totalAmount: 5990000, status: 'confirmed', createdAt: '2026-02-27T14:00:00Z' },
-];
+interface RecentOrder {
+  id: number;
+  code: string;
+  customer_name: string;
+  customer_email: string;
+  total_amount: number;
+  status: string;
+  payment_status: string;
+  created_at: string;
+}
 
-const statusConfig: Record<string, { color: string; label: string }> = {
-  pending: { color: 'orange', label: 'Chờ xác nhận' },
-  confirmed: { color: 'blue', label: 'Đã xác nhận' },
-  shipping: { color: 'geekblue', label: 'Đang giao' },
-  delivered: { color: 'green', label: 'Đã giao' },
-  cancelled: { color: 'red', label: 'Đã hủy' },
-};
+interface RevenueMonth {
+  month: number;
+  label: string;
+  total: number;
+}
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 const formatVND = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 
+const formatVNDShort = (value: number) => {
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(0)}M`;
+  return `${(value / 1_000).toFixed(0)}K`;
+};
+
+const statusConfig: Record<string, { color: string; label: string }> = {
+  pending:   { color: 'orange',   label: 'Chờ xác nhận' },
+  confirmed: { color: 'blue',     label: 'Đã xác nhận'  },
+  shipping:  { color: 'geekblue', label: 'Đang giao'    },
+  delivered: { color: 'green',    label: 'Đã giao'      },
+  completed: { color: 'cyan',     label: 'Hoàn thành'   },
+  cancelled: { color: 'red',      label: 'Đã hủy'       },
+};
+
+// ─── StatCard Component ───────────────────────────────────────────────────────
 const StatCard: React.FC<{
-  title: string; value: number | string; icon: React.ReactNode;
-  gradient: string; suffix?: string; percent?: number;
-}> = ({ title, value, icon, gradient, suffix, percent }) => (
+  title: string;
+  value: number | string;
+  icon: React.ReactNode;
+  gradient: string;
+  suffix?: string;
+  percent?: number;
+  valueStyle?: React.CSSProperties;
+}> = ({ title, value, icon, gradient, suffix, percent, valueStyle }) => (
   <Card
     style={{
-      borderRadius: 16,
-      border: 'none',
-      background: gradient,
-      overflow: 'hidden',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+      borderRadius: 16, border: 'none', background: gradient,
+      overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
     }}
     bodyStyle={{ padding: 24 }}
   >
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <div>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>{title}</Text>
-        <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, marginTop: 4, lineHeight: 1.2 }}>
+        <div style={{ color: '#fff', fontSize: 28, fontWeight: 700, marginTop: 4, lineHeight: 1.2, ...valueStyle }}>
           {value}
         </div>
         {suffix && (
@@ -71,49 +95,46 @@ const StatCard: React.FC<{
           </div>
         )}
       </div>
-      <div
-        style={{
-          width: 52, height: 52, borderRadius: 14,
-          background: 'rgba(255,255,255,0.2)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 22, color: '#fff',
-        }}
-      >
+      <div style={{
+        width: 52, height: 52, borderRadius: 14,
+        background: 'rgba(255,255,255,0.2)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 22, color: '#fff', flexShrink: 0,
+      }}>
         {icon}
       </div>
     </div>
     {percent !== undefined && (
       <Progress
-        percent={percent}
-        showInfo={false}
-        strokeColor="#ffc107"
-        trailColor="rgba(255,255,255,0.2)"
-        style={{ marginTop: 16 }}
-        size="small"
+        percent={percent} showInfo={false}
+        strokeColor="#ffc107" trailColor="rgba(255,255,255,0.2)"
+        style={{ marginTop: 16 }} size="small"
       />
     )}
   </Card>
 );
 
+// ─── Main Component ───────────────────────────────────────────────────────────
 const AdminDashboardPage: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [revenueData, setRevenueData] = useState<RevenueMonth[]>([]);
+  const [topProducts, setTopProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAll = async () => {
+      setLoading(true);
       try {
-        const [pRes, cRes, uRes] = await Promise.all([
-          fetch('http://localhost:3000/products'),
-          fetch('http://localhost:3000/categories'),
-          fetch('http://localhost:3000/users'),
+        const [statsRes, revenueRes, productsRes] = await Promise.all([
+          axiosInstance.get('/admin/dashboard/stats'),
+          axiosInstance.get('/admin/dashboard/revenue'),
+          axiosInstance.get('/admin/products', { params: { per_page: 5, sort: 'newest' } }),
         ]);
-        setProducts(await pRes.json());
-        setCategories(await cRes.json());
-        setUsers(await uRes.json());
+        setStats(statsRes.data.data);
+        setRevenueData(revenueRes.data.data);
+        setTopProducts(productsRes.data.data ?? []);
       } catch (e) {
-        console.error(e);
+        console.error('Dashboard fetch error:', e);
       } finally {
         setLoading(false);
       }
@@ -121,115 +142,244 @@ const AdminDashboardPage: React.FC = () => {
     fetchAll();
   }, []);
 
-  const recentOrderColumns = [
-    { title: 'Mã đơn', dataIndex: 'id', key: 'id', render: (v: string) => <Text code>{v}</Text> },
-    { title: 'Khách hàng', dataIndex: 'customerName', key: 'customerName' },
+  // ── Columns cho bảng đơn hàng gần đây ─────────────────────────────────────
+  const orderColumns = [
     {
-      title: 'Giá trị', dataIndex: 'totalAmount', key: 'totalAmount',
+      title: 'Mã đơn',
+      dataIndex: 'code',
+      key: 'code',
+      render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text>,
+    },
+    {
+      title: 'Khách hàng',
+      key: 'customer',
+      render: (_: any, r: RecentOrder) => (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 13 }}>{r.customer_name}</div>
+          <div style={{ color: '#868e96', fontSize: 12 }}>{r.customer_email}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'Giá trị',
+      dataIndex: 'total_amount',
+      key: 'total_amount',
       render: (v: number) => <Text strong style={{ color: '#0d6efd' }}>{formatVND(v)}</Text>,
     },
     {
-      title: 'Trạng thái', dataIndex: 'status', key: 'status',
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
       render: (v: string) => {
         const cfg = statusConfig[v] || { color: 'default', label: v };
         return <Tag color={cfg.color} style={{ borderRadius: 20, padding: '2px 10px' }}>{cfg.label}</Tag>;
       },
     },
     {
-      title: 'Ngày tạo', dataIndex: 'createdAt', key: 'createdAt',
+      title: 'Thanh toán',
+      dataIndex: 'payment_status',
+      key: 'payment_status',
+      render: (v: string) => (
+        <Tag color={v === 'paid' ? 'green' : v === 'failed' ? 'red' : 'orange'} style={{ borderRadius: 20 }}>
+          {v === 'paid' ? 'Đã thanh toán' : v === 'failed' ? 'Thất bại' : 'Chờ TT'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Ngày đặt',
+      dataIndex: 'created_at',
+      key: 'created_at',
       render: (v: string) => new Date(v).toLocaleDateString('vi-VN'),
     },
   ];
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 80 }}><Spin size="large" /></div>;
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: 80 }}>
+        <Spin size="large" />
+        <div style={{ marginTop: 16, color: '#868e96' }}>Đang tải dữ liệu...</div>
+      </div>
+    );
+  }
+
+  if (!stats) return null;
+
+  const completedPercent = stats.total_orders > 0
+    ? Math.round((stats.completed_orders / stats.total_orders) * 100)
+    : 0;
 
   return (
     <div style={{ padding: 24 }}>
       {/* Page Title */}
       <div style={{ marginBottom: 24 }}>
         <Title level={4} style={{ margin: 0, color: '#1a1a2e' }}>Tổng quan hệ thống</Title>
-        <Text type="secondary" style={{ fontSize: 13 }}>Chào mừng trở lại! Đây là tóm tắt hôm nay.</Text>
+        <Text type="secondary" style={{ fontSize: 13 }}>
+          Dữ liệu thực tế — cập nhật lúc {new Date().toLocaleTimeString('vi-VN')}
+        </Text>
       </div>
 
-      {/* Stat Cards */}
-      <Row gutter={[20, 20]} style={{ marginBottom: 24 }}>
+      {/* ── Row 1: Stat Cards ────────────────────────────────────────── */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+        <Col xs={24} sm={12} xl={6}>
+          <StatCard
+            title="Doanh thu (đã TT)"
+            value={formatVNDShort(stats.total_revenue)}
+            icon={<DollarOutlined />}
+            gradient="linear-gradient(135deg, #0d6efd 0%, #084298 100%)"
+            suffix={formatVND(stats.total_revenue)}
+          />
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <StatCard
+            title="Tổng đơn hàng"
+            value={stats.total_orders}
+            icon={<ShoppingCartOutlined />}
+            gradient="linear-gradient(135deg, #fd7e14 0%, #c35a00 100%)"
+            suffix={`${stats.pending_orders} đơn đang chờ`}
+            percent={completedPercent}
+          />
+        </Col>
         <Col xs={24} sm={12} xl={6}>
           <StatCard
             title="Tổng sản phẩm"
-            value={products.length}
+            value={stats.total_products}
             icon={<ShoppingOutlined />}
-            gradient="linear-gradient(135deg, #0d6efd 0%, #084298 100%)"
-            suffix="+2 sản phẩm mới"
-            percent={72}
-          />
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <StatCard
-            title="Danh mục"
-            value={categories.length}
-            icon={<AppstoreOutlined />}
             gradient="linear-gradient(135deg, #6f42c1 0%, #4a2d80 100%)"
-            suffix="Đang hoạt động"
-            percent={100}
-          />
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <StatCard
-            title="Đơn hàng"
-            value={mockOrders.length}
-            icon={<ShoppingCartOutlined />}
-            gradient="linear-gradient(135deg, #fd7e14 0%, #c35a00 100%)"
-            suffix="1 đơn hàng mới"
-            percent={58}
           />
         </Col>
         <Col xs={24} sm={12} xl={6}>
           <StatCard
             title="Người dùng"
-            value={users.length}
+            value={stats.total_customers}
             icon={<TeamOutlined />}
             gradient="linear-gradient(135deg, #198754 0%, #0d5c35 100%)"
-            suffix="+3 người dùng mới"
-            percent={44}
           />
         </Col>
       </Row>
 
-      {/* Charts + Table */}
-      <Row gutter={[20, 20]}>
+      {/* ── Row 2: Order Status Cards ─────────────────────────────────── */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+        <Col xs={24} sm={8}>
+          <Card
+            style={{ borderRadius: 14, border: '1px solid #f0f0f0', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}
+            bodyStyle={{ padding: '20px 24px' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 12,
+                background: 'linear-gradient(135deg,#198754,#0d5c35)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20
+              }}>
+                <CheckCircleOutlined />
+              </div>
+              <div>
+                <div style={{ color: '#868e96', fontSize: 12, marginBottom: 2 }}>Đơn hoàn thành</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#198754', lineHeight: 1 }}>
+                  {stats.completed_orders}
+                </div>
+              </div>
+            </div>
+            <Progress
+              percent={completedPercent} showInfo strokeColor="#198754"
+              trailColor="#e9ecef" style={{ marginTop: 14 }} size="small"
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card
+            style={{ borderRadius: 14, border: '1px solid #f0f0f0', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}
+            bodyStyle={{ padding: '20px 24px' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 12,
+                background: 'linear-gradient(135deg,#fd7e14,#c35a00)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20
+              }}>
+                <ClockCircleOutlined />
+              </div>
+              <div>
+                <div style={{ color: '#868e96', fontSize: 12, marginBottom: 2 }}>Đơn chưa hoàn thành</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#fd7e14', lineHeight: 1 }}>
+                  {stats.incomplete_orders}
+                </div>
+              </div>
+            </div>
+            <Progress
+              percent={stats.total_orders > 0 ? Math.round((stats.incomplete_orders / stats.total_orders) * 100) : 0}
+              showInfo strokeColor="#fd7e14" trailColor="#e9ecef"
+              style={{ marginTop: 14 }} size="small"
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card
+            style={{ borderRadius: 14, border: '1px solid #f0f0f0', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}
+            bodyStyle={{ padding: '20px 24px' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 12,
+                background: 'linear-gradient(135deg,#ffc107,#c79100)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20
+              }}>
+                <AppstoreOutlined />
+              </div>
+              <div>
+                <div style={{ color: '#868e96', fontSize: 12, marginBottom: 2 }}>Đơn chờ xác nhận</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#c79100', lineHeight: 1 }}>
+                  {stats.pending_orders}
+                </div>
+              </div>
+            </div>
+            <Progress
+              percent={stats.total_orders > 0 ? Math.round((stats.pending_orders / stats.total_orders) * 100) : 0}
+              showInfo strokeColor="#ffc107" trailColor="#e9ecef"
+              style={{ marginTop: 14 }} size="small"
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* ── Row 3: Biểu đồ + Top sản phẩm ───────────────────────────── */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
         {/* Revenue Chart */}
-        <Col xs={24} lg={14}>
+        <Col xs={24} lg={15}>
           <Card
             title={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <RiseOutlined style={{ color: '#0d6efd' }} />
-                <span style={{ fontWeight: 600 }}>Doanh thu tháng</span>
+                <span style={{ fontWeight: 600 }}>Doanh thu theo tháng ({new Date().getFullYear()})</span>
               </div>
             }
             style={{ borderRadius: 16, border: '1px solid #f0f0f0', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
             bodyStyle={{ padding: '8px 16px 16px' }}
           >
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={revenueData}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0d6efd" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#0d6efd" stopOpacity={0} />
+                    <stop offset="5%"  stopColor="#0d6efd" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#0d6efd" stopOpacity={0}    />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#868e96' }} axisLine={false} tickLine={false} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 12, fill: '#868e96' }}
+                  axisLine={false} tickLine={false}
+                />
                 <YAxis
                   tick={{ fontSize: 11, fill: '#868e96' }}
                   axisLine={false} tickLine={false}
-                  tickFormatter={(v) => `${(v / 1000000).toFixed(0)}M`}
+                  tickFormatter={(v) => formatVNDShort(v)}
                 />
                 <Tooltip
-                  formatter={(value) => [formatVND((value as number) ?? 0), 'Doanh thu']}
+                  formatter={(value) => [formatVND(value as number), 'Doanh thu']}
                   contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }}
                 />
                 <Area
-                  type="monotone" dataKey="revenue"
+                  type="monotone" dataKey="total"
                   stroke="#0d6efd" strokeWidth={2.5}
                   fill="url(#colorRevenue)"
                   dot={{ fill: '#0d6efd', strokeWidth: 2, r: 4 }}
@@ -241,59 +391,77 @@ const AdminDashboardPage: React.FC = () => {
         </Col>
 
         {/* Top Products */}
-        <Col xs={24} lg={10}>
+        <Col xs={24} lg={9}>
           <Card
-            title={<span style={{ fontWeight: 600 }}>Sản phẩm bán chạy</span>}
+            title={<span style={{ fontWeight: 600 }}>Sản phẩm mới nhất</span>}
             style={{ borderRadius: 16, border: '1px solid #f0f0f0', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', height: '100%' }}
             bodyStyle={{ padding: '8px 16px 16px' }}
           >
-            {products.slice(0, 5).map((p, idx) => (
+            {topProducts.slice(0, 5).map((p: any, idx: number) => (
               <div
                 key={p.id}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '10px 0',
-                  borderBottom: idx < products.length - 1 && idx < 4 ? '1px solid #f5f5f5' : 'none',
+                  borderBottom: idx < 4 ? '1px solid #f5f5f5' : 'none',
                 }}
               >
-                <div
-                  style={{
-                    width: 28, height: 28, borderRadius: 8,
-                    background: 'linear-gradient(135deg,#0d6efd,#084298)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0,
-                  }}
-                >
+                {/* Rank badge */}
+                <div style={{
+                  width: 28, height: 28, borderRadius: 8,
+                  background: idx === 0
+                    ? 'linear-gradient(135deg,#ffc107,#c79100)'
+                    : 'linear-gradient(135deg,#0d6efd,#084298)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0,
+                }}>
                   {idx + 1}
                 </div>
+                {/* Image */}
+                {p.image && (
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', flexShrink: 0 }}
+                  />
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {p.name}
                   </div>
-                  <div style={{ color: '#868e96', fontSize: 12 }}>{p.category}</div>
+                  <div style={{ color: '#868e96', fontSize: 11 }}>
+                    {typeof p.category === 'object' ? p.category?.name : (p.category || '—')}
+                  </div>
                 </div>
-                <Text strong style={{ color: '#0d6efd', fontSize: 13, flexShrink: 0 }}>
-                  {formatVND(p.price)}
+                <Text strong style={{ color: '#0d6efd', fontSize: 12, flexShrink: 0 }}>
+                  {formatVND(p.sale_price || p.price)}
                 </Text>
               </div>
             ))}
+            {topProducts.length === 0 && (
+              <div style={{ textAlign: 'center', color: '#868e96', padding: '20px 0' }}>Không có dữ liệu</div>
+            )}
           </Card>
         </Col>
+      </Row>
 
-        {/* Recent Orders */}
+      {/* ── Row 4: Bảng đơn hàng gần đây ────────────────────────────── */}
+      <Row>
         <Col xs={24}>
           <Card
             title={<span style={{ fontWeight: 600 }}>Đơn hàng gần đây</span>}
+            extra={<a href="/admin/orders" style={{ fontSize: 13 }}>Xem tất cả →</a>}
             style={{ borderRadius: 16, border: '1px solid #f0f0f0', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
             bodyStyle={{ padding: 0 }}
           >
             <Table
-              columns={recentOrderColumns}
-              dataSource={mockOrders}
+              columns={orderColumns}
+              dataSource={stats.recent_orders}
               rowKey="id"
               pagination={false}
               size="middle"
               style={{ borderRadius: 16, overflow: 'hidden' }}
+              locale={{ emptyText: 'Chưa có đơn hàng nào' }}
             />
           </Card>
         </Col>
