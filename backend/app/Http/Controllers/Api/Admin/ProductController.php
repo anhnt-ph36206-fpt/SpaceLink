@@ -24,7 +24,13 @@ class ProductController extends Controller
             ? Product::onlyTrashed()
             : Product::query();
 
-        $query->with(['category:id,name,slug', 'brand:id,name,slug', 'images'])->latest();
+        $query->with(['category:id,name,slug', 'brand:id,name,slug', 'images'])
+              ->withSum(['orderItems as sold_count' => function($q) {
+                  $q->whereHas('order', function($o) {
+                      $o->where('status', '!=', 'cancelled');
+                  });
+              }], 'quantity')
+              ->latest();
 
         if ($request->filled('search')) {
             $kw = $request->search;
@@ -71,9 +77,21 @@ class ProductController extends Controller
             'category:id,name,slug',
             'brand:id,name,slug',
             'images',
-            'variants',
+            'variants' => function($q) {
+                $q->withSum(['orderItems as sold_count' => function($sq) {
+                    $sq->whereHas('order', function($o) {
+                        $o->where('status', '!=', 'cancelled');
+                    });
+                }], 'quantity');
+            },
             'variants.attributes.attributeGroup',
-        ])->findOrFail($id);
+        ])
+        ->withSum(['orderItems as sold_count' => function($q) {
+            $q->whereHas('order', function($o) {
+                $o->where('status', '!=', 'cancelled');
+            });
+        }], 'quantity')
+        ->findOrFail($id);
 
         return new ProductResource($product);
     }
