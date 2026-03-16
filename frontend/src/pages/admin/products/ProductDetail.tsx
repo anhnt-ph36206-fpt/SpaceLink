@@ -42,6 +42,7 @@ interface Product {
     content: string;
     is_featured: boolean;
     is_active: boolean;
+    sold_count: number;
     images?: { id: number; image_path: string; image_url?: string; is_primary: boolean }[];
     variants?: Variant[];
 }
@@ -167,7 +168,7 @@ const ProductDetail: React.FC = () => {
                             <Descriptions.Item label="Giá gốc">{formatVND(product.price)}</Descriptions.Item>
                             <Descriptions.Item label="Giá KM">{product.sale_price ? formatVND(product.sale_price) : '—'}</Descriptions.Item>
                             <Descriptions.Item label="Tổng kho">{product.quantity}</Descriptions.Item>
-                            <Descriptions.Item label="Đã bán">0 sản phẩm</Descriptions.Item>
+                            <Descriptions.Item label="Đã bán">{product.sold_count || 0} sản phẩm</Descriptions.Item>
                         </Descriptions>
                     </Card>
 

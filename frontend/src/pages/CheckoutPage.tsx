@@ -89,6 +89,7 @@ const CheckoutPage: React.FC = () => {
     const [showSaveAddressModal, setShowSaveAddressModal] = useState(false);
     const [lastOrderAddress, setLastOrderAddress] = useState<any>(null);
     const [lastOrderCode, setLastOrderCode] = useState<string>('');
+    const [lastOrderData, setLastOrderData] = useState<any>(null);
 
     // -- Determine Items to Checkout --
     const buyNowItem: CheckoutItem | null = location.state?.buyNowItem || null;
@@ -202,6 +203,7 @@ const CheckoutPage: React.FC = () => {
             if (res.data.status === 'success') {
                 const orderData = res.data.data;
                 setLastOrderCode(orderData.order_code);
+                setLastOrderData(orderData);
 
                 if (useNewAddress && isAuthenticated) {
                     setLastOrderAddress({
@@ -226,8 +228,15 @@ const CheckoutPage: React.FC = () => {
     };
 
     const handlePostCheckoutFinish = (orderCode: string, orderData?: any) => {
-        toast.success('Đặt hàng thành công!');
         if (!isBuyNow) refreshCart();
+
+        if (orderData?.payment_url) {
+            toast.info('Đang chuyển hướng đến cổng thanh toán...');
+            window.location.href = orderData.payment_url;
+            return;
+        }
+
+        toast.success('Đặt hàng thành công!');
         navigate(`/order/success/${orderCode}`, { state: { order: orderData } });
     };
 
@@ -242,7 +251,7 @@ const CheckoutPage: React.FC = () => {
             console.error('Save address failed', err);
         } finally {
             setShowSaveAddressModal(false);
-            handlePostCheckoutFinish(lastOrderCode);
+            handlePostCheckoutFinish(lastOrderCode, lastOrderData);
         }
     };
 

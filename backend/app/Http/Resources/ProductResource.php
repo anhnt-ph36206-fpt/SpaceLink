@@ -21,7 +21,7 @@ class ProductResource extends JsonResource
             // effective_price: giá hiệu lực để frontend không phải tự tính COALESCE
             'effective_price' => (float) ($this->sale_price ?? $this->price),
             'quantity'    => $this->quantity,
-            'sold_count'  => $this->sold_count,
+            'sold_count'  => (int) ($this->sold_count ?? 0),
             'view_count'  => $this->view_count,
             'is_featured' => (bool) $this->is_featured,
             'is_active'   => (bool) $this->is_active,
@@ -36,6 +36,7 @@ class ProductResource extends JsonResource
                         'price' => $variant->price,
                         'sale_price' => $variant->sale_price,
                         'quantity' => $variant->quantity,
+                        'sold_count' => (int) ($variant->sold_count ?? 0),
                         'image' => $variant->image,
                         'attributes' => $variant->attributes->map(function ($attr) {
                             return [
