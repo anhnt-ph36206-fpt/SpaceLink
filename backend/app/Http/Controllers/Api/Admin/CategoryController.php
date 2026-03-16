@@ -11,7 +11,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
-use OpenApi\Attributes as OA;
 
 class CategoryController extends Controller
 {
@@ -21,13 +20,13 @@ class CategoryController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = Category::withTrashed(false)   // Không lấy soft-deleted
-                         ->with('parent')        // Eager load parent, tránh N+1
-                         ->orderBy('display_order', 'asc')
-                         ->orderBy('id', 'asc');
+            ->with('parent')        // Eager load parent, tránh N+1
+            ->orderBy('display_order', 'asc')
+            ->orderBy('id', 'asc');
 
         // Filter: tìm kiếm theo tên
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $query->where('name', 'like', '%'.$request->search.'%');
         }
 
         // Filter: theo trạng thái active
@@ -61,7 +60,7 @@ class CategoryController extends Controller
     {
         // Admin xem được cả inactive — không filter is_active
         $category = Category::with(['parent', 'children'])
-                            ->findOrFail($id);
+            ->findOrFail($id);
 
         return new CategoryResource($category);
     }
@@ -80,9 +79,9 @@ class CategoryController extends Controller
         $category = Category::create($data);
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => 'Tạo danh mục thành công.',
-            'data'    => new CategoryResource($category),
+            'data' => new CategoryResource($category),
         ], 201);
     }
 
@@ -105,9 +104,9 @@ class CategoryController extends Controller
         $category->update($data);
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => 'Cập nhật danh mục thành công.',
-            'data'    => new CategoryResource($category->fresh('parent')),
+            'data' => new CategoryResource($category->fresh('parent')),
         ]);
     }
 
@@ -116,11 +115,28 @@ class CategoryController extends Controller
     // =========================================================================
     public function destroy(string $id): JsonResponse
     {
-        $category = Category::findOrFail($id);
+        $category = Category::withCount(['products', 'children'])->findOrFail($id);
+
+        // Không cho xóa nếu còn sản phẩm thuộc danh mục này
+        if ($category->products_count > 0) {
+            return response()->json([
+                'status' => false,
+                'message' => "Không thể xóa danh mục \"{$category->name}\" vì còn {$category->products_count} sản phẩm. Vui lòng chuyển hoặc xóa sản phẩm trước.",
+            ], 400);
+        }
+
+        // Không cho xóa nếu còn danh mục con
+        if ($category->children_count > 0) {
+            return response()->json([
+                'status' => false,
+                'message' => "Không thể xóa danh mục \"{$category->name}\" vì còn {$category->children_count} danh mục con. Vui lòng xóa danh mục con trước.",
+            ], 400);
+        }
+
         $category->delete(); // SoftDelete: set deleted_at, không xóa hẳn
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => 'Xóa danh mục thành công.',
         ]);
     }

@@ -34,7 +34,7 @@ class ReviewController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data'   => $reviews
+            'data' => $reviews,
         ]);
     }
 
@@ -50,29 +50,29 @@ class ReviewController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Dữ liệu phản hồi không hợp lệ.',
-                'errors'  => $validator->errors()
-            ], 422);
+                'errors' => $validator->errors(),
+            ], 400);
         }
 
         try {
             $review = Review::findOrFail($id);
             $review->update([
                 'admin_reply' => $request->admin_reply,
-                'replied_at'  => now(),
+                'replied_at' => now(),
             ]);
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Đã gửi phản hồi thành công.',
-                'data'    => $review
+                'data' => $review,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Đã xảy ra lỗi khi lưu phản hồi.',
-                'error'   => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -86,19 +86,19 @@ class ReviewController extends Controller
         try {
             $review = Review::findOrFail($id);
             $review->update([
-                'is_hidden' => !$review->is_hidden
+                'is_hidden' => ! $review->is_hidden,
             ]);
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => $review->is_hidden ? 'Đã ẩn đánh giá.' : 'Đã hiện đánh giá.',
-                'data'    => $review
+                'data' => $review,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Đã xảy ra lỗi khi cập nhật trạng thái hiển thị.',
-                'error'   => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -114,14 +114,14 @@ class ReviewController extends Controller
             $review->delete();
 
             return response()->json([
-                'status'  => 'success',
-                'message' => 'Đã xóa đánh giá vĩnh viễn.'
+                'status' => 'success',
+                'message' => 'Đã xóa đánh giá vĩnh viễn.',
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Đã xảy ra lỗi khi xóa đánh giá.',
-                'error'   => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

@@ -263,7 +263,7 @@
                             }
                         }
                     },
-                    "422": {
+                    "400": {
                         "description": "Lỗi validation"
                     },
                     "403": {
@@ -422,7 +422,7 @@
                     "404": {
                         "description": "Không tìm thấy danh mục"
                     },
-                    "422": {
+                    "400": {
                         "description": "Lỗi validation"
                     },
                     "403": {
@@ -688,7 +688,7 @@
                     "404": {
                         "description": "Không tìm thấy đơn hàng"
                     },
-                    "422": {
+                    "400": {
                         "description": "Validation thất bại"
                     }
                 },
@@ -751,7 +751,7 @@
                     "404": {
                         "description": "Không tìm thấy đơn hàng"
                     },
-                    "422": {
+                    "400": {
                         "description": "Validation thất bại"
                     }
                 },
@@ -931,7 +931,7 @@
                     "201": {
                         "description": "Tạo thành công"
                     },
-                    "422": {
+                    "400": {
                         "description": "Validation thất bại"
                     }
                 },
@@ -1067,7 +1067,7 @@
                     "404": {
                         "description": "Không tìm thấy sản phẩm"
                     },
-                    "422": {
+                    "400": {
                         "description": "Validation thất bại"
                     }
                 },
@@ -1195,7 +1195,7 @@
                     "404": {
                         "description": "Không tìm thấy sản phẩm"
                     },
-                    "422": {
+                    "400": {
                         "description": "Validation thất bại"
                     }
                 },
@@ -1350,7 +1350,7 @@
                     "404": {
                         "description": "Không tìm thấy sản phẩm"
                     },
-                    "422": {
+                    "400": {
                         "description": "Validation thất bại"
                     }
                 },
@@ -1448,7 +1448,7 @@
                     "404": {
                         "description": "Không tìm thấy variant"
                     },
-                    "422": {
+                    "400": {
                         "description": "Validation thất bại"
                     }
                 },
@@ -1670,7 +1670,7 @@
                     "404": {
                         "description": "Không tìm thấy"
                     },
-                    "422": {
+                    "400": {
                         "description": "Validation thất bại"
                     }
                 },
@@ -1739,7 +1739,7 @@
                     "404": {
                         "description": "Không tìm thấy user đã xóa"
                     },
-                    "422": {
+                    "400": {
                         "description": "User chưa bị xóa"
                     }
                 },
@@ -1889,7 +1889,7 @@
                     "201": {
                         "description": "Tạo thành công"
                     },
-                    "422": {
+                    "400": {
                         "description": "Validation thất bại"
                     }
                 },
@@ -2008,7 +2008,7 @@
                     "404": {
                         "description": "Không tìm thấy"
                     },
-                    "422": {
+                    "400": {
                         "description": "Validation thất bại"
                     }
                 },

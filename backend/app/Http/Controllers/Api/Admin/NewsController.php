@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\News;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class NewsController extends Controller
 {
@@ -27,7 +27,7 @@ class NewsController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data'   => $news
+            'data' => $news,
         ]);
     }
 
@@ -38,44 +38,44 @@ class NewsController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'title'       => 'required|string|max:255',
-            'summary'     => 'nullable|string|max:500',
-            'content'     => 'required|string',
-            'thumbnail'   => 'nullable|string',
+            'title' => 'required|string|max:255',
+            'summary' => 'nullable|string|max:500',
+            'content' => 'required|string',
+            'thumbnail' => 'nullable|string',
             'is_featured' => 'boolean',
-            'is_active'   => 'boolean',
+            'is_active' => 'boolean',
             'published_at' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Dữ liệu không hợp lệ.',
-                'errors'  => $validator->errors()
-            ], 422);
+                'errors' => $validator->errors(),
+            ], 400);
         }
 
         try {
             $data = $request->all();
             $data['author_id'] = $request->user()->id;
-            $data['slug'] = Str::slug($request->title) . '-' . uniqid();
-            
-            if (!$request->filled('published_at')) {
+            $data['slug'] = Str::slug($request->title).'-'.uniqid();
+
+            if (! $request->filled('published_at')) {
                 $data['published_at'] = now();
             }
 
             $news = News::create($data);
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Tạo tin tức thành công.',
-                'data'    => $news
+                'data' => $news,
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Lỗi khi tạo tin tức.',
-                'error'   => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -88,14 +88,15 @@ class NewsController extends Controller
     {
         try {
             $news = News::findOrFail($id);
+
             return response()->json([
                 'status' => 'success',
-                'data'   => $news
+                'data' => $news,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Không tìm thấy tin tức.'
+                'status' => 'error',
+                'message' => 'Không tìm thấy tin tức.',
             ], 404);
         }
     }
@@ -107,43 +108,43 @@ class NewsController extends Controller
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'title'       => 'string|max:255',
-            'summary'     => 'nullable|string|max:500',
-            'content'     => 'string',
-            'thumbnail'   => 'nullable|string',
+            'title' => 'string|max:255',
+            'summary' => 'nullable|string|max:500',
+            'content' => 'string',
+            'thumbnail' => 'nullable|string',
             'is_featured' => 'boolean',
-            'is_active'   => 'boolean',
+            'is_active' => 'boolean',
             'published_at' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Dữ liệu không hợp lệ.',
-                'errors'  => $validator->errors()
-            ], 422);
+                'errors' => $validator->errors(),
+            ], 400);
         }
 
         try {
             $news = News::findOrFail($id);
             $data = $request->all();
-            
+
             if ($request->filled('title') && $request->title !== $news->title) {
-                $data['slug'] = Str::slug($request->title) . '-' . uniqid();
+                $data['slug'] = Str::slug($request->title).'-'.uniqid();
             }
 
             $news->update($data);
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Cập nhật tin tức thành công.',
-                'data'    => $news
+                'data' => $news,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Lỗi khi cập nhật tin tức.',
-                'error'   => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -159,13 +160,13 @@ class NewsController extends Controller
             $news->delete();
 
             return response()->json([
-                'status'  => 'success',
-                'message' => 'Đã xóa tin tức.'
+                'status' => 'success',
+                'message' => 'Đã xóa tin tức.',
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Lỗi khi xóa tin tức.'
+                'status' => 'error',
+                'message' => 'Lỗi khi xóa tin tức.',
             ], 500);
         }
     }

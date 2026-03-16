@@ -23,10 +23,10 @@ class ContactController extends Controller
 
         if ($request->filled('search')) {
             $keyword = $request->search;
-            $query->where(function($q) use ($keyword) {
+            $query->where(function ($q) use ($keyword) {
                 $q->where('fullname', 'like', "%{$keyword}%")
-                  ->orWhere('email', 'like', "%{$keyword}%")
-                  ->orWhere('subject', 'like', "%{$keyword}%");
+                    ->orWhere('email', 'like', "%{$keyword}%")
+                    ->orWhere('subject', 'like', "%{$keyword}%");
             });
         }
 
@@ -34,7 +34,7 @@ class ContactController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data'   => $contacts
+            'data' => $contacts,
         ]);
     }
 
@@ -50,33 +50,33 @@ class ContactController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Nội dung phản hồi không hợp lệ.',
-                'errors'  => $validator->errors()
-            ], 422);
+                'errors' => $validator->errors(),
+            ], 400);
         }
 
         try {
             $contact = Contact::findOrFail($id);
             $contact->update([
                 'reply_content' => $request->reply_content,
-                'replied_by'    => $request->user()->id,
-                'replied_at'    => now(),
-                'status'        => 'replied',
+                'replied_by' => $request->user()->id,
+                'replied_at' => now(),
+                'status' => 'replied',
             ]);
 
             // Logic: Send email to customer (optional, depending on project requirement)
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Đã gửi phản hồi cho khách hàng.',
-                'data'    => $contact
+                'data' => $contact,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Lỗi khi lưu phản hồi.',
-                'error'   => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -91,13 +91,13 @@ class ContactController extends Controller
             $contact->delete();
 
             return response()->json([
-                'status'  => 'success',
-                'message' => 'Đã xóa liên hệ.'
+                'status' => 'success',
+                'message' => 'Đã xóa liên hệ.',
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Lỗi khi xóa liên hệ.'
+                'status' => 'error',
+                'message' => 'Lỗi khi xóa liên hệ.',
             ], 500);
         }
     }

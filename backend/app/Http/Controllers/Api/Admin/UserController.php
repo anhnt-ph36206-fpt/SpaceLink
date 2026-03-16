@@ -29,8 +29,8 @@ class UserController extends Controller
             $kw = $request->search;
             $query->where(function ($q) use ($kw) {
                 $q->where('fullname', 'like', "%{$kw}%")
-                  ->orWhere('email',    'like', "%{$kw}%")
-                  ->orWhere('phone',    'like', "%{$kw}%");
+                    ->orWhere('email', 'like', "%{$kw}%")
+                    ->orWhere('phone', 'like', "%{$kw}%");
             });
         }
 
@@ -59,15 +59,15 @@ class UserController extends Controller
 
         return response()->json([
             'status' => true,
-            'data'   => array_merge((new UserResource($user))->toArray(request()), [
-                'role_id'      => $user->role_id,
-                'role_name'    => $user->role?->name,
-                'gender'       => $user->gender,
-                'date_of_birth'=> $user->date_of_birth?->format('d-m-Y'),
-                'last_login_at'=> $user->last_login_at?->format('d-m-Y H:i:s'),
+            'data' => array_merge((new UserResource($user))->toArray(request()), [
+                'role_id' => $user->role_id,
+                'role_name' => $user->role?->name,
+                'gender' => $user->gender,
+                'date_of_birth' => $user->date_of_birth?->format('d-m-Y'),
+                'last_login_at' => $user->last_login_at?->format('d-m-Y H:i:s'),
                 'orders_count' => $user->orders_count,
-                'deleted_at'   => $user->deleted_at?->format('d-m-Y H:i:s'),
-                'created_at'   => $user->created_at?->format('d-m-Y H:i:s'),
+                'deleted_at' => $user->deleted_at?->format('d-m-Y H:i:s'),
+                'created_at' => $user->created_at?->format('d-m-Y H:i:s'),
             ]),
         ]);
     }
@@ -82,9 +82,9 @@ class UserController extends Controller
         $user->load('role');
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => 'Cập nhật thông tin người dùng thành công.',
-            'data'    => new UserResource($user),
+            'data' => new UserResource($user),
         ]);
     }
 
@@ -98,7 +98,7 @@ class UserController extends Controller
         // An toàn: admin không thể tự xóa chính mình
         if ($user->id === $request->user()->id) {
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'Bạn không thể xóa tài khoản đang đăng nhập.',
             ], 400);
         }
@@ -106,7 +106,7 @@ class UserController extends Controller
         $user->delete();
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => "Đã xóa người dùng \"{$user->fullname}\". Có thể khôi phục qua POST /admin/users/{id}/restore.",
         ]);
     }
@@ -118,19 +118,19 @@ class UserController extends Controller
     {
         $user = User::withTrashed()->findOrFail($id);
 
-        if (!$user->trashed()) {
+        if (! $user->trashed()) {
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'Người dùng này chưa bị xóa, không cần khôi phục.',
-            ], 422);
+            ], 400);
         }
 
         $user->restore();
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => "Đã khôi phục người dùng \"{$user->fullname}\" thành công.",
-            'data'    => new UserResource($user->load('role')),
+            'data' => new UserResource($user->load('role')),
         ]);
     }
 }
