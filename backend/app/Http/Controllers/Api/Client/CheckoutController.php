@@ -8,6 +8,7 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\UserAddress;
 use App\Models\Voucher;
@@ -272,11 +273,15 @@ class CheckoutController extends Controller
                         'total'         => $effectivePrice * $item->quantity,
                     ]);
 
-                    // Trừ tồn kho (chỉ khi có variant, variant-less dùng product.quantity)
+                    // Trừ tồn kho variant
                     if ($item->variant_id) {
                         ProductVariant::where('id', $item->variant_id)
                             ->decrement('quantity', $item->quantity);
                     }
+
+                    // Trừ tồn kho tổng của product (luôn thực hiện)
+                    Product::where('id', $item->product_id)
+                        ->decrement('quantity', $item->quantity);
                 }
 
                 // ── 10. Ghi nhận VoucherUsage + tăng used_count ─────────────
@@ -428,7 +433,11 @@ class CheckoutController extends Controller
                         if ($variant->quantity < $item->quantity) {
                             throw new \Exception("Sản phẩm {$item->product->name} (Biến thể ID: {$variant->id}) chỉ còn {$variant->quantity} trong kho.");
                         }
+                        // Trừ tồn kho biến thể
                         $variant->decrement('quantity', $item->quantity);
+                        // Trừ tồn kho tổng của product
+                        Product::where('id', $item->product_id)
+                            ->decrement('quantity', $item->quantity);
                     } else {
                         throw new \Exception("Vui lòng chọn phân loại sản phẩm cho {$item->product->name}.");
                     }
