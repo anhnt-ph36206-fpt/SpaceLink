@@ -1247,7 +1247,7 @@ const ProfilePage: React.FC = () => {
         <div className="cancel-overlay" onClick={(e) => { if (e.target === e.currentTarget) setCancelModalOrder(null); }}>
           <div className="cancel-modal">
             <h6><i className="fas fa-exclamation-triangle me-2" style={{ color:'#dc3545' }} />Xác nhận hủy đơn hàng</h6>
-            <p>Đơn hàng <strong>#{cancelModalOrder.order_code}</strong> sẽ bị hủy và không thể khôi phục. Hàng sẽ được hoàn lại tồn kho.</p>
+            <p>Đơn hàng <strong>#{cancelModalOrder.order_code}</strong> sẽ bị hủy và không thể khôi phục. Các ưu đãi hoặc mã giảm giá đã áp dụng cho đơn hàng này có thể sẽ không còn hiệu lực cho đơn sau.</p>
             <textarea
               className="cancel-textarea"
               placeholder="Lý do hủy (không bắt buộc)..."
