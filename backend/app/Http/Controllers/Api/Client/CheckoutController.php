@@ -10,7 +10,6 @@ use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\Product;
 use App\Models\UserAddress;
 use App\Models\Voucher;
 use App\Models\VoucherUsage;
