@@ -1868,7 +1868,7 @@ interface SwaggerDocumentationController
             content: new OA\JsonContent(
                 required: ['fullname', 'email', 'subject', 'message'],
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'fullname', type: 'string'),
                     new OA\Property(property: 'email', type: 'string', format: 'email'),
                     new OA\Property(property: 'phone', type: 'string'),
                     new OA\Property(property: 'subject', type: 'string'),
