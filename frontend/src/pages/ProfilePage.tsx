@@ -1290,9 +1290,25 @@ const ProfilePage: React.FC = () => {
                                               <div className="od-item-info">
                                                 <div className="od-item-name">{item.product_name}</div>
                                                 {item.product_sku && <div className="od-item-sku">SKU: {item.product_sku}</div>}
-                                                {item.variant_info && Object.entries(item.variant_info).map(([k,v]) => (
-                                                  <span key={k} style={{ fontSize:11, background:'#eaecf0', borderRadius:10, padding:'1px 7px', marginRight:4 }}>{k}: {v}</span>
-                                                ))}
+                                                {item.variant_info && (() => {
+                                                  const info = item.variant_info as any;
+                                                  // Format mới: { sku, image, attrs: [{name, value}] }
+                                                  if (Array.isArray(info.attrs)) {
+                                                    return info.attrs.map((a: { name: string; value: string }, idx: number) => (
+                                                      <span key={idx} style={{ fontSize:11, background:'#eaecf0', borderRadius:10, padding:'1px 7px', marginRight:4 }}>
+                                                        {a.name}: {a.value}
+                                                      </span>
+                                                    ));
+                                                  }
+                                                  // Format cũ: Record<string, string> phẳng
+                                                  return Object.entries(info)
+                                                    .filter(([, v]) => typeof v === 'string')
+                                                    .map(([k, v]) => (
+                                                      <span key={k} style={{ fontSize:11, background:'#eaecf0', borderRadius:10, padding:'1px 7px', marginRight:4 }}>
+                                                        {k}: {v as string}
+                                                      </span>
+                                                    ));
+                                                })()}
                                                 <div style={{ fontSize:12, color:'#8590a3', marginTop:3 }}>
                                                   {formatVND(item.price)} × {item.quantity}
                                                 </div>

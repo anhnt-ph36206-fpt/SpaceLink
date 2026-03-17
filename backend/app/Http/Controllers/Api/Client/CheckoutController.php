@@ -10,7 +10,6 @@ use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\Product;
 use App\Models\UserAddress;
 use App\Models\Voucher;
 use App\Models\VoucherUsage;
@@ -157,7 +156,7 @@ class CheckoutController extends Controller
                     $variantInfo = $variant ? [
                         'sku' => $variant->sku,
                         'image' => $variant->image,
-                        'attrs' => $variant->attributes?->map(fn($a) => ['name' => $a->name, 'value' => $a->pivot->value])->toArray(),
+                        'attrs' => $variant->attributes?->map(fn($a) => ['name' => $a->name, 'value' => $a->value])->toArray(),
                     ] : null;
 
                     OrderItem::create([
@@ -343,7 +342,7 @@ class CheckoutController extends Controller
                     $voucher->increment('used_count');
                 }
 
-                OrderStatusHistory::create(['order_id' => $order->id, 'status' => 'pending', 'note' => 'Khởi tạo thanh toán VNPAY']);
+                OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => 'pending', 'note' => 'Khởi tạo thanh toán VNPAY']);
                 Cart::where('user_id', $user->id)->delete();
 
                 return $order;

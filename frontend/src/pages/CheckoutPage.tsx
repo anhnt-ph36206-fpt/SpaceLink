@@ -168,7 +168,7 @@ const CheckoutPage: React.FC = () => {
                 items: displayItems.map(i => ({ variant_id: i.variantId, quantity: i.quantity }))
             });
             if (res.data.status === 'success') {
-                setAppliedVoucher(res.data.voucher);
+                setAppliedVoucher(res.data.data);
                 toast.success('Áp dụng mã giảm giá thành công!');
             }
         } catch (error: any) {

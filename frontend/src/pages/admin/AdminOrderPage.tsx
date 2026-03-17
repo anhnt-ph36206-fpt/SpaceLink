@@ -689,13 +689,32 @@ const AdminOrderPage: React.FC = () => {
                         {item.product_sku && (
                           <Text type="secondary" style={{ fontSize: 12 }}>SKU: {item.product_sku}</Text>
                         )}
-                        {item.variant_info && Object.keys(item.variant_info).length > 0 && (
-                          <div style={{ marginTop: 2 }}>
-                            {Object.entries(item.variant_info).map(([k, v]) => (
-                              <Tag key={k} style={{ fontSize: 11, borderRadius: 12, margin: '0 4px 0 0' }}>{k}: {v}</Tag>
-                            ))}
-                          </div>
-                        )}
+                        {item.variant_info && (() => {
+                          const info = item.variant_info as any;
+                          // Format mới: { sku, image, attrs: [{name, value}] }
+                          if (Array.isArray(info.attrs)) {
+                            return info.attrs.length > 0 ? (
+                              <div style={{ marginTop: 2 }}>
+                                {info.attrs.map((a: { name: string; value: string }, idx: number) => (
+                                  <Tag key={idx} style={{ fontSize: 11, borderRadius: 12, margin: '0 4px 0 0' }}>
+                                    {a.name}: {a.value}
+                                  </Tag>
+                                ))}
+                              </div>
+                            ) : null;
+                          }
+                          // Format cũ: Record<string, string> phẳng
+                          const entries = Object.entries(info).filter(([, v]) => typeof v === 'string');
+                          return entries.length > 0 ? (
+                            <div style={{ marginTop: 2 }}>
+                              {entries.map(([k, v]) => (
+                                <Tag key={k} style={{ fontSize: 11, borderRadius: 12, margin: '0 4px 0 0' }}>
+                                  {k}: {v as string}
+                                </Tag>
+                              ))}
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
                         <div style={{ color: '#6c757d', fontSize: 12 }}>

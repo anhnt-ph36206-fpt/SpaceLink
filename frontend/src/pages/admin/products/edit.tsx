@@ -318,6 +318,27 @@ const ProductEdit: React.FC = () => {
         setVariants(prev => prev.map(v => v._key === key ? { ...v, [field]: value, _saved: false } : v));
     };
 
+    // Sync ảnh sang tất cả các variant cùng màu
+    const syncImageToColorSiblings = (sourceKey: string, file: File, previewUrl: string) => {
+        setVariants(prev => {
+            const source = prev.find(v => v._key === sourceKey);
+            if (!source) return prev;
+            // Tìm color attribute id của source variant
+            let colorId: number | null = null;
+            for (const group of attrGroups) {
+                if (!/color|mau|màu|colour/i.test(group.name) && !/color|mau|màu|colour/i.test(group.display_name || '')) continue;
+                const found = source.attribute_ids.find(id => group.attributes.some(a => a.id === id));
+                if (found !== undefined) { colorId = found; break; }
+            }
+            if (colorId === null) return prev; // Không phải nhóm màu → không sync
+            return prev.map(v => {
+                if (v._key === sourceKey) return v; // Bản thân không cần copy
+                if (!v.attribute_ids.includes(colorId!)) return v; // Khác màu → skip
+                return { ...v, imageFile: file, imagePreviewUrl: previewUrl, _saved: false };
+            });
+        });
+    };
+
     const saveExistingVariant = async (row: VariantRow) => {
         if (!row.id) return;
         
@@ -726,6 +747,7 @@ const ProductEdit: React.FC = () => {
                                 />
                             </div>
                         )}
+                        <Tooltip title="Ảnh sẽ tự động áp dụng cho tất cả biến thể cùng màu" placement="top">
                         <Upload
                             accept="image/*"
                             showUploadList={false}
@@ -733,11 +755,14 @@ const ProductEdit: React.FC = () => {
                                 const url = URL.createObjectURL(file);
                                 updateVariant(r._key, 'imageFile', file);
                                 updateVariant(r._key, 'imagePreviewUrl', url);
+                                // Sync sang các variant cùng màu
+                                syncImageToColorSiblings(r._key, file, url);
                                 return false;
                             }}
                         >
                             {!previewSrc && <Button size="small" icon={<UploadOutlined />}>Đổi</Button>}
                         </Upload>
+                        </Tooltip>
                     </div>
                 );
             },
