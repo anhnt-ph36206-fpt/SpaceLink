@@ -109,6 +109,10 @@ const CheckoutPage: React.FC = () => {
             stock: item.stock
         }));
     }, [isBuyNow, buyNowItem, cartItems]);
+    
+    // Watch form values for reactive UI updates (borders)
+    const currentPaymentMethod = Form.useWatch('payment_method', form);
+    const currentAddressId = Form.useWatch('shipping_address_id', form);
 
     const subtotal = useMemo(() => {
         return displayItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -328,7 +332,7 @@ const CheckoutPage: React.FC = () => {
                                                 <Radio.Group className="w-100">
                                                     <div className="d-flex flex-column gap-3">
                                                         {addresses.map(addr => (
-                                                            <div key={addr.id} className={`address-card p-3 rounded-3 border-2 transition-all ${form.getFieldValue('shipping_address_id') === addr.id ? 'active' : ''}`}>
+                                                            <div key={addr.id} className={`address-card p-3 rounded-3 border-2 transition-all ${currentAddressId === addr.id ? 'active' : ''}`}>
                                                                 <Radio value={addr.id} className="w-100 p-0 m-0 custom-radio">
                                                                     <div className="ms-2">
                                                                         <div className="d-flex align-items-center gap-2 mb-1">
@@ -406,7 +410,7 @@ const CheckoutPage: React.FC = () => {
                                     <Radio.Group className="w-100 payment-group">
                                         <Row gutter={[16, 16]}>
                                             <Col span={24}>
-                                                <div className={`payment-card p-3 rounded-3 border-2 transition-all ${form.getFieldValue('payment_method') === 'cod' ? 'active' : ''}`}>
+                                                <div className={`payment-card p-3 rounded-3 border-2 transition-all ${currentPaymentMethod === 'cod' ? 'active' : ''}`}>
                                                     <Radio value="cod" className="w-100">
                                                         <div className="ms-2">
                                                             <Text strong>Thanh toán khi nhận hàng (COD)</Text>
@@ -416,7 +420,7 @@ const CheckoutPage: React.FC = () => {
                                                 </div>
                                             </Col>
                                             <Col span={24}>
-                                                <div className={`payment-card p-3 rounded-3 border-2 transition-all ${form.getFieldValue('payment_method') === 'vnpay' ? 'active' : ''}`}>
+                                                <div className={`payment-card p-3 rounded-3 border-2 transition-all ${currentPaymentMethod === 'vnpay' ? 'active' : ''}`}>
                                                     <Radio value="vnpay" className="w-100">
                                                         <div className="ms-2">
                                                             <Text strong>Thanh toán qua VNPAY</Text>

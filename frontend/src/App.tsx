@@ -11,6 +11,7 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderSuccessPage from './pages/OrderSuccessPage';
+import PaymentReturnPage from './pages/PaymentReturnPage';
 import BestsellerPage from './pages/BestsellerPage';
 import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -83,6 +84,7 @@ function App() {
                                 <Route path="/contact" element={<ContactPage />} />
                                 <Route path="/search" element={<SearchPage />} />
                                 <Route path="/compare" element={<ComparePage />} />
+                                <Route path="/payment-return" element={<PaymentReturnPage />} />
                                 <Route path="*" element={<NotFoundPage />} />
                             </Route>
 
