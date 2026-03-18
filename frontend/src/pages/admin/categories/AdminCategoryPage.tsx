@@ -61,6 +61,7 @@ const AdminCategoryPage: React.FC = () => {
         try {
             const res = await axiosInstance.get(categoryPrefix, {
                 params: {
+                    all: 1,
                     search: params?.search,
                     is_active: params?.is_active,
                     parent_id: params?.parent_id,

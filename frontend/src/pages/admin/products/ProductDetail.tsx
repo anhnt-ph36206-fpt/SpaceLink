@@ -10,11 +10,12 @@ import {
     ThunderboltOutlined, SaveOutlined, TagsOutlined,
     BarChartOutlined, InfoCircleOutlined
 } from '@ant-design/icons';
+import MDEditor from '@uiw/react-md-editor';
 import { axiosInstance } from '../../../api/axios';
 import { productPrefix } from '../../../api/apiAdminPrefix';
 import { toast } from 'react-toastify';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface Variant {
     id: number;
@@ -41,6 +42,7 @@ interface Product {
     content: string;
     is_featured: boolean;
     is_active: boolean;
+    sold_count: number;
     images?: { id: number; image_path: string; image_url?: string; is_primary: boolean }[];
     variants?: Variant[];
 }
@@ -166,7 +168,7 @@ const ProductDetail: React.FC = () => {
                             <Descriptions.Item label="Giá gốc">{formatVND(product.price)}</Descriptions.Item>
                             <Descriptions.Item label="Giá KM">{product.sale_price ? formatVND(product.sale_price) : '—'}</Descriptions.Item>
                             <Descriptions.Item label="Tổng kho">{product.quantity}</Descriptions.Item>
-                            <Descriptions.Item label="Đã bán">0 sản phẩm</Descriptions.Item>
+                            <Descriptions.Item label="Đã bán">{product.sold_count || 0} sản phẩm</Descriptions.Item>
                         </Descriptions>
                     </Card>
 
@@ -336,18 +338,28 @@ const ProductDetail: React.FC = () => {
                                     <div style={{ minHeight: 400 }}>
                                         <div style={{ marginBottom: 24 }}>
                                             <Title level={5}>Mô tả ngắn</Title>
-                                            <Paragraph style={{ background: '#f9f9f9', padding: 16, borderRadius: 8 }}>
-                                                {product.description || 'Không có mô tả ngắn'}
-                                            </Paragraph>
+                                            <div
+                                                data-color-mode="light"
+                                                style={{ background: '#f9f9f9', padding: 16, borderRadius: 8 }}
+                                            >
+                                                {product.description
+                                                    ? <MDEditor.Markdown source={product.description} />
+                                                    : <span style={{ color: '#999' }}>Không có mô tả ngắn</span>
+                                                }
+                                            </div>
                                         </div>
                                         <Divider />
                                         <div>
                                             <Title level={5}>Nội dung chi tiết</Title>
                                             <div
-                                                className="product-content-render"
-                                                dangerouslySetInnerHTML={{ __html: product.content || 'Chưa có nội dung chi tiết' }}
+                                                data-color-mode="light"
                                                 style={{ padding: 16, border: '1px solid #f0f0f0', borderRadius: 8, minHeight: 200 }}
-                                            />
+                                            >
+                                                {product.content
+                                                    ? <MDEditor.Markdown source={product.content} />
+                                                    : <span style={{ color: '#999' }}>Chưa có nội dung chi tiết</span>
+                                                }
+                                            </div>
                                         </div>
                                     </div>
                                 )

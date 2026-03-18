@@ -37,10 +37,23 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
+        const status = error.response?.status;
+        const data = error.response?.data;
+
+        if (status === 401) {
             localStorage.removeItem(TOKEN_KEY);
             localStorage.removeItem("user");
         }
+
+        if (status === 400 || status === 422) {
+            // Hiển thị alert định dạng JSON như yêu cầu
+            const alertMsg = JSON.stringify({
+                status: data?.status ?? false,
+                message: data?.message ?? "Có lỗi xảy ra"
+            });
+            window.alert(alertMsg);
+        }
+
         return Promise.reject(error);
     }
 );

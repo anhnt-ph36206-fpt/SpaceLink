@@ -45,7 +45,13 @@ class CategoryController extends Controller
             }
         }
 
-        return CategoryResource::collection($query->get());
+        $perPage = (int) $request->get('per_page', 10);
+
+        if ($request->has('all')) {
+            return CategoryResource::collection($query->get());
+        }
+
+        return CategoryResource::collection($query->paginate($perPage));
     }
 
     // =========================================================================

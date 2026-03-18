@@ -250,7 +250,7 @@ const AdminLayout: React.FC = () => {
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis'
                             }}>
-                                {user.name || user.email}
+                                {user.fullname || user.email}
                             </div>
                             <div style={{ color: '#ffc107', fontSize: 11 }}>Administrator</div>
                         </div>

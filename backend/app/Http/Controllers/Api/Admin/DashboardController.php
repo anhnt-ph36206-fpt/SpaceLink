@@ -20,13 +20,35 @@ class DashboardController extends Controller
     public function stats()
     {
         $stats = [
-            'total_revenue'   => (float) Order::where('payment_status', 'paid')->sum('total_amount'),
-            'total_orders'    => Order::count(),
-            'pending_orders'  => Order::where('status', 'pending')->count(),
-            'total_products'  => Product::count(),
-            'total_customers' => User::where('role_id', '!=', 1)->count(), // Assuming 1 is Admin
-            'pending_contacts' => Contact::where('status', 'pending')->count(),
+            'total_revenue'     => (float) Order::where('payment_status', 'paid')->sum('total_amount'),
+            'total_orders'      => Order::count(),
+            'pending_orders'    => Order::where('status', 'pending')->count(),
+            'completed_orders'  => Order::whereIn('status', ['delivered', 'completed'])->count(),
+            'incomplete_orders' => Order::whereNotIn('status', ['delivered', 'completed', 'cancelled'])->count(),
+            'total_products'    => Product::count(),
+            'total_customers'   => User::where('role_id', '!=', 1)->count(),
+            'pending_contacts'  => Contact::where('status', 'pending')->count(),
         ];
+
+        // 8 đơn hàng gần nhất kèm thông tin user
+        $recentOrders = Order::with('user')
+            ->latest()
+            ->take(8)
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id'             => $order->id,
+                    'code'           => $order->order_code ?? ('#' . str_pad($order->id, 5, '0', STR_PAD_LEFT)),
+                    'customer_name'  => $order->user?->fullname ?? $order->shipping_name ?? 'Khách',
+                    'customer_email' => $order->user?->email ?? $order->shipping_email ?? '',
+                    'total_amount'   => (float) $order->total_amount,
+                    'status'         => $order->status,
+                    'payment_status' => $order->payment_status,
+                    'created_at'     => $order->created_at,
+                ];
+            });
+
+        $stats['recent_orders'] = $recentOrders;
 
         return response()->json([
             'status' => 'success',
@@ -58,7 +80,8 @@ class DashboardController extends Controller
             $monthData = $revenue->firstWhere('month', $i);
             $data[] = [
                 'month' => $i,
-                'total' => $monthData ? (float) $monthData->total : 0
+                'label' => 'T' . $i,
+                'total' => $monthData ? (float) $monthData->total : 0,
             ];
         }
 

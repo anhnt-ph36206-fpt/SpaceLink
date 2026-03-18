@@ -72,7 +72,7 @@ const AdminUserPage: React.FC = () => {
   const openEdit = (u: User) => {
     setEditingUser(u);
     form.setFieldsValue({
-      fullname: u.name,
+      fullname: u.fullname,
       email: u.email,
       role: u.role || 'customer',
       status: u.status || 'active',
@@ -214,7 +214,7 @@ const AdminUserPage: React.FC = () => {
 
   const filtered = users.filter(u => {
     const matchSearch =
-      (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (u.fullname || '').toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase());
     const matchRole = roleFilter ? u.role === roleFilter : true;
     return matchSearch && matchRole;
@@ -242,7 +242,7 @@ const AdminUserPage: React.FC = () => {
             }}
           />
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>{r.name || '—'}</div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{r.fullname || '—'}</div>
             <Text type="secondary" style={{ fontSize: 12 }}>{r.email}</Text>
           </div>
         </Space>

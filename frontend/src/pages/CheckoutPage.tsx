@@ -89,6 +89,7 @@ const CheckoutPage: React.FC = () => {
     const [showSaveAddressModal, setShowSaveAddressModal] = useState(false);
     const [lastOrderAddress, setLastOrderAddress] = useState<any>(null);
     const [lastOrderCode, setLastOrderCode] = useState<string>('');
+    const [lastOrderData, setLastOrderData] = useState<any>(null);
 
     // -- Determine Items to Checkout --
     const buyNowItem: CheckoutItem | null = location.state?.buyNowItem || null;
@@ -108,6 +109,10 @@ const CheckoutPage: React.FC = () => {
             stock: item.stock
         }));
     }, [isBuyNow, buyNowItem, cartItems]);
+    
+    // Watch form values for reactive UI updates (borders)
+    const currentPaymentMethod = Form.useWatch('payment_method', form);
+    const currentAddressId = Form.useWatch('shipping_address_id', form);
 
     const subtotal = useMemo(() => {
         return displayItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -167,7 +172,7 @@ const CheckoutPage: React.FC = () => {
                 items: displayItems.map(i => ({ variant_id: i.variantId, quantity: i.quantity }))
             });
             if (res.data.status === 'success') {
-                setAppliedVoucher(res.data.voucher);
+                setAppliedVoucher(res.data.data);
                 toast.success('Áp dụng mã giảm giá thành công!');
             }
         } catch (error: any) {
@@ -202,6 +207,7 @@ const CheckoutPage: React.FC = () => {
             if (res.data.status === 'success') {
                 const orderData = res.data.data;
                 setLastOrderCode(orderData.order_code);
+                setLastOrderData(orderData);
 
                 if (useNewAddress && isAuthenticated) {
                     setLastOrderAddress({
@@ -226,8 +232,15 @@ const CheckoutPage: React.FC = () => {
     };
 
     const handlePostCheckoutFinish = (orderCode: string, orderData?: any) => {
-        toast.success('Đặt hàng thành công!');
         if (!isBuyNow) refreshCart();
+
+        if (orderData?.payment_url) {
+            toast.info('Đang chuyển hướng đến cổng thanh toán...');
+            window.location.href = orderData.payment_url;
+            return;
+        }
+
+        toast.success('Đặt hàng thành công!');
         navigate(`/order/success/${orderCode}`, { state: { order: orderData } });
     };
 
@@ -242,7 +255,7 @@ const CheckoutPage: React.FC = () => {
             console.error('Save address failed', err);
         } finally {
             setShowSaveAddressModal(false);
-            handlePostCheckoutFinish(lastOrderCode);
+            handlePostCheckoutFinish(lastOrderCode, lastOrderData);
         }
     };
 
@@ -319,7 +332,7 @@ const CheckoutPage: React.FC = () => {
                                                 <Radio.Group className="w-100">
                                                     <div className="d-flex flex-column gap-3">
                                                         {addresses.map(addr => (
-                                                            <div key={addr.id} className={`address-card p-3 rounded-3 border-2 transition-all ${form.getFieldValue('shipping_address_id') === addr.id ? 'active' : ''}`}>
+                                                            <div key={addr.id} className={`address-card p-3 rounded-3 border-2 transition-all ${currentAddressId === addr.id ? 'active' : ''}`}>
                                                                 <Radio value={addr.id} className="w-100 p-0 m-0 custom-radio">
                                                                     <div className="ms-2">
                                                                         <div className="d-flex align-items-center gap-2 mb-1">
@@ -397,7 +410,7 @@ const CheckoutPage: React.FC = () => {
                                     <Radio.Group className="w-100 payment-group">
                                         <Row gutter={[16, 16]}>
                                             <Col span={24}>
-                                                <div className={`payment-card p-3 rounded-3 border-2 transition-all ${form.getFieldValue('payment_method') === 'cod' ? 'active' : ''}`}>
+                                                <div className={`payment-card p-3 rounded-3 border-2 transition-all ${currentPaymentMethod === 'cod' ? 'active' : ''}`}>
                                                     <Radio value="cod" className="w-100">
                                                         <div className="ms-2">
                                                             <Text strong>Thanh toán khi nhận hàng (COD)</Text>
@@ -407,7 +420,7 @@ const CheckoutPage: React.FC = () => {
                                                 </div>
                                             </Col>
                                             <Col span={24}>
-                                                <div className={`payment-card p-3 rounded-3 border-2 transition-all ${form.getFieldValue('payment_method') === 'vnpay' ? 'active' : ''}`}>
+                                                <div className={`payment-card p-3 rounded-3 border-2 transition-all ${currentPaymentMethod === 'vnpay' ? 'active' : ''}`}>
                                                     <Radio value="vnpay" className="w-100">
                                                         <div className="ms-2">
                                                             <Text strong>Thanh toán qua VNPAY</Text>

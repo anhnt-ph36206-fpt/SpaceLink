@@ -108,4 +108,9 @@ class Product extends Model
     {
         return $this->hasMany(Voucher::class);
     }
+    // Product has many order items
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
 }

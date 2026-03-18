@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
+use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -83,28 +85,34 @@ class OrderController extends Controller
 
         $reason = $request->input('reason', 'Khách hàng tự hủy.');
 
-        $order->update([
-            'status'           => 'cancelled',
-            'cancelled_reason' => $reason,
-            'cancelled_by'     => $user->id,
-            'cancelled_at'     => now(),
-        ]);
+        DB::transaction(function () use ($order, $user, $reason) {
+            $order->update([
+                'status'           => 'cancelled',
+                'cancelled_reason' => $reason,
+                'cancelled_by'     => $user->id,
+                'cancelled_at'     => now(),
+            ]);
 
-        // Ghi lịch sử
-        OrderStatusHistory::create([
-            'order_id'    => $order->id,
-            'from_status' => 'pending',
-            'to_status'   => 'cancelled',
-            'note'        => $reason,
-            'changed_by'  => $user->id,
-        ]);
+            // Ghi lịch sử
+            OrderStatusHistory::create([
+                'order_id'    => $order->id,
+                'from_status' => 'pending',
+                'to_status'   => 'cancelled',
+                'note'        => $reason,
+                'changed_by'  => $user->id,
+            ]);
 
-        // Hoàn lại tồn kho cho các variant trong đơn
-        foreach ($order->items()->with('variant')->get() as $item) {
-            if ($item->variant_id && $item->variant) {
-                $item->variant->increment('quantity', $item->quantity);
+            // Hoàn lại tồn kho: cả variant lẫn product
+            foreach ($order->items()->with('variant')->get() as $item) {
+                // Khôi phục tồn kho biến thể (nếu có)
+                if ($item->variant_id && $item->variant) {
+                    $item->variant->increment('quantity', $item->quantity);
+                }
+                // Khôi phục tồn kho tổng của product (luôn thực hiện)
+                Product::where('id', $item->product_id)
+                    ->increment('quantity', $item->quantity);
             }
-        }
+        });
 
         return response()->json([
             'status'  => 'success',

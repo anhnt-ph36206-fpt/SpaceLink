@@ -11,6 +11,7 @@ import {
     PictureOutlined, TagsOutlined, SaveOutlined, CheckCircleOutlined,
     UploadOutlined, CloseCircleOutlined
 } from '@ant-design/icons';
+import MDEditor from '@uiw/react-md-editor';
 import { axiosInstance } from '../../../api/axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -93,6 +94,17 @@ function buildVariantLabel(attrs: VariantAttr[]): string {
     return attrs.map(a => a.value).join(' / ') || 'Không có thuộc tính';
 }
 
+function hasDuplicateVariants(variantList: VariantRow[]): boolean {
+    const attributeSets = new Set<string>();
+    for (const v of variantList) {
+        if (v._deleted) continue;
+        const key = [...v.attribute_ids].sort((a, b) => a - b).join(',');
+        if (attributeSets.has(key)) return true;
+        attributeSets.add(key);
+    }
+    return false;
+}
+
 const ProductEdit: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [form] = Form.useForm();
@@ -111,9 +123,15 @@ const ProductEdit: React.FC = () => {
 
     const [variants, setVariants] = useState<VariantRow[]>([]);
 
+    // MDEditor content
+    const [contentValue, setContentValue] = useState<string>('');
+
     const [showBuilder, setShowBuilder] = useState(false);
     const [selectedAttrs, setSelectedAttrs] = useState<{ groupId: number; groupName: string; values: AttrValue[] }[]>([]);
     const [addGroupId, setAddGroupId] = useState<number | null>(null);
+
+    // Attribute groups currently active for this product's variants
+    const [variantGroups, setVariantGroups] = useState<number[]>([]);
 
     // Quick add attribute group
     const [attrModalVisible, setAttrModalVisible] = useState(false);
@@ -170,9 +188,9 @@ const ProductEdit: React.FC = () => {
                     brandRes,
                     attrRes] = await Promise.all([
                         axiosInstance.get(`${productPrefix}/${id}`),
-                        axiosInstance.get(`${categoryPrefix}`),
-                        axiosInstance.get(`${brandPrefix}`),
-                        axiosInstance.get(attributeGroupPrefix),
+                        axiosInstance.get(`${categoryPrefix}`, { params: { all: 1 } }),
+                        axiosInstance.get(`${brandPrefix}`, { params: { all: 1 } }),
+                        axiosInstance.get(attributeGroupPrefix, { params: { all: 1 } }),
                     ]);
 
                 const p = productRes.data.data;
@@ -187,12 +205,12 @@ const ProductEdit: React.FC = () => {
                     sale_price: p.sale_price ? parseFloat(p.sale_price) : undefined,
                     quantity: p.quantity,
                     description: p.description,
-                    content: p.content,
                     is_active: p.is_active,
                     is_featured: p.is_featured,
                     meta_title: p.meta_title,
                     meta_description: p.meta_description,
                 });
+                setContentValue(p.content || '');
 
                 setExistingImages((p.images || []).map((img: any) => ({
                     id: img.id,
@@ -213,6 +231,17 @@ const ProductEdit: React.FC = () => {
                     image: v.image || '',
                     is_active: v.is_active ?? true,
                 })));
+
+                // Initialize variantGroups from existing variants
+                const initialGroups = new Set<number>();
+                const allGrps = attrRes.data.data as AttrGroup[];
+                p.variants?.forEach((v: any) => {
+                    v.attributes?.forEach((a: any) => {
+                        const g = allGrps.find(group => group.attributes.some(attr => attr.id === a.id));
+                        if (g) initialGroups.add(g.id);
+                    });
+                });
+                setVariantGroups(Array.from(initialGroups));
 
                 const buildTree = (data: any[]) => {
                     const map = new Map<number, any>();
@@ -289,8 +318,38 @@ const ProductEdit: React.FC = () => {
         setVariants(prev => prev.map(v => v._key === key ? { ...v, [field]: value, _saved: false } : v));
     };
 
+    // Sync ảnh sang tất cả các variant cùng màu
+    const syncImageToColorSiblings = (sourceKey: string, file: File, previewUrl: string) => {
+        setVariants(prev => {
+            const source = prev.find(v => v._key === sourceKey);
+            if (!source) return prev;
+            // Tìm color attribute id của source variant
+            let colorId: number | null = null;
+            for (const group of attrGroups) {
+                if (!/color|mau|màu|colour/i.test(group.name) && !/color|mau|màu|colour/i.test(group.display_name || '')) continue;
+                const found = source.attribute_ids.find(id => group.attributes.some(a => a.id === id));
+                if (found !== undefined) { colorId = found; break; }
+            }
+            if (colorId === null) return prev; // Không phải nhóm màu → không sync
+            return prev.map(v => {
+                if (v._key === sourceKey) return v; // Bản thân không cần copy
+                if (!v.attribute_ids.includes(colorId!)) return v; // Khác màu → skip
+                return { ...v, imageFile: file, imagePreviewUrl: previewUrl, _saved: false };
+            });
+        });
+    };
+
     const saveExistingVariant = async (row: VariantRow) => {
         if (!row.id) return;
+        
+        // Check duplicate
+        const otherVariants = variants.filter(v => v._key !== row._key && !v._deleted);
+        const currentKey = [...row.attribute_ids].sort((a, b) => a - b).join(',');
+        if (otherVariants.some(v => [...v.attribute_ids].sort((a, b) => a - b).join(',') === currentKey)) {
+            toast.error('Bộ thuộc tính này đã tồn tại ở biến thể khác');
+            return;
+        }
+
         setVariants(prev => prev.map(v => v._key === row._key ? { ...v, _saving: true } : v));
         try {
             const fd = new FormData();
@@ -330,6 +389,19 @@ const ProductEdit: React.FC = () => {
         } catch { toast.error('Xóa biến thể thất bại'); }
     };
 
+    const addGroupToVariants = (groupId: number) => {
+        if (!variantGroups.includes(groupId)) {
+            setVariantGroups(prev => [...prev, groupId]);
+        }
+    };
+
+    const removeGroupFromVariants = (groupId: number) => {
+        setVariantGroups(prev => prev.filter(id => id !== groupId));
+    };
+
+    // Helper to get attribute group object
+    const getGroupById = (id: number) => attrGroups.find(g => g.id === id);
+
     const addAttrGroup = () => {
         if (!addGroupId) return;
         const group = attrGroups.find(g => g.id === addGroupId);
@@ -338,6 +410,7 @@ const ProductEdit: React.FC = () => {
             toast.warning('Nhóm này đã được thêm'); return;
         }
         setSelectedAttrs(prev => [...prev, { groupId: group.id, groupName: group.display_name || group.name, values: [] }]);
+        addGroupToVariants(group.id); // Also add to global groups
         setAddGroupId(null);
     };
 
@@ -399,6 +472,14 @@ const ProductEdit: React.FC = () => {
     };
 
     const saveNewVariant = async (row: VariantRow) => {
+        // Check duplicate
+        const otherVariants = variants.filter(v => v._key !== row._key && !v._deleted);
+        const currentKey = [...row.attribute_ids].sort((a, b) => a - b).join(',');
+        if (otherVariants.some(v => [...v.attribute_ids].sort((a, b) => a - b).join(',') === currentKey)) {
+            toast.error('Bộ thuộc tính này đã tồn tại ở biến thể khác');
+            return;
+        }
+
         setVariants(prev => prev.map(v => v._key === row._key ? { ...v, _saving: true } : v));
         try {
             const fd = new FormData();
@@ -435,6 +516,29 @@ const ProductEdit: React.FC = () => {
     const handleSave = async () => {
         try {
             const values = await form.validateFields();
+
+            // Validate duplicate variants
+            if (variants.length > 0 && hasDuplicateVariants(variants)) {
+                toast.error('Có các biến thể bị trùng lặp bộ thuộc tính. Vui lòng kiểm tra lại!');
+                setActiveTab('variants');
+                return;
+            }
+
+            // Validate: tổng SL biến thể = SL tồn kho (nếu có biến thể)
+            if (variants.length > 0) {
+                const totalStock = Number(values.quantity) || 0;
+                const activeVariants = variants.filter(v => !v._deleted);
+                const totalVariantQty = activeVariants.reduce((sum, v) => sum + (v.quantity || 0), 0);
+                if (totalVariantQty !== totalStock) {
+                    toast.error(
+                        `Tổng số lượng biến thể (${totalVariantQty}) phải bằng số lượng tồn kho (${totalStock}). Vui lòng kiểm tra lại!`,
+                        { autoClose: 5000 }
+                    );
+                    setActiveTab('variants');
+                    return;
+                }
+            }
+
             setSubmitting(true);
 
             // Gửi 1 FormData duy nhất: product fields + ảnh mới + variants mới + cập nhật cũ
@@ -443,9 +547,12 @@ const ProductEdit: React.FC = () => {
 
             // ── Product fields ──
             Object.entries(values).forEach(([key, val]) => {
+                if (key === 'content') return; // handled separately via contentValue
                 if (val === null || val === undefined) return;
                 fd.append(key, typeof val === 'boolean' ? (val ? '1' : '0') : String(val));
             });
+            // Append markdown content
+            fd.append('content', contentValue || '');
 
             // ── Cập nhật ảnh đã có (existing_images) ──
             existingImages.forEach((img) => {
@@ -545,23 +652,41 @@ const ProductEdit: React.FC = () => {
     };
 
     const variantColumns: ColumnsType<VariantRow> = [
-        {
-            title: 'Biến thể / Thuộc tính',
-            dataIndex: 'label',
-            width: 160,
-            render: (v, r) => (
-                <div>
-                    <Input
-                        value={v} size="small"
-                        onChange={e => updateVariant(r._key, 'label', e.target.value)}
+        ...variantGroups.map(groupId => {
+            const group = getGroupById(groupId);
+            return {
+                title: group?.display_name || group?.name || 'Thuộc tính',
+                width: 140,
+                render: (_: any, r: VariantRow) => (
+                    <Select
+                        placeholder="Chọn..."
+                        style={{ width: '100%' }}
+                        size="small"
+                        value={r.attribute_ids.find(aid => group?.attributes.some(a => a.id === aid))}
+                        onChange={val => {
+                            const others = r.attribute_ids.filter(aid => !group?.attributes.some(a => a.id === aid));
+                            const nextIds = val ? [...others, val] : others;
+                            updateVariant(r._key, 'attribute_ids', nextIds);
+                            
+                            // Update label automatically
+                            const updatedAttrs: any[] = [];
+                            nextIds.forEach(id => {
+                                for(const g of attrGroups) {
+                                    const found = g.attributes.find(a => a.id === id);
+                                    if(found) updatedAttrs.push(found);
+                                }
+                            });
+                            updateVariant(r._key, 'label', buildVariantLabel(updatedAttrs));
+                        }}
+                        options={group?.attributes.map(a => ({ value: a.id, label: a.value }))}
+                        allowClear
                     />
-                    {r._isNew && <Tag color="green" style={{ marginTop: 4 }}>Mới</Tag>}
-                </div>
-            ),
-        },
+                )
+            };
+        }),
         {
             title: 'SKU',
-            width: 120,
+            width: 150,
             render: (_, r) => (
                 <Input
                     value={r.sku} size="small" placeholder="SKU variant"
@@ -622,6 +747,7 @@ const ProductEdit: React.FC = () => {
                                 />
                             </div>
                         )}
+                        <Tooltip title="Ảnh sẽ tự động áp dụng cho tất cả biến thể cùng màu" placement="top">
                         <Upload
                             accept="image/*"
                             showUploadList={false}
@@ -629,11 +755,14 @@ const ProductEdit: React.FC = () => {
                                 const url = URL.createObjectURL(file);
                                 updateVariant(r._key, 'imageFile', file);
                                 updateVariant(r._key, 'imagePreviewUrl', url);
+                                // Sync sang các variant cùng màu
+                                syncImageToColorSiblings(r._key, file, url);
                                 return false;
                             }}
                         >
                             {!previewSrc && <Button size="small" icon={<UploadOutlined />}>Đổi</Button>}
                         </Upload>
+                        </Tooltip>
                     </div>
                 );
             },
@@ -724,8 +853,15 @@ const ProductEdit: React.FC = () => {
                             <Form.Item name="description" label="Mô tả ngắn">
                                 <TextArea rows={3} />
                             </Form.Item>
-                            <Form.Item name="content" label="Nội dung chi tiết">
-                                <TextArea rows={6} />
+                            <Form.Item label="Nội dung chi tiết (Markdown)">
+                                <div data-color-mode="light">
+                                    <MDEditor
+                                        value={contentValue}
+                                        onChange={v => setContentValue(v || '')}
+                                        height={300}
+                                        preview="live"
+                                    />
+                                </div>
                             </Form.Item>
                         </Card>
                         <Card title="SEO">
@@ -753,7 +889,15 @@ const ProductEdit: React.FC = () => {
                                     addonAfter="₫"
                                 />
                             </Form.Item>
-                            <Form.Item name="quantity" label="Số lượng tồn kho">
+                            <Form.Item
+                                name="quantity"
+                                label="Số lượng tồn kho"
+                                rules={[{ required: true, message: 'Nhập số lượng tồn kho' }]}
+                                extra={variants.length > 0
+                                    ? `Tổng biến thể: ${variants.reduce((s, v) => s + (v.quantity || 0), 0)} / ${form.getFieldValue('quantity') ?? 0}`
+                                    : undefined
+                                }
+                            >
                                 <InputNumber style={{ width: '100%' }} min={0} />
                             </Form.Item>
                         </Card>
@@ -864,20 +1008,33 @@ const ProductEdit: React.FC = () => {
                         }
                     >
                         {showBuilder && (
-                            <div style={{ background: '#f0f7ff', border: '1px dashed #1677ff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+                             <div style={{ background: '#f0f7ff', border: '1px dashed #1677ff', borderRadius: 8, padding: 16, marginBottom: 16 }}>
                                 <Title level={5} style={{ marginBottom: 12 }}>
                                     <ThunderboltOutlined style={{ color: '#fa8c16' }} /> Bộ tạo biến thể tự động
                                 </Title>
 
-                                <Space style={{ marginBottom: 12 }}>
+                                <Space style={{ marginBottom: 12 }} wrap>
                                     <Select
-                                        placeholder="Chọn nhóm thuộc tính..." style={{ width: 220 }}
+                                        placeholder="Chọn nhóm thuộc tính thêm vào..." style={{ width: 300 }}
                                         value={addGroupId} onChange={v => setAddGroupId(v)}
-                                        options={attrGroups.filter(g => !selectedAttrs.some(a => a.groupId === g.id)).map(g => ({ value: g.id, label: g.display_name || g.name }))}
+                                        options={attrGroups.map(g => ({ 
+                                            value: g.id, 
+                                            label: g.display_name || g.name,
+                                            disabled: selectedAttrs.some(a => a.groupId === g.id)
+                                        }))}
                                     />
-                                    <Button type="default" onClick={() => setAttrModalVisible(true)} icon={<PlusOutlined />}>Tạo mới</Button>
-                                    <Button type="default" onClick={addAttrGroup} icon={<PlusOutlined />}>Thêm nhóm</Button>
+                                    <Button type="default" onClick={addAttrGroup} icon={<PlusOutlined />}>Thêm vào bộ sinh</Button>
+                                    <Button type="dashed" onClick={() => setAttrModalVisible(true)} icon={<PlusOutlined />}>Tạo nhóm mới</Button>
                                 </Space>
+
+                                <div style={{ marginBottom: 12 }}>
+                                    <Text type="secondary">Cấu trúc biến thể hiện tại: </Text>
+                                    {variantGroups.length === 0 ? <Tag>Chưa có</Tag> : variantGroups.map(gid => (
+                                        <Tag key={gid} color="blue" closable onClose={() => removeGroupFromVariants(gid)}>
+                                            {getGroupById(gid)?.display_name || getGroupById(gid)?.name}
+                                        </Tag>
+                                    ))}
+                                </div>
 
                                 {selectedAttrs.length === 0 ? (
                                     <Text type="secondary">Chọn nhóm thuộc tính và các giá trị cần tạo biến thể</Text>
@@ -938,6 +1095,23 @@ const ProductEdit: React.FC = () => {
                                         type="warning" showIcon style={{ marginBottom: 12 }}
                                     />
                                 )}
+                                {(() => {
+                                    const totalStock = form.getFieldValue('quantity') ?? 0;
+                                    const totalVariantQty = variants.reduce((s, v) => s + (v.quantity || 0), 0);
+                                    const match = totalVariantQty === Number(totalStock);
+                                    return (
+                                        <Alert
+                                            type={match ? 'success' : 'warning'}
+                                            showIcon
+                                            style={{ marginBottom: 12 }}
+                                            message={
+                                                match
+                                                    ? `✓ Tổng số lượng biến thể khớp với tồn kho: ${totalVariantQty}`
+                                                    : `Tổng số lượng biến thể: ${totalVariantQty} / Tồn kho: ${totalStock} — Cần điều chỉnh để khớp`
+                                            }
+                                        />
+                                    );
+                                })()}
                                 <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
                                     {variants.length} biến thể · Chỉnh sửa trực tiếp rồi bấm 💾 để lưu từng biến thể
                                 </Text>

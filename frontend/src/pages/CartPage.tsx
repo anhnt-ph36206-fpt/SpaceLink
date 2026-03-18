@@ -91,7 +91,7 @@ const CartPage: React.FC = () => {
                 </div>
                 <h3>Giỏ hàng của bạn đang trống</h3>
                 <p className="text-muted">Hãy chọn thêm sản phẩm để tiếp tục mua sắm.</p>
-                <Link to="/products" className="btn btn-primary px-4 rounded-pill mt-3">
+                <Link to="/" className="btn btn-primary px-4 rounded-pill mt-3">
                     Tiếp tục mua sắm
                 </Link>
             </div>

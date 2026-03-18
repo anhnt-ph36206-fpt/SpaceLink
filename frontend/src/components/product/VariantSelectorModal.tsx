@@ -207,7 +207,8 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({
                     <div className="d-flex flex-wrap gap-2">
                         {attrs.map(attr => {
                             const isSelected = selectedAttrs[group] === attr.id;
-                            const isColor = !!attr.color_code;
+                            const isColorGroup = /color|mau|màu|colour/i.test(group);
+                            const isColor = !!attr.color_code && isColorGroup;
 
                             // Check availability based on other selections (simplified for modal)
                             const isAvailable = product.variants?.some(v =>
@@ -233,13 +234,19 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({
                             ) : (
                                 <button
                                     key={attr.id}
-                                    className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                    className="btn btn-sm"
                                     style={{
                                         borderRadius: 8,
                                         padding: '6px 16px',
-                                        fontWeight: isSelected ? 600 : 400,
+                                        fontWeight: isSelected ? 700 : 400,
                                         opacity: isAvailable ? 1 : 0.4,
                                         cursor: isAvailable ? 'pointer' : 'not-allowed',
+                                        borderWidth: 2,
+                                        borderStyle: 'solid',
+                                        borderColor: isSelected ? '#ff7a00' : '#dee2e6',
+                                        backgroundColor: isSelected ? '#fffcf8' : 'transparent',
+                                        color: isSelected ? '#ff7a00' : '#6c757d',
+                                        boxShadow: isSelected ? '0 0 0 2px rgba(255,122,0,0.15)' : 'none',
                                         transition: 'all 0.2s'
                                     }}
                                     onClick={() => isAvailable && setSelectedAttrs(prev => ({ ...prev, [group]: attr.id }))}
