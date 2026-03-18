@@ -509,7 +509,8 @@ const ProductDetailPage: React.FC = () => {
                                     <div className="d-flex flex-wrap gap-2">
                                         {attrs.map(attr => {
                                             const isSelected = selectedAttrs[group] === attr.id;
-                                            const isColor = !!attr.color_code;
+                                            const isColorGroup = /color|mau|màu|colour/i.test(group);
+                                            const isColor = !!attr.color_code && isColorGroup;
 
                                             // Check if this attr is available given other selections
                                             const isAvailable = product.variants?.some(v => {
