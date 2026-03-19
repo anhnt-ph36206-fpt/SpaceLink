@@ -22,6 +22,7 @@ interface OrderItem {
   price: number;
   quantity: number;
   total: number;
+  is_reviewed?: boolean;
 }
 
 interface StatusHistory {
@@ -211,6 +212,14 @@ const OrderDetailPage: React.FC = () => {
   const [returnEvidenceFiles, setReturnEvidenceFiles] = useState<File[]>([]);
   const [bankInfo, setBankInfo] = useState({ bank: '', accountName: '', accountNumber: '' });
 
+  // ── Review States ─────────────────────────────────────────
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewItem, setReviewItem] = useState<OrderItem | null>(null);
+  const [writeRating, setWriteRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [reviewContent, setReviewContent] = useState('');
+  const [reviewLoading, setReviewLoading] = useState(false);
+
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -323,6 +332,29 @@ const OrderDetailPage: React.FC = () => {
       showToast(e?.response?.data?.message ?? 'Không thể gửi yêu cầu hoàn trả', 'error');
     } finally {
       setReturnLoading(false);
+    }
+  };
+
+  // ── Submit Review ─────────────────────────────────────────
+  const handleSubmitReview = async () => {
+    if (!reviewItem || !order) return;
+    setReviewLoading(true);
+    try {
+      await axiosInstance.post('/client/reviews', {
+        order_item_id: reviewItem.id,
+        rating: writeRating,
+        content: reviewContent || null,
+      });
+      showToast('Cảm ơn bạn đã đánh giá sản phẩm!', 'success');
+      setReviewOpen(false);
+      setReviewContent('');
+      setWriteRating(5);
+      fetchOrder();
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showToast(e?.response?.data?.message ?? 'Không thể gửi đánh giá hoặc bạn đã đánh giá sản phẩm này.', 'error');
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -535,7 +567,21 @@ const OrderDetailPage: React.FC = () => {
                         )}
                         <div className="od-item-qty">{formatVND(item.price)} × {item.quantity}</div>
                       </div>
-                      <div className="od-item-total">{formatVND(item.total)}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                         <div className="od-item-total">{formatVND(item.total)}</div>
+                         {order.status === 'completed' && (
+                            <button
+                              className="od-btn-review-sm"
+                              disabled={item.is_reviewed}
+                              onClick={() => {
+                                setReviewItem(item);
+                                setReviewOpen(true);
+                              }}
+                            >
+                              {item.is_reviewed ? <><i className="fas fa-check me-1" />Đã đánh giá</> : 'Đánh giá'}
+                            </button>
+                         )}
+                      </div>
                     </div>
                   );
                 })}
@@ -929,6 +975,66 @@ const OrderDetailPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ── Review Modal ── */}
+      {reviewOpen && reviewItem && (
+        <div className="od-overlay" onClick={e => { if (e.target === e.currentTarget) setReviewOpen(false); }}>
+          <div className="od-modal">
+            <div className="od-modal-hd">
+              <div>
+                <div className="od-modal-title">
+                  <i className="fas fa-star me-2" style={{ color: '#eab308' }} />Đánh giá sản phẩm
+                </div>
+                <div className="od-modal-sub">Bạn cảm thấy thế nào về sản phẩm này?</div>
+              </div>
+              <button className="od-modal-x" onClick={() => setReviewOpen(false)}><i className="fas fa-times" /></button>
+            </div>
+            <div className="od-modal-bd">
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                <img src={reviewItem.product_image || 'https://via.placeholder.com/60'} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid #eee' }} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1d23', marginBottom: 4 }}>{reviewItem.product_name}</div>
+                  <div style={{ fontSize: 12, color: '#8590a3' }}>Phân loại: {parseVariantAttrs(reviewItem.variant_info).map(a => `${a.name}: ${a.value}`).join(', ') || 'Mặc định'}</div>
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Mức độ hài lòng</div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <i
+                      key={star}
+                      className={star <= (hoverRating || writeRating) ? 'fas fa-star' : 'far fa-star'}
+                      style={{ fontSize: 28, color: '#eab308', cursor: 'pointer', transition: 'transform 0.1s' }}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      onClick={() => setWriteRating(star)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <label className="od-modal-label">Nhận xét chi tiết</label>
+              <textarea
+                className="od-textarea"
+                placeholder="Hãy chia sẻ những điều bạn thích về sản phẩm này nhé..."
+                value={reviewContent}
+                onChange={e => setReviewContent(e.target.value)}
+                style={{ minHeight: 100 }}
+              />
+            </div>
+            <div className="od-modal-ft">
+              <button className="od-modal-btn-no" onClick={() => setReviewOpen(false)} disabled={reviewLoading}>Trở lại</button>
+              <button className="od-modal-btn-yes" style={{ background: 'linear-gradient(135deg, #1d4ed8, #1e3a8a)' }} onClick={handleSubmitReview} disabled={reviewLoading}>
+                {reviewLoading
+                  ? <><span className="od-spin me-2" />Đang gửi...</>
+                  : <><i className="fas fa-paper-plane me-2" />Hoàn thành</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
@@ -1105,6 +1211,9 @@ const CSS = `
   .od-note-box { font-size: 13px; color: #5a6275; font-style: italic; line-height: 1.65; background: var(--od-primary-light); border-radius: 8px; padding: 10px 12px; }
 
   /* Action buttons */
+  .od-btn-review-sm { background: #fff; border: 1.5px solid var(--od-primary); color: var(--od-primary); font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; }
+  .od-btn-review-sm:hover:not(:disabled) { background: var(--od-primary); color: #fff; }
+  .od-btn-review-sm:disabled { border-color: #eaecf0; color: #8590a3; cursor: not-allowed; background: #f8f9fc; }
   .od-btn-full { width: 100%; display: flex; align-items: center; justify-content: center; border-radius: 10px; padding: 11px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s; margin-bottom: 10px; }
   .od-btn-full:last-child { margin-bottom: 0; }
   .od-btn-cancel { background: #fff5f5; border: 1.5px solid #dc3545; color: #dc3545; }
