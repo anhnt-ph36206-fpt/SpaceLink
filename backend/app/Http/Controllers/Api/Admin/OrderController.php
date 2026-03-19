@@ -19,12 +19,12 @@ class OrderController extends Controller
 {
     // Map trạng thái → timestamp field tương ứng
     private const STATUS_TIMESTAMPS = [
-        'confirmed'  => 'confirmed_at',
-        'shipped'    => 'shipped_at',
-        'shipping'   => 'shipped_at',
-        'delivered'  => 'delivered_at',
-        'completed'  => 'completed_at',
-        'cancelled'  => 'cancelled_at',
+        'confirmed' => 'confirmed_at',
+        'shipped' => 'shipped_at',
+        'shipping' => 'shipped_at',
+        'delivered' => 'delivered_at',
+        'completed' => 'completed_at',
+        'cancelled' => 'cancelled_at',
     ];
 
     // =========================================================================
@@ -40,9 +40,9 @@ class OrderController extends Controller
             $kw = $request->search;
             $query->where(function ($q) use ($kw) {
                 $q->where('order_code', 'like', "%{$kw}%")
-                  ->orWhere('shipping_name', 'like', "%{$kw}%")
-                  ->orWhere('shipping_phone', 'like', "%{$kw}%")
-                  ->orWhere('shipping_email', 'like', "%{$kw}%");
+                    ->orWhere('shipping_name', 'like', "%{$kw}%")
+                    ->orWhere('shipping_phone', 'like', "%{$kw}%")
+                    ->orWhere('shipping_email', 'like', "%{$kw}%");
             });
         }
 
@@ -66,8 +66,8 @@ class OrderController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $perPage  = min((int) $request->get('per_page', 15), 100);
-        $orders   = $query->paginate($perPage);
+        $perPage = min((int)$request->get('per_page', 15), 100);
+        $orders = $query->paginate($perPage);
 
         return OrderResource::collection($orders);
     }
@@ -91,10 +91,10 @@ class OrderController extends Controller
     // =========================================================================
     public function updateStatus(UpdateOrderStatusRequest $request, string $id): JsonResponse
     {
-        $order      = Order::findOrFail($id);
-        $oldStatus  = $order->status;
-        $newStatus  = $request->status;
-        $admin      = $request->user();
+        $order = Order::findOrFail($id);
+        $oldStatus = $order->status;
+        $newStatus = $request->status;
+        $admin = $request->user();
 
         $order = DB::transaction(function () use ($order, $oldStatus, $newStatus, $admin, $request) {
             // Build update payload
@@ -102,14 +102,14 @@ class OrderController extends Controller
 
             // Ghi timestamp tương ứng với trạng thái mới
             $tsField = self::STATUS_TIMESTAMPS[$newStatus] ?? null;
-            if ($tsField && !$order->{$tsField}) {
+            if ($tsField && !$order->{ $tsField}) {
                 $updateData[$tsField] = now();
             }
 
             // Xử lý riêng khi hủy đơn
             if ($newStatus === 'cancelled') {
                 $updateData['cancelled_reason'] = $request->cancelled_reason;
-                $updateData['cancelled_by']     = $admin->id;
+                $updateData['cancelled_by'] = $admin->id;
 
                 // Khôi phục tồn kho: variant + product
                 foreach ($order->items()->with('variant')->get() as $item) {
@@ -122,9 +122,12 @@ class OrderController extends Controller
             }
 
             // Thông tin vận chuyển (khi chuyển sang shipping)
-            if ($request->filled('tracking_code'))     $updateData['tracking_code']     = $request->tracking_code;
-            if ($request->filled('shipping_partner'))  $updateData['shipping_partner']  = $request->shipping_partner;
-            if ($request->filled('estimated_delivery')) $updateData['estimated_delivery'] = $request->estimated_delivery;
+            if ($request->filled('tracking_code'))
+                $updateData['tracking_code'] = $request->tracking_code;
+            if ($request->filled('shipping_partner'))
+                $updateData['shipping_partner'] = $request->shipping_partner;
+            if ($request->filled('estimated_delivery'))
+                $updateData['estimated_delivery'] = $request->estimated_delivery;
 
             // Ghi admin note nếu có
             if ($request->filled('note')) {
@@ -135,10 +138,10 @@ class OrderController extends Controller
 
             // Ghi lịch sử chuyển trạng thái
             OrderStatusHistory::create([
-                'order_id'   => $order->id,
-                'from_status'=> $oldStatus,
-                'to_status'  => $newStatus,
-                'note'       => $request->note,
+                'order_id' => $order->id,
+                'from_status' => $oldStatus,
+                'to_status' => $newStatus,
+                'note' => $request->note,
                 'changed_by' => $admin->id,
             ]);
 
@@ -148,9 +151,9 @@ class OrderController extends Controller
         });
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => "Đã cập nhật trạng thái đơn hàng từ \"{$oldStatus}\" → \"{$newStatus}\".",
-            'data'    => new OrderResource($order),
+            'data' => new OrderResource($order),
         ]);
     }
 
@@ -169,9 +172,9 @@ class OrderController extends Controller
         $order->update($updateData);
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => "Đã cập nhật thanh toán thành \"{$request->payment_status}\".",
-            'data'    => new OrderResource($order),
+            'data' => new OrderResource($order),
         ]);
     }
 }

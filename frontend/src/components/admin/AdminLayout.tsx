@@ -16,6 +16,7 @@ import {
     RocketOutlined,
     ShopOutlined,
     PictureOutlined,
+    FileTextOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -55,6 +56,11 @@ const menuItems = [
         label: 'Banners',
     },
     {
+        key: '/admin/news',
+        icon: <FileTextOutlined />,
+        label: 'Tin tức',
+    },
+    {
         key: '/admin/orders',
         icon: <ShoppingCartOutlined />,
         label: 'Đơn hàng',
@@ -73,6 +79,7 @@ const breadcrumbMap: Record<string, string> = {
     '/admin/products': 'Sản phẩm',
     '/admin/attribute-groups': 'Nhóm biến thể',
     '/admin/banners': 'Banners',
+    '/admin/news': 'Tin tức',
     '/admin/orders': 'Đơn hàng',
     '/admin/users': 'Người dùng',
 };
