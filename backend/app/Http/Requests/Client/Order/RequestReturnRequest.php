@@ -17,6 +17,9 @@ class RequestReturnRequest extends FormRequest
             'reason' => 'required|string|max:500',
             'evidence_images' => 'required|array|min:1|max:5',
             'evidence_images.*' => 'file|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'refund_bank' => 'nullable|string|max:100',
+            'refund_account_name' => 'nullable|string|max:100',
+            'refund_account_number' => 'nullable|string|max:50',
         ];
     }
 

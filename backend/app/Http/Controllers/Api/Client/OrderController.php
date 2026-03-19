@@ -98,6 +98,22 @@ class OrderController extends Controller
                 'cancelled_at' => now(),
             ]);
 
+            // Nếu đơn đã thanh toán (VNPAY/Banking), cần lưu thông tin hoàn tiền
+            if ($order->payment_status === 'paid' && in_array($order->payment_method, ['vnpay', 'banking'])) {
+                ProductReturn::updateOrCreate(
+                    ['order_id' => $order->id],
+                    [
+                        'user_id' => $user->id,
+                        'reason' => 'Hủy đơn hàng đã thanh toán: ' . $reason,
+                        'status' => 'pending',
+                        'refund_bank' => request('refund_bank'),
+                        'refund_account_name' => request('refund_account_name'),
+                        'refund_account_number' => request('refund_account_number'),
+                        'items' => $order->items->pluck('id')->all(),
+                    ]
+                );
+            }
+
             // Ghi lịch sử
             OrderStatusHistory::create([
                 'order_id' => $order->id,
@@ -274,30 +290,29 @@ class OrderController extends Controller
 
         $evidenceFiles = $request->file('evidence_images');
 
-        DB::transaction(function () use ($order, $user, $reason, $itemIds, $evidenceFiles) {
+        DB::transaction(function () use ($order, $user, $reason, $itemIds, $evidenceFiles, $request) {
             $oldStatus = $order->status;
-
-            /** @var ProductReturn|null $productReturn */
             $productReturn = $order->productReturn;
+            $refundData = [
+                'order_id' => $order->id,
+                'user_id' => $user->id,
+                'reason' => $reason,
+                'status' => 'pending',
+                'items' => $itemIds,
+                'refund_bank' => $request->input('refund_bank'),
+                'refund_account_name' => $request->input('refund_account_name'),
+                'refund_account_number' => $request->input('refund_account_number'),
+            ];
+
             if ($productReturn) {
-                $productReturn->status = 'pending';
-                $productReturn->reason = $reason;
-                $productReturn->reason_for_refusal = null;
-                $productReturn->refund_amount = null;
-                $productReturn->transaction_code = null;
-                $productReturn->refund_bank = null;
-                $productReturn->refund_account_name = null;
-                $productReturn->refund_account_number = null;
-                $productReturn->items = $itemIds;
-                $productReturn->save();
+                // Reset fields if re-requesting
+                $productReturn->update(array_merge($refundData, [
+                    'reason_for_refusal' => null,
+                    'refund_amount' => null,
+                    'transaction_code' => null,
+                ]));
             } else {
-                $productReturn = ProductReturn::create([
-                    'order_id' => $order->id,
-                    'user_id' => $user->id,
-                    'reason' => $reason,
-                    'status' => 'pending',
-                    'items' => $itemIds,
-                ]);
+                $productReturn = ProductReturn::create($refundData);
             }
 
             // Đặt trạng thái đơn = returned để UI chuyển sang luồng hoàn trả (client chỉ "yêu cầu", admin sẽ duyệt/từ chối)

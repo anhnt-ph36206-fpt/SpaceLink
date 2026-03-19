@@ -98,6 +98,9 @@ class OrderResource extends JsonResource
                     'reason_for_refusal' => $pr->reason_for_refusal,
                     'refund_amount' => $pr->refund_amount !== null ? (float) $pr->refund_amount : null,
                     'transaction_code' => $pr->transaction_code,
+                    'refund_bank' => $pr->refund_bank,
+                    'refund_account_name' => $pr->refund_account_name,
+                    'refund_account_number' => $pr->refund_account_number,
                     'items' => $pr->items,
                     'evidences' => $pr->relationLoaded('evidences')
                         ? $pr->evidences->map(fn ($e) => [

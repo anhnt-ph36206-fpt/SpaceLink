@@ -209,6 +209,7 @@ const OrderDetailPage: React.FC = () => {
   const [returnReason, setReturnReason] = useState('');
   const [returnLoading, setReturnLoading] = useState(false);
   const [returnEvidenceFiles, setReturnEvidenceFiles] = useState<File[]>([]);
+  const [bankInfo, setBankInfo] = useState({ bank: '', accountName: '', accountNumber: '' });
 
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -250,10 +251,14 @@ const OrderDetailPage: React.FC = () => {
     try {
       await axiosInstance.post(`/client/orders/${order.id}/cancel`, {
         reason: cancelReason || 'Khách hàng tự hủy.',
+        refund_bank: bankInfo.bank,
+        refund_account_name: bankInfo.accountName,
+        refund_account_number: bankInfo.accountNumber,
       });
       showToast('Đã hủy đơn hàng thành công!', 'success');
       setCancelOpen(false);
       setCancelReason('');
+      setBankInfo({ bank: '', accountName: '', accountNumber: '' });
       fetchOrder();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -297,6 +302,9 @@ const OrderDetailPage: React.FC = () => {
     try {
       const formData = new FormData();
       formData.append('reason', returnReason);
+      formData.append('refund_bank', bankInfo.bank);
+      formData.append('refund_account_name', bankInfo.accountName);
+      formData.append('refund_account_number', bankInfo.accountNumber);
       returnEvidenceFiles.forEach((f) => {
         formData.append('evidence_images[]', f);
       });
@@ -308,6 +316,7 @@ const OrderDetailPage: React.FC = () => {
       setReturnOpen(false);
       setReturnReason('');
       setReturnEvidenceFiles([]);
+      setBankInfo({ bank: '', accountName: '', accountNumber: '' });
       fetchOrder();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -747,6 +756,20 @@ const OrderDetailPage: React.FC = () => {
                 value={cancelReason}
                 onChange={e => setCancelReason(e.target.value)}
               />
+
+              {order.payment_status === 'paid' && ['vnpay', 'banking'].includes(order.payment_method ?? '') && (
+                <div style={{ marginTop: 16, padding: 14, background: '#fff7ed', borderRadius: 10, border: '1px solid #fed7aa' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#9a3412', marginBottom: 10 }}>
+                    <i className="fas fa-university me-2" />Thông tin hoàn tiền
+                  </div>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <input className="od-textarea" style={{ minHeight: 40 }} placeholder="Tên ngân hàng (ví dụ: VCB, Techcombank...)" value={bankInfo.bank} onChange={e => setBankInfo(prev => ({ ...prev, bank: e.target.value }))} />
+                    <input className="od-textarea" style={{ minHeight: 40 }} placeholder="Họ tên chủ tài khoản" value={bankInfo.accountName} onChange={e => setBankInfo(prev => ({ ...prev, accountName: e.target.value }))} />
+                    <input className="od-textarea" style={{ minHeight: 40 }} placeholder="Số tài khoản" value={bankInfo.accountNumber} onChange={e => setBankInfo(prev => ({ ...prev, accountNumber: e.target.value }))} />
+                  </div>
+                  <div style={{ fontSize: 11, color: '#9a3412', marginTop: 8 }}>Vui lòng nhập chính xác để Shop hoàn lại tiền đã thanh toán.</div>
+                </div>
+              )}
             </div>
             <div className="od-modal-ft">
               <button className="od-modal-btn-no" onClick={() => setCancelOpen(false)} disabled={cancelLoading}>Không hủy</button>
@@ -863,6 +886,20 @@ const OrderDetailPage: React.FC = () => {
                       style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 10, border: '1px solid #f0f0f0' }}
                     />
                   ))}
+                </div>
+              )}
+
+              {order.payment_status === 'paid' && (
+                <div style={{ marginTop: 16, padding: 14, background: '#fff7ed', borderRadius: 10, border: '1px solid #fed7aa' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#9a3412', marginBottom: 10 }}>
+                    <i className="fas fa-university me-2" />Thông tin hoàn tiền
+                  </div>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <input className="od-textarea" style={{ minHeight: 40 }} placeholder="Tên ngân hàng (ví dụ: VCB, Techcombank...)" value={bankInfo.bank} onChange={e => setBankInfo(prev => ({ ...prev, bank: e.target.value }))} />
+                    <input className="od-textarea" style={{ minHeight: 40 }} placeholder="Họ tên chủ tài khoản" value={bankInfo.accountName} onChange={e => setBankInfo(prev => ({ ...prev, accountName: e.target.value }))} />
+                    <input className="od-textarea" style={{ minHeight: 40 }} placeholder="Số tài khoản" value={bankInfo.accountNumber} onChange={e => setBankInfo(prev => ({ ...prev, accountNumber: e.target.value }))} />
+                  </div>
+                  <div style={{ fontSize: 11, color: '#9a3412', marginTop: 8 }}>Vui lòng nhập chính xác để Shop hoàn lại tiền cho bạn.</div>
                 </div>
               )}
             </div>
