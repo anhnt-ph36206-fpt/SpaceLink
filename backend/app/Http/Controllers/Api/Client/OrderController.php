@@ -18,7 +18,7 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = Order::where('user_id', $user->id)->latest();
+        $query = Order::with('items')->where('user_id', $user->id)->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
