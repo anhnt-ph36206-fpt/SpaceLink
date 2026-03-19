@@ -55,6 +55,13 @@ class OrderResource extends JsonResource
             'cancelled_reason' => $this->cancelled_reason,
             'cancelled_at'     => $this->cancelled_at?->format('d-m-Y H:i:s'),
 
+            // Hoàn trả
+            'refund_reason'         => $this->refund_reason,
+            'refund_images'         => $this->refund_images,
+            'refund_refusal_reason' => $this->refund_refusal_reason,
+            'refund_requested_at'   => $this->refund_requested_at?->format('d-m-Y H:i:s'),
+            'refund_processed_at'   => $this->refund_processed_at?->format('d-m-Y H:i:s'),
+
             // Shipping extra
             'shipping_partner'    => $this->shipping_partner,
             'tracking_code'       => $this->tracking_code,

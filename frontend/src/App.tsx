@@ -18,11 +18,13 @@ import NotFoundPage from './pages/NotFoundPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
+import OrderDetailPage from './pages/OrderDetailPage';
 import NewsDetailPage from './pages/NewsDetailPage';
 import NewsListPage from './pages/NewsListPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminCategoryPage from './pages/admin/categories/AdminCategoryPage';
 import AdminOrderPage from './pages/admin/AdminOrderPage';
+import AdminOrderDetailPage from './pages/admin/AdminOrderDetailPage';
 import AdminUserPage from './pages/admin/AdminUserPage';
 import ProductList from "./pages/admin/products/list";
 import ProductCreate from "./pages/admin/products/create";
@@ -70,6 +72,7 @@ function App() {
                                 </Route>
 
                                 <Route path="orders" element={<AdminOrderPage />} />
+                                <Route path="orders/:id" element={<AdminOrderDetailPage />} />
                                 <Route path="users" element={<AdminUserPage />} />
                             </Route>
 
@@ -83,6 +86,7 @@ function App() {
                                     <Route path="/checkout" element={<CheckoutPage />} />
                                     <Route path="/order/success/:orderCode" element={<OrderSuccessPage />} />
                                     <Route path="/profile" element={<ProfilePage />} />
+                                    <Route path="/orders/:id" element={<OrderDetailPage />} />
                                 </Route>
                                 <Route path="/bestseller" element={<BestsellerPage />} />
                                 <Route path="/contact" element={<ContactPage />} />
