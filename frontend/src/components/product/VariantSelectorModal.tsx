@@ -133,6 +133,10 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({
             toast.error('Sản phẩm này hiện đang hết hàng!');
             return;
         }
+        if (qty > stockCount) {
+            toast.error('Số lượng trong kho không đủ!');
+            return;
+        }
         onAddToCart(selectedVariant.id, qty);
         onCancel();
     };
@@ -157,7 +161,7 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({
         ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
         : 0;
 
-    const stock = selectedVariant?.quantity ?? 0;
+    const stock = allSelected ? (selectedVariant?.quantity ?? 0) : 0;
 
     return (
         <Modal
@@ -210,16 +214,32 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({
                             const isColorGroup = /color|mau|màu|colour/i.test(group);
                             const isColor = !!attr.color_code && isColorGroup;
 
-                            // Check availability based on other selections (simplified for modal)
-                            const isAvailable = product.variants?.some(v =>
-                                v.attributes.some(a => a.id === attr.id) && v.quantity > 0
-                            );
+                            // Check availability based on current selections (if incompatible -> disable)
+                            const isAvailable = product.variants?.some((v) => {
+                                const hasThisAttr = v.attributes.some((a) => a.id === attr.id);
+                                const otherGroupsMatch = Object.entries(selectedAttrs).every(
+                                    ([g, sid]) => g === group || v.attributes.some((a) => a.id === sid),
+                                );
+
+                                return hasThisAttr && otherGroupsMatch && v.quantity > 0;
+                            });
 
                             return isColor ? (
                                 <button
                                     key={attr.id}
                                     title={attr.value}
-                                    onClick={() => isAvailable && setSelectedAttrs(prev => ({ ...prev, [group]: attr.id }))}
+                                    onClick={() => {
+                                        if (isSelected) {
+                                            setSelectedAttrs((prev) => {
+                                                const next = { ...prev };
+                                                delete next[group];
+                                                return next;
+                                            });
+                                            setQty(1);
+                                        } else if (isAvailable) {
+                                            setSelectedAttrs((prev) => ({ ...prev, [group]: attr.id }));
+                                        }
+                                    }}
                                     style={{
                                         width: 32, height: 32, borderRadius: '50%',
                                         background: attr.color_code,
@@ -249,7 +269,18 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({
                                         boxShadow: isSelected ? '0 0 0 2px rgba(255,122,0,0.15)' : 'none',
                                         transition: 'all 0.2s'
                                     }}
-                                    onClick={() => isAvailable && setSelectedAttrs(prev => ({ ...prev, [group]: attr.id }))}
+                                    onClick={() => {
+                                        if (isSelected) {
+                                            setSelectedAttrs((prev) => {
+                                                const next = { ...prev };
+                                                delete next[group];
+                                                return next;
+                                            });
+                                            setQty(1);
+                                        } else if (isAvailable) {
+                                            setSelectedAttrs((prev) => ({ ...prev, [group]: attr.id }));
+                                        }
+                                    }}
                                 >
                                     {attr.value}
                                 </button>

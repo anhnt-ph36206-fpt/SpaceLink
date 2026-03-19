@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class ReturnEvidence extends Model
 {
     public $timestamps = false; // chỉ có created_at
+    public $table = 'return_evidences';
 
     protected $fillable = [
         'product_return_id',

@@ -65,6 +65,16 @@ interface ClientOrder {
   created_at: string;
   items?: OrderItem[];
   status_history?: StatusHistory[];
+  product_return?: {
+    id?: number;
+    status?: string;
+    reason?: string | null;
+    reason_for_refusal?: string | null;
+    refund_amount?: number | null;
+    transaction_code?: string | null;
+    items?: number[] | null;
+    created_at?: string;
+  };
 }
 
 // ── Shopee-like Status Config (Orange primary) ───────────────
@@ -126,11 +136,17 @@ const ORDER_STATUS_CFG: Record<string, {
 };
 
 const PAYMENT_STATUS_CFG: Record<string, { color: string; bg: string; border: string; label: string; icon: string }> = {
-  pending: { color: '#b45309', bg: '#fffbeb', border: '#fde68a', label: 'Chưa thanh toán', icon: 'fa-clock' },
   unpaid: { color: '#b45309', bg: '#fffbeb', border: '#fde68a', label: 'Chưa thanh toán', icon: 'fa-clock' },
   paid: { color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0', label: 'Đã thanh toán', icon: 'fa-check-circle' },
-  failed: { color: '#b91c1c', bg: '#fef2f2', border: '#fecaca', label: 'Thất bại', icon: 'fa-times-circle' },
   refunded: { color: '#64748b', bg: '#f8fafc', border: '#e2e8f0', label: 'Đã hoàn tiền', icon: 'fa-undo' },
+  partial_refund: { color: '#64748b', bg: '#f8fafc', border: '#e2e8f0', label: 'Hoàn một phần', icon: 'fa-undo' },
+};
+
+const PRODUCT_RETURN_STATUS_CFG: Record<string, { color: string; label: string }> = {
+  pending: { color: '#b45309', label: 'Đang chờ duyệt' },
+  approved: { color: '#0369a1', label: 'Đã duyệt hoàn trả' },
+  rejected: { color: '#b91c1c', label: 'Từ chối hoàn trả' },
+  refunded: { color: '#64748b', label: 'Đã hoàn tiền' },
 };
 
 const PAYMENT_METHOD_CFG: Record<string, { label: string; icon: string; color: string }> = {
@@ -187,6 +203,12 @@ const OrderDetailPage: React.FC = () => {
   // Confirm received
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
+
+  // Return request (không nhận/trả hàng)
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
+  const [returnLoading, setReturnLoading] = useState(false);
+  const [returnEvidenceFiles, setReturnEvidenceFiles] = useState<File[]>([]);
 
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -258,6 +280,43 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+  // ── Return Request ─────────────────────────────────────────
+  const handleReturnRequest = async () => {
+    if (!order) return;
+    if (!returnReason.trim()) {
+      showToast('Vui lòng nhập lý do yêu cầu hoàn trả.', 'error');
+      return;
+    }
+
+    if (returnEvidenceFiles.length === 0) {
+      showToast('Vui lòng chọn ít nhất 1 hình ảnh minh chứng.', 'error');
+      return;
+    }
+
+    setReturnLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('reason', returnReason);
+      returnEvidenceFiles.forEach((f) => {
+        formData.append('evidence_images[]', f);
+      });
+
+      await axiosInstance.post(`/client/orders/${order.id}/return-request`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      showToast('Đã gửi yêu cầu hoàn trả thành công. Vui lòng chờ admin duyệt.', 'success');
+      setReturnOpen(false);
+      setReturnReason('');
+      setReturnEvidenceFiles([]);
+      fetchOrder();
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showToast(e?.response?.data?.message ?? 'Không thể gửi yêu cầu hoàn trả', 'error');
+    } finally {
+      setReturnLoading(false);
+    }
+  };
+
   // ── Loading ─────────────────────────────────────────────────
   if (loading) return (
     <>
@@ -293,13 +352,15 @@ const OrderDetailPage: React.FC = () => {
   if (!order) return null;
 
   const statusCfg = ORDER_STATUS_CFG[order.status] ?? ORDER_STATUS_CFG.pending;
-  const payStatusCfg = PAYMENT_STATUS_CFG[order.payment_status] ?? PAYMENT_STATUS_CFG.pending;
+  const payStatusCfg = PAYMENT_STATUS_CFG[order.payment_status] ?? PAYMENT_STATUS_CFG.unpaid;
   const payMethodCfg = PAYMENT_METHOD_CFG[order.payment_method ?? ''];
   const isCancelled = order.status === 'cancelled' || order.status === 'returned';
   const currentStep = isCancelled ? -1 : (statusCfg.step ?? 0);
 
   const canCancel = order.status === 'pending';
   const canConfirmReceived = order.status === 'delivered';
+  const canRequestReturn = (['delivered', 'completed'].includes(order.status)) &&
+    (!order.product_return || order.product_return.status === 'rejected');
 
   return (
     <>
@@ -375,10 +436,29 @@ const OrderDetailPage: React.FC = () => {
               <i className={`fas ${statusCfg.icon} od-cancelled-icon`} style={{ color: statusCfg.color }} />
               <div>
                 <div className="od-cancelled-label" style={{ color: statusCfg.color }}>{statusCfg.label}</div>
-                {order.cancelled_reason && (
+                {order.status === 'returned' && order.product_return && (
+                  <>
+                    <div className="od-cancelled-reason">
+                      Hoàn trả: {PRODUCT_RETURN_STATUS_CFG[order.product_return.status ?? 'pending']?.label ?? order.product_return.status ?? '—'}
+                    </div>
+                    {order.product_return.reason && order.product_return.status === 'pending' && (
+                      <div className="od-cancelled-reason">Lý do: {order.product_return.reason}</div>
+                    )}
+                    {order.product_return.reason_for_refusal && order.product_return.status === 'rejected' && (
+                      <div className="od-cancelled-reason">Lý do từ chối: {order.product_return.reason_for_refusal}</div>
+                    )}
+                    {order.product_return.created_at && (
+                      <div className="od-cancelled-time">{order.product_return.created_at}</div>
+                    )}
+                  </>
+                )}
+
+                {order.status === 'cancelled' && order.cancelled_reason && (
                   <div className="od-cancelled-reason">Lý do: {order.cancelled_reason}</div>
                 )}
-                {order.cancelled_at && <div className="od-cancelled-time">{order.cancelled_at}</div>}
+                {order.status === 'cancelled' && order.cancelled_at && (
+                  <div className="od-cancelled-time">{order.cancelled_at}</div>
+                )}
               </div>
             </div>
           )}
@@ -617,6 +697,19 @@ const OrderDetailPage: React.FC = () => {
                     <i className="fas fa-times-circle me-2" />Hủy đơn hàng
                   </button>
                 )}
+                {canRequestReturn && (
+                  <button
+                    className="od-btn-full"
+                    style={{ background: '#fff7ed', border: '1.5px solid #b45309', color: '#b45309' }}
+                    onClick={() => {
+                      setReturnOpen(true);
+                      setReturnReason('');
+                    }}
+                  >
+                    <i className="fas fa-undo me-2" />
+                    {order.status === 'delivered' ? 'Không nhận hàng' : 'Trả hàng'}
+                  </button>
+                )}
                 {['confirmed', 'processing', 'shipping'].includes(order.status) && (
                   <div className="od-lock-hint">
                     <i className="fas fa-lock me-2" />Đơn hàng đang xử lý, không thể hủy
@@ -693,6 +786,106 @@ const OrderDetailPage: React.FC = () => {
                 {confirmLoading
                   ? <><span className="od-spin me-2" />Đang xác nhận...</>
                   : <><i className="fas fa-check-double me-2" />Đã nhận được hàng</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Return Request Modal ── */}
+      {returnOpen && (
+        <div
+          className="od-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setReturnOpen(false);
+              setReturnEvidenceFiles([]);
+            }
+          }}
+        >
+          <div className="od-modal">
+            <div className="od-modal-hd">
+              <div>
+                <div className="od-modal-title">
+                  <i className="fas fa-undo me-2" style={{ color: '#b45309' }} />Yêu cầu hoàn trả
+                </div>
+                <div className="od-modal-sub">
+                  Bạn sẽ gửi yêu cầu hoàn trả cho đơn <strong>#{order.order_code}</strong>. Admin sẽ duyệt/từ chối.
+                </div>
+              </div>
+              <button
+                className="od-modal-x"
+                onClick={() => {
+                  setReturnOpen(false);
+                  setReturnEvidenceFiles([]);
+                }}
+              >
+                <i className="fas fa-times" />
+              </button>
+            </div>
+            <div className="od-modal-bd">
+              <label className="od-modal-label">Lý do yêu cầu hoàn trả (bắt buộc)</label>
+              <textarea
+                className="od-textarea"
+                placeholder="Ví dụ: không nhận được hàng / muốn trả hàng / lý do khác..."
+                value={returnReason}
+                onChange={e => setReturnReason(e.target.value)}
+              />
+
+              <div style={{ height: 12 }} />
+
+              <label className="od-modal-label">Hình ảnh minh chứng (bắt buộc)</label>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  setReturnEvidenceFiles(files);
+                }}
+                style={{
+                  width: '100%',
+                  border: '2px solid #eaecf0',
+                  borderRadius: 10,
+                  padding: '10px 12px',
+                  background: '#f8f9fc',
+                  fontSize: 13,
+                }}
+              />
+              {returnEvidenceFiles.length > 0 && (
+                <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {returnEvidenceFiles.slice(0, 6).map((f, idx) => (
+                    <img
+                      key={`${f.name}_${idx}`}
+                      src={URL.createObjectURL(f)}
+                      alt="minh chứng"
+                      style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 10, border: '1px solid #f0f0f0' }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="od-modal-ft">
+              <button
+                className="od-modal-btn-no"
+                onClick={() => {
+                  setReturnOpen(false);
+                  setReturnEvidenceFiles([]);
+                }}
+                disabled={returnLoading}
+              >
+                Hủy
+              </button>
+              <button
+                className="od-modal-btn-yes"
+                style={{ background: 'linear-gradient(135deg,#b45309,#92400e)' }}
+                onClick={handleReturnRequest}
+                disabled={returnLoading}
+              >
+                {returnLoading
+                  ? <><span className="od-spin me-2" />Đang gửi...</>
+                  : <><i className="fas fa-undo-alt me-2" />Gửi yêu cầu hoàn trả</>
                 }
               </button>
             </div>

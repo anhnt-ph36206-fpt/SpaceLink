@@ -44,7 +44,7 @@ const CartPage: React.FC = () => {
         if (!editingItem || !editingItem.availableVariants) return null;
         const selectedIds = Object.values(selectedAttrs);
         return editingItem.availableVariants.find(v =>
-            selectedIds.every(sid => v.attributes.some((a: any) => a.id === sid))
+            selectedIds.every(sid => v.attributes.some((a: any) => a.id === sid)) && v.quantity > 0
         ) || null;
     }, [editingItem, selectedAttrs]);
 
@@ -260,7 +260,12 @@ const CartPage: React.FC = () => {
                         key="submit"
                         type="primary"
                         loading={isUpdating}
-                        disabled={!matchingVariant || matchingVariant.id === editingItem?.variantId || matchingVariant.quantity === 0}
+                        disabled={
+                            !matchingVariant ||
+                            matchingVariant.id === editingItem?.variantId ||
+                            matchingVariant.quantity === 0 ||
+                            editingItem.quantity > matchingVariant.quantity
+                        }
                         onClick={handleUpdateVariant}
                         style={{ borderRadius: 8, fontWeight: 600 }}
                     >

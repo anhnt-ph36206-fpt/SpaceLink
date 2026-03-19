@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Client\Order\RequestReturnRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
+use App\Models\ProductReturn;
+use App\Models\ReturnEvidence;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -28,7 +32,7 @@ class OrderController extends Controller
             $query->where('payment_status', $request->payment_status);
         }
 
-        $perPage = min((int)$request->get('per_page', 10), 50);
+        $perPage = min((int) $request->get('per_page', 10), 50);
         $orders = $query->paginate($perPage);
 
         return OrderResource::collection($orders);
@@ -42,7 +46,8 @@ class OrderController extends Controller
         $user = $request->user();
         $order = Order::with([
             'items',
-            'statusHistory' => fn($q) => $q->orderBy('id', 'asc'),
+            'statusHistory' => fn ($q) => $q->orderBy('id', 'asc'),
+            'productReturn',
         ])->findOrFail($id);
 
         // Bảo vệ: chỉ xem đơn của chính mình
@@ -201,7 +206,7 @@ class OrderController extends Controller
             'vnp_CurrCode' => 'VND',
             'vnp_IpAddr' => $request->ip(),
             'vnp_Locale' => 'vn',
-            'vnp_OrderInfo' => 'Thanh toan lai don hang ' . $order->order_code,
+            'vnp_OrderInfo' => 'Thanh toan lai don hang '.$order->order_code,
             'vnp_OrderType' => 'billpayment',
             'vnp_ReturnUrl' => $vnp_Returnurl,
             'vnp_TxnRef' => $order->order_code,
@@ -213,22 +218,122 @@ class OrderController extends Controller
         $i = 0;
         foreach ($inputData as $key => $value) {
             if ($i == 1) {
-                $hashdata .= '&' . urlencode($key) . '=' . urlencode($value);
-            }
-            else {
-                $hashdata .= urlencode($key) . '=' . urlencode($value);
+                $hashdata .= '&'.urlencode($key).'='.urlencode($value);
+            } else {
+                $hashdata .= urlencode($key).'='.urlencode($value);
                 $i = 1;
             }
-            $query .= urlencode($key) . '=' . urlencode($value) . '&';
+            $query .= urlencode($key).'='.urlencode($value).'&';
         }
 
-        $paymentUrl = $vnp_Url . '?' . $query . 'vnp_SecureHash=' . hash_hmac('sha512', $hashdata, $vnp_HashSecret);
+        $paymentUrl = $vnp_Url.'?'.$query.'vnp_SecureHash='.hash_hmac('sha512', $hashdata, $vnp_HashSecret);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Tạo lại link thanh toán VNPAY thành công.',
             'payment_url' => $paymentUrl,
             'data' => $order->only('id', 'order_code', 'total_amount'),
+        ]);
+    }
+
+    // =========================================================================
+    // POST /api/client/orders/{id}/return-request — Khách yêu cầu hoàn trả/không nhận hàng
+    // =========================================================================
+    public function requestReturn(RequestReturnRequest $request, string $id): JsonResponse
+    {
+        $user = $request->user();
+        $order = Order::with(['items', 'productReturn'])->findOrFail($id);
+
+        // Bảo vệ: chỉ thao tác trên đơn của chính mình
+        if ($order->user_id !== $user->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bạn không có quyền thực hiện thao tác này.',
+            ], 403);
+        }
+
+        // Chỉ cho phép sau khi đã giao/hoặc đã hoàn thành
+        if (! in_array($order->status, ['delivered', 'completed'], true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Không thể yêu cầu hoàn trả khi đơn đang ở trạng thái \"{$order->status}\".",
+            ], 422);
+        }
+
+        $reason = $request->input('reason');
+
+        // Nếu đã có yêu cầu hoàn trả đang xử lý thì không tạo thêm
+        if ($order->productReturn && in_array($order->productReturn->status, ['pending', 'approved', 'refunded'], true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Yêu cầu hoàn trả này đã được tạo và đang chờ xử lý.',
+            ], 422);
+        }
+
+        $itemIds = $order->items->pluck('id')->all();
+
+        $evidenceFiles = $request->file('evidence_images');
+
+        DB::transaction(function () use ($order, $user, $reason, $itemIds, $evidenceFiles) {
+            $oldStatus = $order->status;
+
+            /** @var ProductReturn|null $productReturn */
+            $productReturn = $order->productReturn;
+            if ($productReturn) {
+                $productReturn->status = 'pending';
+                $productReturn->reason = $reason;
+                $productReturn->reason_for_refusal = null;
+                $productReturn->refund_amount = null;
+                $productReturn->transaction_code = null;
+                $productReturn->refund_bank = null;
+                $productReturn->refund_account_name = null;
+                $productReturn->refund_account_number = null;
+                $productReturn->items = $itemIds;
+                $productReturn->save();
+            } else {
+                $productReturn = ProductReturn::create([
+                    'order_id' => $order->id,
+                    'user_id' => $user->id,
+                    'reason' => $reason,
+                    'status' => 'pending',
+                    'items' => $itemIds,
+                ]);
+            }
+
+            // Đặt trạng thái đơn = returned để UI chuyển sang luồng hoàn trả (client chỉ "yêu cầu", admin sẽ duyệt/từ chối)
+            $order->update(['status' => 'returned']);
+
+            OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'from_status' => $oldStatus,
+                'to_status' => 'returned',
+                'note' => 'Khách hàng yêu cầu hoàn trả: '.$reason,
+                'changed_by' => $user->id,
+            ]);
+
+            if (is_array($evidenceFiles) && count($evidenceFiles) > 0) {
+                foreach ($evidenceFiles as $file) {
+                    if (! $file) {
+                        continue;
+                    }
+
+                    $path = $file->store('product-returns/evidences', 'public');
+
+                    ReturnEvidence::create([
+                        'product_return_id' => $productReturn->id,
+                        'file_path' => $path,
+                        'file_type' => $file->getClientMimeType(),
+                    ]);
+                }
+            }
+        });
+
+        $order->load(['productReturn.evidences']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Đã gửi yêu cầu hoàn trả thành công. Vui lòng chờ admin duyệt.',
+            'data' => new OrderResource($order),
         ]);
     }
 }
