@@ -415,14 +415,16 @@ const AdminOrderDetailPage: React.FC = () => {
               Cập nhật trạng thái
             </Button>
           )}
-          <Button
-            icon={<DollarOutlined />}
-            onClick={openPaymentModal}
-            disabled={order.status === 'returned' && order.product_return?.status !== 'approved'}
-            style={{ borderRadius: 10, height: 40, borderColor: '#198754', color: '#198754' }}
-          >
-            Cập nhật thanh toán
-          </Button>
+          {!(order.status === 'cancelled' && order.payment_method === 'cod') && (
+            <Button
+              icon={<DollarOutlined />}
+              onClick={openPaymentModal}
+              disabled={order.status === 'returned' && order.product_return?.status !== 'approved'}
+              style={{ borderRadius: 10, height: 40, borderColor: '#198754', color: '#198754' }}
+            >
+              Cập nhật thanh toán
+            </Button>
+          )}
         </Space>
       </div>
 
@@ -658,7 +660,9 @@ const AdminOrderDetailPage: React.FC = () => {
                 <Text type="secondary" style={{ fontSize: 13 }}>Thanh toán</Text>
                 <Space>
                   <StatusTag status={order.payment_status} config={PAYMENT_STATUS_CONFIG} />
-                  <Button size="small" icon={<EditOutlined />} onClick={openPaymentModal} style={{ borderRadius: 6 }} />
+                  {!(order.status === 'cancelled' && order.payment_method === 'cod') && (
+                    <Button size="small" icon={<EditOutlined />} onClick={openPaymentModal} style={{ borderRadius: 6 }} />
+                  )}
                 </Space>
               </div>
               <div style={rowStyle}>
@@ -686,6 +690,25 @@ const AdminOrderDetailPage: React.FC = () => {
                 <div style={rowStyle}>
                   <Text type="secondary" style={{ fontSize: 13 }}>Dự kiến giao</Text>
                   <Text style={{ fontSize: 13 }}>{order.estimated_delivery}</Text>
+                </div>
+              )}
+
+              {/* Thông tin hoàn tiền nếu có */}
+              {order.product_return && (order.product_return.refund_bank || order.product_return.refund_account_number) && (
+                <div style={{ marginTop: 12, padding: 12, background: '#fff7ed', borderRadius: 10, border: '1px solid #fed7aa' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#c2410c', marginBottom: 8 }}>
+                    <RollbackOutlined style={{ marginRight: 6 }} /> Thông tin hoàn tiền
+                  </div>
+                  <Descriptions column={1} size="small" styles={{ label: { fontSize: 11 }, content: { fontSize: 11, fontWeight: 600 } }}>
+                    <Descriptions.Item label="Ngân hàng">{order.product_return.refund_bank || '—'}</Descriptions.Item>
+                    <Descriptions.Item label="Chủ TK">{order.product_return.refund_account_name || '—'}</Descriptions.Item>
+                    <Descriptions.Item label="Số TK">
+                      {order.product_return.refund_account_number || '—'}
+                      {order.product_return.refund_account_number && (
+                        <Button type="text" size="small" icon={<CopyOutlined style={{ fontSize: 10 }} />} onClick={() => copy(order.product_return!.refund_account_number!)} />
+                      )}
+                    </Descriptions.Item>
+                  </Descriptions>
                 </div>
               )}
             </Space>
