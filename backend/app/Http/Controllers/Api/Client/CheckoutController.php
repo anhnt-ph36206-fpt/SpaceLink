@@ -28,26 +28,35 @@ class CheckoutController extends Controller
         if ($request->filled('items')) {
             $cartItems = collect($request->items)->map(function ($item) {
                 $variant = ProductVariant::with('product')->find($item['variant_id']);
-                if (! $variant) return null;
+                if (! $variant) {
+                    return null;
+                }
+
                 return (object) ['variant_id' => $variant->id, 'quantity' => (int) $item['quantity'], 'product' => $variant->product];
             })->filter();
         } else {
-            if (! $user) return response()->json(['status' => 'error', 'message' => 'Vui lòng đăng nhập.'], 401);
+            if (! $user) {
+                return response()->json(['status' => 'error', 'message' => 'Vui lòng đăng nhập.'], 401);
+            }
             $cartItems = Cart::with(['product', 'variant'])->where('user_id', $user->id)->get();
         }
 
-        if ($cartItems->isEmpty()) return response()->json(['status' => 'error', 'message' => 'Giỏ hàng trống.'], 400);
+        if ($cartItems->isEmpty()) {
+            return response()->json(['status' => 'error', 'message' => 'Giỏ hàng trống.'], 400);
+        }
 
         $subtotal = $cartItems->sum(function ($item) {
             if ($item instanceof Cart) {
                 return (float) ($item->variant?->sale_price ?? $item->variant?->price ?? $item->product->sale_price ?? $item->product->price) * $item->quantity;
             }
             $v = ProductVariant::find($item->variant_id);
+
             return (float) ($v?->sale_price ?? $v?->price ?? $item->product?->sale_price ?? $item->product?->price) * $item->quantity;
         });
 
         try {
             [$voucher, $discount] = $this->applyVoucher($request->voucher_code, $subtotal, $user?->id);
+
             return response()->json(['status' => 'success', 'data' => ['code' => $voucher->code, 'discount_amount' => $discount, 'discount_type' => $voucher->discount_type, 'discount_value' => $voucher->discount_value]]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 400);
@@ -62,7 +71,10 @@ class CheckoutController extends Controller
         if ($request->filled('items')) {
             $cartItems = collect($request->items)->map(function ($item) {
                 $variant = ProductVariant::with('product')->find($item['variant_id']);
-                if (!$variant) return null;
+                if (! $variant) {
+                    return null;
+                }
+
                 return (object) [
                     'product_id' => $variant->product_id,
                     'variant_id' => $variant->id,
@@ -77,20 +89,28 @@ class CheckoutController extends Controller
                 $query->where('user_id', $user->id);
             } else {
                 $sessionId = $request->header('X-Session-ID') ?? $request->input('session_id');
-                if (!$sessionId) return response()->json(['status' => 'error', 'message' => 'Vui lòng đăng nhập hoặc cung cấp Session ID.'], 400);
+                if (! $sessionId) {
+                    return response()->json(['status' => 'error', 'message' => 'Vui lòng đăng nhập hoặc cung cấp Session ID.'], 400);
+                }
                 $query->where('session_id', $sessionId)->whereNull('user_id');
             }
             $cartItems = $query->get();
         }
 
-        if ($cartItems->isEmpty()) return response()->json(['status' => 'error', 'message' => 'Danh sách sản phẩm trống.'], 400);
+        if ($cartItems->isEmpty()) {
+            return response()->json(['status' => 'error', 'message' => 'Danh sách sản phẩm trống.'], 400);
+        }
 
         // 2. Shipping Address
         $address = null;
         if ($request->filled('shipping_address_id')) {
-            if (!$user) return response()->json(['status' => 'error', 'message' => 'Vui lòng đăng nhập để sử dụng địa chỉ đã lưu.'], 401);
+            if (! $user) {
+                return response()->json(['status' => 'error', 'message' => 'Vui lòng đăng nhập để sử dụng địa chỉ đã lưu.'], 401);
+            }
             $address = UserAddress::where('id', $request->shipping_address_id)->where('user_id', $user->id)->first();
-            if (!$address) return response()->json(['status' => 'error', 'message' => 'Địa chỉ không hợp lệ.'], 403);
+            if (! $address) {
+                return response()->json(['status' => 'error', 'message' => 'Địa chỉ không hợp lệ.'], 403);
+            }
         } else {
             $address = (object) [
                 'fullname' => $request->fullname,
@@ -110,16 +130,23 @@ class CheckoutController extends Controller
                 $lockedVariants = ProductVariant::with('attributes')->whereIn('id', $variantIds)->lockForUpdate()->get()->keyBy('id');
 
                 foreach ($cartItems as $item) {
-                    if (!$item->variant_id) continue;
+                    if (! $item->variant_id) {
+                        continue;
+                    }
                     $variant = $lockedVariants->get($item->variant_id);
-                    if (!$variant || !$variant->is_active) throw new \App\Exceptions\StockException("Sản phẩm \"{$item->product->name}\" hiện không còn bán.");
-                    if ($variant->quantity < $item->quantity) throw new \App\Exceptions\StockException("Sản phẩm \"{$item->product->name}\" không đủ tồn kho.");
+                    if (! $variant || ! $variant->is_active) {
+                        throw new \App\Exceptions\StockException("Sản phẩm \"{$item->product->name}\" hiện không còn bán.");
+                    }
+                    if ($variant->quantity < $item->quantity) {
+                        throw new \App\Exceptions\StockException("Sản phẩm \"{$item->product->name}\" không đủ tồn kho.");
+                    }
                 }
 
                 // 4. Financials
-                $subtotal = $cartItems->sum(fn($i) => $this->resolvePrice($i, $lockedVariants) * $i->quantity);
+                $subtotal = $cartItems->sum(fn ($i) => $this->resolvePrice($i, $lockedVariants) * $i->quantity);
                 $shippingFee = $this->calculateShippingFee($subtotal);
-                $voucher = null; $discountValue = 0;
+                $voucher = null;
+                $discountValue = 0;
                 if ($request->filled('voucher_code')) {
                     [$voucher, $discountValue] = $this->applyVoucher($request->voucher_code, $subtotal, $user?->id);
                 }
@@ -156,7 +183,7 @@ class CheckoutController extends Controller
                     $variantInfo = $variant ? [
                         'sku' => $variant->sku,
                         'image' => $variant->image,
-                        'attrs' => $variant->attributes?->map(fn($a) => ['name' => $a->name, 'value' => $a->value])->toArray(),
+                        'attrs' => $variant->attributes?->map(fn ($a) => ['name' => $a->name, 'value' => $a->value])->toArray(),
                     ] : null;
 
                     OrderItem::create([
@@ -189,17 +216,17 @@ class CheckoutController extends Controller
 
                 OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => 'pending', 'note' => 'Đơn hàng được khởi tạo.', 'changed_by' => $user?->id]);
 
-                if ($user && !$request->filled('shipping_address_id') && $request->boolean('save_address')) {
+                if ($user && ! $request->filled('shipping_address_id') && $request->boolean('save_address')) {
                     UserAddress::create([
                         'user_id' => $user->id, 'fullname' => $address->fullname, 'phone' => $address->phone,
                         'email' => $address->email ?? $user->email, 'province' => $address->province,
                         'district' => $address->district, 'ward' => $address->ward, 'address_detail' => $address->address_detail,
-                        'is_default' => !UserAddress::where('user_id', $user->id)->exists(),
+                        'is_default' => ! UserAddress::where('user_id', $user->id)->exists(),
                     ]);
                 }
 
                 // 7. Xóa giỏ hàng (Guest hoặc User)
-                if (!$request->boolean('is_buy_now')) {
+                if (! $request->boolean('is_buy_now')) {
                     $cartQuery = Cart::query();
                     if ($user) {
                         $cartQuery->where('user_id', $user->id);
@@ -232,7 +259,7 @@ class CheckoutController extends Controller
         } catch (\App\Exceptions\StockException $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 409);
         } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => 'Lỗi: ' . $e->getMessage()], 500);
+            return response()->json(['status' => 'error', 'message' => 'Lỗi: '.$e->getMessage()], 500);
         }
     }
 
@@ -249,10 +276,14 @@ class CheckoutController extends Controller
 
         // --- 1. Copy logic check order tương tự hàm checkout() ---
         $cartItems = Cart::with(['product', 'variant'])->where('user_id', $user->id)->get();
-        if ($cartItems->isEmpty()) return response()->json(['status' => 'error', 'message' => 'Giỏ hàng trống.'], 400);
+        if ($cartItems->isEmpty()) {
+            return response()->json(['status' => 'error', 'message' => 'Giỏ hàng trống.'], 400);
+        }
 
         $address = UserAddress::where('id', $request->shipping_address_id)->where('user_id', $user->id)->first();
-        if (!$address) return response()->json(['status' => 'error', 'message' => 'Địa chỉ không hợp lệ.'], 403);
+        if (! $address) {
+            return response()->json(['status' => 'error', 'message' => 'Địa chỉ không hợp lệ.'], 403);
+        }
 
         try {
             $order = collect();
@@ -273,13 +304,19 @@ class CheckoutController extends Controller
                 if ($request->filled('voucher_code')) {
                     $voucher = Voucher::where('code', $request->voucher_code)->where('is_active', true)
                         ->where('start_date', '<=', now())->where('end_date', '>=', now())->lockForUpdate()->first();
-                    if (!$voucher) throw new \Exception("Mã giảm giá không hợp lệ hoặc đã hết hạn.");
-                    if ($subtotal < $voucher->min_order_amount) throw new \Exception("Đơn hàng chưa đạt mức tối thiểu.");
+                    if (! $voucher) {
+                        throw new \Exception('Mã giảm giá không hợp lệ hoặc đã hết hạn.');
+                    }
+                    if ($subtotal < $voucher->min_order_amount) {
+                        throw new \Exception('Đơn hàng chưa đạt mức tối thiểu.');
+                    }
                     // Check usage... (giản lược trong IPN create)
 
                     if ($voucher->discount_type === 'percent') {
                         $discount = $subtotal * ($voucher->discount_value / 100);
-                        if ($voucher->max_discount && $discount > $voucher->max_discount) $discount = $voucher->max_discount;
+                        if ($voucher->max_discount && $discount > $voucher->max_discount) {
+                            $discount = $voucher->max_discount;
+                        }
                         $voucherDiscount = $discount;
                     } else {
                         $voucherDiscount = $voucher->discount_value;
@@ -289,22 +326,22 @@ class CheckoutController extends Controller
                 $totalAmount = max(0, $subtotal + $shippingFee - $voucherDiscount);
 
                 $order = Order::create([
-                    'user_id'          => $user->id,
-                    'order_code'       => $this->generateOrderCode(),
-                    'shipping_name'    => $address->fullname,
-                    'shipping_phone'   => $address->phone,
-                    'shipping_address' => $address->address_detail . ', ' . $address->ward . ', ' . $address->district . ', ' . $address->province,
-                    'subtotal'         => $subtotal,
-                    'discount_amount'  => $voucherDiscount,
-                    'shipping_fee'     => $shippingFee,
-                    'total_amount'     => $totalAmount,
-                    'status'           => 'pending',
-                    'payment_status'   => 'unpaid',
-                    'payment_method'   => 'vnpay',
-                    'voucher_id'       => $voucher?->id,
-                    'voucher_code'     => $voucher?->code,
+                    'user_id' => $user->id,
+                    'order_code' => $this->generateOrderCode(),
+                    'shipping_name' => $address->fullname,
+                    'shipping_phone' => $address->phone,
+                    'shipping_address' => $address->address_detail.', '.$address->ward.', '.$address->district.', '.$address->province,
+                    'subtotal' => $subtotal,
+                    'discount_amount' => $voucherDiscount,
+                    'shipping_fee' => $shippingFee,
+                    'total_amount' => $totalAmount,
+                    'status' => 'pending',
+                    'payment_status' => 'unpaid',
+                    'payment_method' => 'vnpay',
+                    'voucher_id' => $voucher?->id,
+                    'voucher_code' => $voucher?->code,
                     'voucher_discount' => $voucherDiscount,
-                    'note'             => $request->note,
+                    'note' => $request->note,
                 ]);
 
                 foreach ($cartItems as $item) {
@@ -325,15 +362,15 @@ class CheckoutController extends Controller
                     }
 
                     OrderItem::create([
-                        'order_id'       => $order->id,
-                        'product_id'     => $item->product_id,
-                        'variant_id'     => $item->variant_id,
-                        'product_name'   => $item->product->name,
-                        'variant_name'   => 'Variant Name ' . $variant->id,
-                        'variant_info'   => null,
-                        'sku'            => $variant->sku,
-                        'quantity'       => $item->quantity,
-                        'price'          => $effectivePrice,
+                        'order_id' => $order->id,
+                        'product_id' => $item->product_id,
+                        'variant_id' => $item->variant_id,
+                        'product_name' => $item->product->name,
+                        'variant_name' => 'Variant Name '.$variant->id,
+                        'variant_info' => null,
+                        'sku' => $variant->sku,
+                        'quantity' => $item->quantity,
+                        'price' => $effectivePrice,
                     ]);
                 }
 
@@ -355,52 +392,52 @@ class CheckoutController extends Controller
             $vnp_HashSecret = config('vnpay.vnp_HashSecret');
 
             $vnp_TxnRef = $result->order_code;
-            $vnp_OrderInfo = "Thanh toan don hang " . $result->order_code;
-            $vnp_OrderType = "billpayment";
+            $vnp_OrderInfo = 'Thanh toan don hang '.$result->order_code;
+            $vnp_OrderType = 'billpayment';
             $vnp_Amount = $result->total_amount * 100;
             $vnp_Locale = 'vn';
             $vnp_IpAddr = $request->ip();
 
-            $inputData = array(
-                "vnp_Version" => "2.1.0",
-                "vnp_TmnCode" => $vnp_TmnCode,
-                "vnp_Amount" => $vnp_Amount,
-                "vnp_Command" => "pay",
-                "vnp_CreateDate" => date('YmdHis'),
-                "vnp_CurrCode" => "VND",
-                "vnp_IpAddr" => $vnp_IpAddr,
-                "vnp_Locale" => $vnp_Locale,
-                "vnp_OrderInfo" => $vnp_OrderInfo,
-                "vnp_OrderType" => $vnp_OrderType,
-                "vnp_ReturnUrl" => $vnp_Returnurl,
-                "vnp_TxnRef" => $vnp_TxnRef,
-            );
+            $inputData = [
+                'vnp_Version' => '2.1.0',
+                'vnp_TmnCode' => $vnp_TmnCode,
+                'vnp_Amount' => $vnp_Amount,
+                'vnp_Command' => 'pay',
+                'vnp_CreateDate' => date('YmdHis'),
+                'vnp_CurrCode' => 'VND',
+                'vnp_IpAddr' => $vnp_IpAddr,
+                'vnp_Locale' => $vnp_Locale,
+                'vnp_OrderInfo' => $vnp_OrderInfo,
+                'vnp_OrderType' => $vnp_OrderType,
+                'vnp_ReturnUrl' => $vnp_Returnurl,
+                'vnp_TxnRef' => $vnp_TxnRef,
+            ];
 
             ksort($inputData);
-            $query = "";
+            $query = '';
             $i = 0;
-            $hashdata = "";
+            $hashdata = '';
             foreach ($inputData as $key => $value) {
                 if ($i == 1) {
-                    $hashdata .= '&' . urlencode($key) . "=" . urlencode($value);
+                    $hashdata .= '&'.urlencode($key).'='.urlencode($value);
                 } else {
-                    $hashdata .= urlencode($key) . "=" . urlencode($value);
+                    $hashdata .= urlencode($key).'='.urlencode($value);
                     $i = 1;
                 }
-                $query .= urlencode($key) . "=" . urlencode($value) . '&';
+                $query .= urlencode($key).'='.urlencode($value).'&';
             }
 
-            $vnp_Url = $vnp_Url . "?" . $query;
+            $vnp_Url = $vnp_Url.'?'.$query;
             if (isset($vnp_HashSecret)) {
                 $vnpSecureHash = hash_hmac('sha512', $hashdata, $vnp_HashSecret);
-                $vnp_Url .= 'vnp_SecureHash=' . $vnpSecureHash;
+                $vnp_Url .= 'vnp_SecureHash='.$vnpSecureHash;
             }
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Chuyển hướng đến cổng thanh toán',
                 'payment_url' => $vnp_Url,
-                'data'    => $result->only('id', 'order_code', 'total_amount')
+                'data' => $result->only('id', 'order_code', 'total_amount'),
             ], 200);
 
         } catch (\Exception $e) {
@@ -415,7 +452,9 @@ class CheckoutController extends Controller
     {
         $inputData = [];
         foreach ($request->all() as $key => $value) {
-            if (substr($key, 0, 4) == 'vnp_') $inputData[$key] = $value;
+            if (substr($key, 0, 4) == 'vnp_') {
+                $inputData[$key] = $value;
+            }
         }
 
         $vnp_SecureHash = $inputData['vnp_SecureHash'] ?? '';
@@ -424,7 +463,7 @@ class CheckoutController extends Controller
 
         $hashData = '';
         foreach ($inputData as $key => $value) {
-            $hashData .= ($hashData === '' ? '' : '&') . urlencode($key) . '=' . urlencode($value);
+            $hashData .= ($hashData === '' ? '' : '&').urlencode($key).'='.urlencode($value);
         }
 
         $secureHash = hash_hmac('sha512', $hashData, config('vnpay.vnp_HashSecret'));
@@ -437,15 +476,19 @@ class CheckoutController extends Controller
                         $order->update(['payment_status' => 'paid']);
                         OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => $order->status, 'note' => 'Thanh toán VNPAY thành công. Mã GD: '.$inputData['vnp_TransactionNo']]);
                     } else {
-                        $order->update(['payment_status' => 'failed']);
-                        OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => $order->status, 'note' => 'Thanh toán VNPAY thất bại.']);
+                        $order->update(['payment_status' => 'unpaid']);
+                        OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => $order->status, 'note' => 'Thanh toán VNPAY thất bại. Đơn vẫn ở trạng thái chưa thanh toán.']);
                     }
+
                     return response()->json(['RspCode' => '00', 'Message' => 'Confirm Success']);
                 }
+
                 return response()->json(['RspCode' => '02', 'Message' => 'Order already confirmed']);
             }
+
             return response()->json(['RspCode' => '01', 'Message' => 'Order not found']);
         }
+
         return response()->json(['RspCode' => '97', 'Message' => 'Invalid signature']);
     }
 
@@ -453,22 +496,26 @@ class CheckoutController extends Controller
     {
         $inputData = [];
         foreach ($request->all() as $key => $value) {
-            if (substr($key, 0, 4) == 'vnp_') $inputData[$key] = $value;
+            if (substr($key, 0, 4) == 'vnp_') {
+                $inputData[$key] = $value;
+            }
         }
         $vnp_SecureHash = $inputData['vnp_SecureHash'] ?? '';
         unset($inputData['vnp_SecureHash'], $inputData['vnp_SecureHashType']);
         ksort($inputData);
         $hashData = '';
         foreach ($inputData as $key => $value) {
-            $hashData .= ($hashData === '' ? '' : '&') . urlencode($key) . '=' . urlencode($value);
+            $hashData .= ($hashData === '' ? '' : '&').urlencode($key).'='.urlencode($value);
         }
 
         if (hash_hmac('sha512', $hashData, config('vnpay.vnp_HashSecret')) == $vnp_SecureHash) {
             if ($request->vnp_ResponseCode == '00') {
                 return response()->json(['status' => 'success', 'message' => 'Giao dịch thành công', 'data' => $request->all()]);
             }
+
             return response()->json(['status' => 'error', 'message' => 'Giao dịch lỗi', 'data' => $request->all()], 400);
         }
+
         return response()->json(['status' => 'error', 'message' => 'Chữ ký không hợp lệ'], 400);
     }
 
@@ -476,8 +523,11 @@ class CheckoutController extends Controller
     {
         if ($item->variant_id) {
             $variant = $lockedVariants->get($item->variant_id);
-            if ($variant) return (float) ($variant->sale_price ?? $variant->price);
+            if ($variant) {
+                return (float) ($variant->sale_price ?? $variant->price);
+            }
         }
+
         return (float) ($item->product->sale_price ?? $item->product->price);
     }
 
@@ -489,8 +539,9 @@ class CheckoutController extends Controller
     private function generateOrderCode(): string
     {
         do {
-            $code = 'SL-' . now()->format('Ymd') . '-' . strtoupper(Str::random(8));
+            $code = 'SL-'.now()->format('Ymd').'-'.strtoupper(Str::random(8));
         } while (Order::where('order_code', $code)->exists());
+
         return $code;
     }
 
@@ -502,40 +553,44 @@ class CheckoutController extends Controller
         $vnpReturnUrl = config('vnpay.vnp_Returnurl');
 
         $vnp_IpAddr = $request->ip();
-        if ($vnp_IpAddr === '::1') $vnp_IpAddr = '127.0.0.1';
+        if ($vnp_IpAddr === '::1') {
+            $vnp_IpAddr = '127.0.0.1';
+        }
 
         $inputData = [
             'vnp_Version' => '2.1.0',
             'vnp_TmnCode' => $vnpTmnCode,
-            'vnp_Amount' => (int)($order->total_amount * 100),
+            'vnp_Amount' => (int) ($order->total_amount * 100),
             'vnp_Command' => 'pay',
             'vnp_CreateDate' => date('YmdHis'),
             'vnp_CurrCode' => 'VND',
             'vnp_IpAddr' => $vnp_IpAddr,
             'vnp_Locale' => 'vn',
-            'vnp_OrderInfo' => 'Thanh toan don hang ' . $order->order_code,
+            'vnp_OrderInfo' => 'Thanh toan don hang '.$order->order_code,
             'vnp_OrderType' => 'billpayment',
             'vnp_ReturnUrl' => $vnpReturnUrl,
             'vnp_TxnRef' => $order->order_code,
         ];
 
         ksort($inputData);
-        $query = ""; $i = 0; $hashdata = "";
+        $query = '';
+        $i = 0;
+        $hashdata = '';
 
         foreach ($inputData as $key => $value) {
             if ($i == 1) {
-                $hashdata .= '&' . urlencode($key) . "=" . urlencode($value);
+                $hashdata .= '&'.urlencode($key).'='.urlencode($value);
             } else {
-                $hashdata .= urlencode($key) . "=" . urlencode($value);
+                $hashdata .= urlencode($key).'='.urlencode($value);
                 $i = 1;
             }
-            $query .= urlencode($key) . "=" . urlencode($value) . '&';
+            $query .= urlencode($key).'='.urlencode($value).'&';
         }
 
-        $vnpUrl .= "?" . $query;
-        if (!empty($vnpHashSecret)) {
+        $vnpUrl .= '?'.$query;
+        if (! empty($vnpHashSecret)) {
             $vnpSecureHash = hash_hmac('sha512', $hashdata, $vnpHashSecret);
-            $vnpUrl .= 'vnp_SecureHash=' . $vnpSecureHash;
+            $vnpUrl .= 'vnp_SecureHash='.$vnpSecureHash;
         }
 
         return $vnpUrl;
@@ -544,14 +599,27 @@ class CheckoutController extends Controller
     private function applyVoucher(string $code, float $subtotal, ?int $userId): array
     {
         $voucher = Voucher::where('code', strtoupper(trim($code)))->first();
-        if (!$voucher || !$voucher->is_active) throw new \App\Exceptions\StockException("Voucher không tồn tại.");
-        if (now()->lt($voucher->start_date) || now()->gt($voucher->end_date)) throw new \App\Exceptions\StockException("Voucher hết hạn.");
-        if ($subtotal < $voucher->min_order_amount) throw new \App\Exceptions\StockException("Đơn chưa đạt tối thiểu.");
-        if ($voucher->used_count >= $voucher->limit_number) throw new \App\Exceptions\StockException("Voucher hết lượt.");
-        if ($userId && VoucherUsage::where('voucher_id', $voucher->id)->where('user_id', $userId)->exists()) throw new \App\Exceptions\StockException("Bạn đã dùng voucher này.");
+        if (! $voucher || ! $voucher->is_active) {
+            throw new \App\Exceptions\StockException('Voucher không tồn tại.');
+        }
+        if (now()->lt($voucher->start_date) || now()->gt($voucher->end_date)) {
+            throw new \App\Exceptions\StockException('Voucher hết hạn.');
+        }
+        if ($subtotal < $voucher->min_order_amount) {
+            throw new \App\Exceptions\StockException('Đơn chưa đạt tối thiểu.');
+        }
+        if ($voucher->used_count >= $voucher->limit_number) {
+            throw new \App\Exceptions\StockException('Voucher hết lượt.');
+        }
+        if ($userId && VoucherUsage::where('voucher_id', $voucher->id)->where('user_id', $userId)->exists()) {
+            throw new \App\Exceptions\StockException('Bạn đã dùng voucher này.');
+        }
 
         $discount = ($voucher->discount_type === 'percent') ? ($subtotal * $voucher->discount_value / 100) : $voucher->discount_value;
-        if ($voucher->max_discount && $discount > $voucher->max_discount) $discount = $voucher->max_discount;
+        if ($voucher->max_discount && $discount > $voucher->max_discount) {
+            $discount = $voucher->max_discount;
+        }
+
         return [$voucher, $discount];
     }
 }

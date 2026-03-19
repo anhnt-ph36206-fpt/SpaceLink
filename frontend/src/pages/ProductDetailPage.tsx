@@ -94,6 +94,7 @@ const ProductDetailPage: React.FC = () => {
     const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
     const [selectedAttrs, setSelectedAttrs] = useState<Record<string, number>>({}); // groupName -> attrId
     const [mainImg, setMainImg] = useState<string | null>(null);
+    const [defaultMainImg, setDefaultMainImg] = useState<string | null>(null);
     const [qty, setQty] = useState(1);
     const [activeTab, setActiveTab] = useState<'desc' | 'content' | 'specs' | 'reviews'>('desc');
     const [relatedProducts, setRelatedProducts] = useState<{ id: string; name: string; image: string; price: number; oldPrice?: number; category?: string; rating?: number; isSale?: boolean; isNew?: boolean }[]>([]);
@@ -214,7 +215,9 @@ const ProductDetailPage: React.FC = () => {
 
                 // Set default image
                 const primary = p.images?.find(i => i.is_primary) || p.images?.[0];
-                setMainImg(imgUrl(primary));
+                const defaultUrl = imgUrl(primary);
+                setDefaultMainImg(defaultUrl);
+                setMainImg(defaultUrl);
 
                 // If variants exist, select the first one
                 if (p.variants && p.variants.length > 0) {
@@ -226,7 +229,8 @@ const ProductDetailPage: React.FC = () => {
                         if (a.group) attrsMap[a.group] = a.id;
                     });
                     setSelectedAttrs(attrsMap);
-                    if (varImgUrl(firstVariant)) setMainImg(varImgUrl(firstVariant));
+                    const vi = varImgUrl(firstVariant);
+                    if (vi) setMainImg(vi);
                 }
             } catch {
                 navigate('/shop');
@@ -255,21 +259,37 @@ const ProductDetailPage: React.FC = () => {
 
     // ── Select attribute ───────────────────────────────────────────────
     const handleSelectAttr = (group: string, attrId: number) => {
-        const newSelected = { ...selectedAttrs, [group]: attrId };
+        const isSelected = selectedAttrs[group] === attrId;
+        const newSelected: Record<string, number> = { ...selectedAttrs };
+
+        if (isSelected) {
+            delete newSelected[group];
+        } else {
+            newSelected[group] = attrId;
+        }
+
         setSelectedAttrs(newSelected);
 
-        // Find best matching variant
-        const selectedIds = Object.values(newSelected);
-        const match = product?.variants?.find(v =>
-            selectedIds.every(sid => v.attributes.some(a => a.id === sid))
-        );
+        const allNextSelected =
+            attrGroups.length === 0 ? true : attrGroups.every(({ group }) => !!newSelected[group]);
 
-        if (match) {
-            setSelectedVariant(match);
+        if (!allNextSelected) {
+            setSelectedVariant(null);
             setQty(1);
-            const vi = varImgUrl(match);
-            if (vi) setMainImg(vi);
+            setMainImg(defaultMainImg);
+            return;
         }
+
+        const selectedIds = Object.values(newSelected);
+        const match = product?.variants?.find((v) => {
+            if (v.quantity <= 0) return false;
+            return selectedIds.every((sid) => v.attributes.some((a) => a.id === sid));
+        }) ?? null;
+
+        setSelectedVariant(match);
+        setQty(1);
+        const vi = match ? varImgUrl(match) : null;
+        setMainImg(vi ?? defaultMainImg);
     };
 
     // ── Derived ────────────────────────────────────────────────────────
@@ -286,15 +306,25 @@ const ProductDetailPage: React.FC = () => {
         ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
         : 0;
 
-    const stock = selectedVariant?.quantity ?? product?.quantity ?? 0;
+    const stock = selectedVariant?.quantity ?? 0;
     const maxQty = Math.max(1, stock);
 
     // ── Add to cart ────────────────────────────────────────────────────
     const handleAddToCart = (goToCart = false) => {
-        if (!product || stock === 0) return;
+        if (!product) return;
 
         if (!selectedVariant) {
-            toast.warning('Vui lòng chọn các thuộc tính sản phẩm!');
+            toast.warning('Vui lòng chọn đầy đủ thuộc tính sản phẩm!');
+            return;
+        }
+
+        if (stock <= 0) {
+            toast.error('Sản phẩm này hiện đang hết hàng!');
+            return;
+        }
+
+        if (qty > stock) {
+            toast.error('Số lượng trong kho không đủ!');
             return;
         }
 
@@ -525,7 +555,10 @@ const ProductDetailPage: React.FC = () => {
                                                 <button
                                                     key={attr.id}
                                                     title={attr.value}
-                                                    onClick={() => handleSelectAttr(group, attr.id)}
+                                                    onClick={() => {
+                                                        if (isSelected) handleSelectAttr(group, attr.id);
+                                                        else if (isAvailable) handleSelectAttr(group, attr.id);
+                                                    }}
                                                     style={{
                                                         width: 32, height: 32, borderRadius: '50%',
                                                         background: attr.color_code,
@@ -552,7 +585,10 @@ const ProductDetailPage: React.FC = () => {
                                                         borderWidth: 2,
                                                         transition: 'all .2s'
                                                     }}
-                                                    onClick={() => isAvailable && handleSelectAttr(group, attr.id)}
+                                                    onClick={() => {
+                                                        if (isSelected) handleSelectAttr(group, attr.id);
+                                                        else if (isAvailable) handleSelectAttr(group, attr.id);
+                                                    }}
                                                 >
                                                     {attr.value}
                                                 </button>
@@ -563,11 +599,15 @@ const ProductDetailPage: React.FC = () => {
                             ))}
 
                             {/* Stock status */}
-                            <p className={`small mb-3 ${stock > 0 ? 'text-success' : 'text-danger'}`}>
-                                {stock > 0 ? (
-                                    <><i className="fas fa-check-circle me-1" />Còn {stock} sản phẩm</>
+                            <p className={`small mb-3 ${selectedVariant ? (stock > 0 ? 'text-success' : 'text-danger') : 'text-muted'}`}>
+                                {selectedVariant ? (
+                                    stock > 0 ? (
+                                        <><i className="fas fa-check-circle me-1" />Còn {stock} sản phẩm</>
+                                    ) : (
+                                        <><i className="fas fa-times-circle me-1" />Hết hàng</>
+                                    )
                                 ) : (
-                                    <><i className="fas fa-times-circle me-1" />Hết hàng</>
+                                    <><i className="fas fa-info-circle me-1" />Chọn biến thể để xem tồn kho</>
                                 )}
                             </p>
 

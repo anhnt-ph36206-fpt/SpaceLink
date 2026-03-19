@@ -1158,7 +1158,12 @@ const ProfilePage: React.FC = () => {
                                     <div className="order-items-preview">
                                       {(order.items ?? []).slice(0, 4).map((item, i) =>
                                         item.product_image
-                                          ? <img key={i} src={item.product_image} alt={item.product_name} className="order-item-img" />
+                                          ? (
+                                              <>
+                                                <img key={i} src={item.product_image} alt={item.product_name} className="order-item-img" />
+                                                <span className={'text-truncate'}>{item.product_name}</span>
+                                              </>
+                                            )
                                           : <div key={i} className="order-item-img-placeholder"><i className="fas fa-box" /></div>
                                       )}
                                       {(order.items?.length ?? 0) > 4 && (

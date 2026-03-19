@@ -37,6 +37,16 @@ interface Order {
   cancelled_reason?: string;
   tracking_code?: string;
   created_at: string;
+  product_return?: {
+    id?: number;
+    status?: string;
+    reason?: string | null;
+    reason_for_refusal?: string | null;
+    refund_amount?: number | null;
+    transaction_code?: string | null;
+    items?: number[] | null;
+    created_at?: string;
+  };
 }
 
 interface PaginationMeta {
@@ -61,11 +71,10 @@ const ORDER_STATUS_CONFIG: Record<string, { color: string; label: string; icon: 
 };
 
 const PAYMENT_STATUS_CONFIG: Record<string, { color: string; label: string }> = {
-  pending: { color: 'orange', label: 'Chưa thanh toán' },
   unpaid: { color: 'orange', label: 'Chưa thanh toán' },
   paid: { color: 'success', label: 'Đã thanh toán' },
-  failed: { color: 'error', label: 'Thất bại' },
   refunded: { color: 'default', label: 'Đã hoàn tiền' },
+  partial_refund: { color: 'default', label: 'Hoàn một phần' },
 };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -81,8 +90,8 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   confirmed: ['processing', 'cancelled'],
   processing: ['shipping', 'cancelled'],
   shipping: ['delivered'],     // Admin cập nhật khi đơn vị VT giao xong
-  delivered: ['returned'],      // completed do khách bấm
-  completed: ['returned'],
+  delivered: [],
+  completed: [],
   cancelled: [],
   returned: [],
 };
@@ -204,9 +213,20 @@ const AdminOrderPage: React.FC = () => {
   // --------------------------------------------------------
   const openQuickPayment = (order: Order, e: React.MouseEvent) => {
     e.stopPropagation();
+
+    if (order.status === 'returned' && order.product_return?.status !== 'approved') {
+      message.error('Chỉ có thể cập nhật hoàn tiền sau khi đã duyệt yêu cầu hoàn trả.');
+      return;
+    }
+
     setQuickPaymentOrder(order);
     paymentForm.resetFields();
-    paymentForm.setFieldsValue({ payment_status: order.payment_status });
+    const initialPaymentStatus =
+      order.status === 'returned'
+        ? (['refunded', 'partial_refund'].includes(order.payment_status) ? order.payment_status : 'refunded')
+        : order.payment_status;
+
+    paymentForm.setFieldsValue({ payment_status: initialPaymentStatus });
     setQuickPaymentModalOpen(true);
   };
 
@@ -717,7 +737,10 @@ const AdminOrderPage: React.FC = () => {
           >
             <Select
               options={Object.entries(PAYMENT_STATUS_CONFIG)
-                .filter(([k]) => !['unpaid'].includes(k)) // loại bỏ alias
+                .filter(([k]) => {
+                  if (quickPaymentOrder?.status === 'returned') return ['refunded', 'partial_refund'].includes(k);
+                  return ['unpaid', 'paid'].includes(k);
+                })
                 .map(([k, cfg]) => ({
                   value: k,
                   label: <Tag color={cfg.color} style={{ borderRadius: 20, margin: 0 }}>{cfg.label}</Tag>,

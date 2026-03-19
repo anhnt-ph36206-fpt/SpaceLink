@@ -71,6 +71,22 @@ interface Order {
   updated_at?: string;
   items?: OrderItem[];
   status_history?: StatusHistory[];
+  product_return?: {
+    id?: number;
+    status?: string;
+    reason?: string | null;
+    reason_for_refusal?: string | null;
+    refund_amount?: number | null;
+    transaction_code?: string | null;
+    items?: number[] | null;
+    evidences?: Array<{
+      id?: number;
+      file_url?: string | null;
+      file_type?: string | null;
+      created_at?: string;
+    }> | null;
+    created_at?: string;
+  };
 }
 
 // ── Status Config (orange primary, Shopee-like) ──────────────
@@ -95,17 +111,23 @@ const ORDER_STATUS_CONFIG: Record<string, { color: string; label: string; icon: 
 };
 
 const PAYMENT_STATUS_CONFIG: Record<string, { color: string; label: string }> = {
-  pending: { color: 'orange', label: 'Chưa thanh toán' },
   unpaid: { color: 'orange', label: 'Chưa thanh toán' },
   paid: { color: 'success', label: 'Đã thanh toán' },
-  failed: { color: 'error', label: 'Thất bại' },
   refunded: { color: 'default', label: 'Đã hoàn tiền' },
+  partial_refund: { color: 'default', label: 'Hoàn một phần' },
 };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   cod: 'COD (Tiền mặt)',
   vnpay: 'VNPay',
   banking: 'Chuyển khoản',
+};
+
+const PRODUCT_RETURN_STATUS_CONFIG: Record<string, { color: string; label: string }> = {
+  pending: { color: '#b45309', label: 'Đang chờ duyệt' },
+  approved: { color: '#0369a1', label: 'Đã duyệt hoàn trả' },
+  rejected: { color: '#b91c1c', label: 'Từ chối hoàn trả' },
+  refunded: { color: '#64748b', label: 'Đã hoàn tiền' },
 };
 
 /**
@@ -120,8 +142,8 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   confirmed: ['processing', 'cancelled'],
   processing: ['shipping', 'cancelled'],
   shipping: ['delivered'],     // Admin cập nhật khi đơn vị VT xác nhận giao xong
-  delivered: ['returned'],      // completed do khách bấm, admin chỉ xử lý hoàn trả
-  completed: ['returned'],
+  delivered: [],
+  completed: [],
   cancelled: [],
   returned: [],
 };
@@ -201,6 +223,11 @@ const AdminOrderDetailPage: React.FC = () => {
   const [paymentForm] = Form.useForm();
   const [savingPayment, setSavingPayment] = useState(false);
 
+  const [returnApproveLoading, setReturnApproveLoading] = useState(false);
+  const [returnRejectOpen, setReturnRejectOpen] = useState(false);
+  const [returnRejectReason, setReturnRejectReason] = useState('');
+  const [returnRejectLoading, setReturnRejectLoading] = useState(false);
+
   // ── Fetch ──────────────────────────────────────────────────
   const fetchOrder = useCallback(async () => {
     if (!id) return;
@@ -254,8 +281,22 @@ const AdminOrderDetailPage: React.FC = () => {
   // ── Update Payment ─────────────────────────────────────────
   const openPaymentModal = () => {
     if (!order) return;
+
+    if (
+      order.status === 'returned' &&
+      order.product_return?.status !== 'approved'
+    ) {
+      message.error('Chỉ có thể cập nhật hoàn tiền sau khi đã duyệt yêu cầu hoàn trả.');
+      return;
+    }
+
     paymentForm.resetFields();
-    paymentForm.setFieldsValue({ payment_status: order.payment_status });
+    const initialPaymentStatus =
+      order.status === 'returned'
+        ? (['refunded', 'partial_refund'].includes(order.payment_status) ? order.payment_status : 'refunded')
+        : order.payment_status;
+
+    paymentForm.setFieldsValue({ payment_status: initialPaymentStatus });
     setPaymentModalOpen(true);
   };
 
@@ -273,6 +314,48 @@ const AdminOrderDetailPage: React.FC = () => {
       message.error(error?.response?.data?.message ?? 'Có lỗi xảy ra');
     } finally {
       setSavingPayment(false);
+    }
+  };
+
+  // ── Return Approval / Reject ─────────────────────────────
+  const handleApproveReturn = async () => {
+    if (!order) return;
+    setReturnApproveLoading(true);
+    try {
+      await axiosInstance.post(`${API_BASE}/${order.id}/return/approve`, {
+        admin_note: 'Chấp nhận yêu cầu hoàn trả.',
+      });
+      message.success('Đã duyệt hoàn trả!');
+      fetchOrder();
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      message.error(error?.response?.data?.message ?? 'Không thể duyệt hoàn trả');
+    } finally {
+      setReturnApproveLoading(false);
+    }
+  };
+
+  const handleRejectReturn = async () => {
+    if (!order) return;
+    if (!returnRejectReason.trim()) {
+      message.error('Vui lòng nhập lý do từ chối hoàn trả.');
+      return;
+    }
+
+    setReturnRejectLoading(true);
+    try {
+      await axiosInstance.post(`${API_BASE}/${order.id}/return/reject`, {
+        reason_for_refusal: returnRejectReason,
+      });
+      message.success('Đã từ chối hoàn trả.');
+      setReturnRejectOpen(false);
+      setReturnRejectReason('');
+      fetchOrder();
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      message.error(error?.response?.data?.message ?? 'Không thể từ chối hoàn trả');
+    } finally {
+      setReturnRejectLoading(false);
     }
   };
 
@@ -332,7 +415,12 @@ const AdminOrderDetailPage: React.FC = () => {
               Cập nhật trạng thái
             </Button>
           )}
-          <Button icon={<DollarOutlined />} onClick={openPaymentModal} style={{ borderRadius: 10, height: 40, borderColor: '#198754', color: '#198754' }}>
+          <Button
+            icon={<DollarOutlined />}
+            onClick={openPaymentModal}
+            disabled={order.status === 'returned' && order.product_return?.status !== 'approved'}
+            style={{ borderRadius: 10, height: 40, borderColor: '#198754', color: '#198754' }}
+          >
             Cập nhật thanh toán
           </Button>
         </Space>
@@ -375,10 +463,82 @@ const AdminOrderDetailPage: React.FC = () => {
           style={{ ...cardStyle, border: `1.5px solid ${order.status === 'cancelled' ? '#fca5a5' : '#e2e8f0'}`, background: order.status === 'cancelled' ? '#fef2f2' : '#f8fafc' }}
           styles={{ body: { padding: '14px 20px' } }}
         >
-          <Space>
-            <StatusTag status={order.status} config={ORDER_STATUS_CONFIG} />
-            {order.cancelled_reason && <Text type="danger" style={{ fontSize: 13 }}>Lý do: {order.cancelled_reason}</Text>}
-            {order.cancelled_at && <Text type="secondary" style={{ fontSize: 12 }}>{order.cancelled_at}</Text>}
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Space>
+              <StatusTag status={order.status} config={ORDER_STATUS_CONFIG} />
+              {order.status === 'cancelled' && order.cancelled_reason && (
+                <Text type="danger" style={{ fontSize: 13 }}>Lý do: {order.cancelled_reason}</Text>
+              )}
+              {order.status === 'cancelled' && order.cancelled_at && (
+                <Text type="secondary" style={{ fontSize: 12 }}>{order.cancelled_at}</Text>
+              )}
+            </Space>
+
+            {order.status === 'returned' && order.product_return && (
+              <div style={{ marginTop: 10 }}>
+                <Space wrap>
+                  <Tag color={PRODUCT_RETURN_STATUS_CONFIG[order.product_return.status ?? 'pending']?.color ?? '#64748b'}>
+                    {PRODUCT_RETURN_STATUS_CONFIG[order.product_return.status ?? 'pending']?.label ?? order.product_return.status ?? '—'}
+                  </Tag>
+                  {order.product_return.status === 'pending' && order.product_return.reason && (
+                    <Text type="secondary" style={{ fontSize: 13 }}>
+                      Lý do: {order.product_return.reason}
+                    </Text>
+                  )}
+                </Space>
+
+                {order.product_return.evidences && order.product_return.evidences.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>Minh chứng ({order.product_return.evidences.length})</Text>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+                      {order.product_return.evidences.map((e) => (
+                        e.file_url ? (
+                          <Image
+                            key={e.id ?? e.file_url}
+                            src={e.file_url}
+                            width={90}
+                            height={90}
+                            style={{ objectFit: 'cover', borderRadius: 10, border: '1px solid #f0f0f0' }}
+                            preview={false}
+                          />
+                        ) : null
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {order.product_return.status === 'pending' && (
+                  <Space style={{ marginTop: 12 }}>
+                    <Button
+                      type="primary"
+                      icon={<CheckCircleOutlined />}
+                      loading={returnApproveLoading}
+                      onClick={handleApproveReturn}
+                      style={{ borderRadius: 10, background: 'linear-gradient(135deg,#198754,#0f5132)', border: 'none' }}
+                    >
+                      Chấp nhận hoàn trả
+                    </Button>
+                    <Button
+                      danger
+                      icon={<CloseCircleOutlined />}
+                      onClick={() => {
+                        setReturnRejectReason('');
+                        setReturnRejectOpen(true);
+                      }}
+                      style={{ borderRadius: 10 }}
+                    >
+                      Từ chối
+                    </Button>
+                  </Space>
+                )}
+
+                {order.product_return.status === 'approved' && (
+                  <div style={{ marginTop: 10, color: '#0369a1', fontSize: 13 }}>
+                    Đã duyệt hoàn trả. Tiếp theo cập nhật hoàn tiền ở mục “Cập nhật thanh toán”.
+                  </div>
+                )}
+              </div>
+            )}
           </Space>
         </Card>
       )}
@@ -702,7 +862,10 @@ const AdminOrderDetailPage: React.FC = () => {
             <Select
               style={{ borderRadius: 8 }}
               options={Object.entries(PAYMENT_STATUS_CONFIG)
-                .filter(([k]) => k !== 'unpaid')
+                .filter(([k]) => {
+                  if (order.status === 'returned') return ['refunded', 'partial_refund'].includes(k);
+                  return ['unpaid', 'paid'].includes(k);
+                })
                 .map(([k, cfg]) => ({
                   value: k,
                   label: <Tag color={cfg.color} style={{ borderRadius: 20, margin: 0 }}>{cfg.label}</Tag>,
@@ -711,6 +874,35 @@ const AdminOrderDetailPage: React.FC = () => {
           </Form.Item>
           <Form.Item name="note" label="Ghi chú (tuỳ chọn)">
             <Input.TextArea rows={2} placeholder="Ghi chú..." style={{ borderRadius: 8 }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* ── Return Reject Modal ── */}
+      <Modal
+        title={<Space><CloseCircleOutlined style={{ color: '#dc3545' }} /><span>Từ chối hoàn trả – <Text code>{order.order_code}</Text></span></Space>}
+        open={returnRejectOpen}
+        onOk={handleRejectReturn}
+        onCancel={() => setReturnRejectOpen(false)}
+        okText="Xác nhận từ chối"
+        cancelText="Hủy"
+        confirmLoading={returnRejectLoading}
+        width={520}
+        style={{ top: 120 }}
+        okButtonProps={{ style: { borderRadius: 10 } }}
+      >
+        <div style={{ background: '#fff7ed', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: '#92400e', border: '1px solid #fed7aa' }}>
+          Nhập lý do từ chối. Sau khi từ chối, trạng thái đơn hàng sẽ được khôi phục về `delivered`/`completed` (tuỳ thời điểm khách đã nhận hàng).
+        </div>
+        <Form layout="vertical">
+          <Form.Item label="Lý do từ chối" required>
+            <Input.TextArea
+              rows={3}
+              value={returnRejectReason}
+              onChange={(e) => setReturnRejectReason(e.target.value)}
+              placeholder="Ví dụ: Lý do không chấp nhận hoàn trả..."
+              style={{ borderRadius: 8 }}
+            />
           </Form.Item>
         </Form>
       </Modal>
