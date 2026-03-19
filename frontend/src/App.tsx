@@ -27,6 +27,7 @@ import AdminOrderPage from './pages/admin/AdminOrderPage';
 import AdminOrderDetailPage from './pages/admin/AdminOrderDetailPage';
 import AdminUserPage from './pages/admin/AdminUserPage';
 import AdminReviewPage from './pages/admin/reviews/AdminReviewPage';
+import AdminVoucherPage from './pages/admin/vouchers/AdminVoucherPage';
 import ProductList from "./pages/admin/products/list";
 import ProductCreate from "./pages/admin/products/create";
 import ProductEdit from "./pages/admin/products/edit";
@@ -76,6 +77,7 @@ function App() {
                                 <Route path="orders/:id" element={<AdminOrderDetailPage />} />
                                 <Route path="users" element={<AdminUserPage />} />
                                 <Route path="reviews" element={<AdminReviewPage />} />
+                                <Route path="vouchers" element={<AdminVoucherPage />} />
                             </Route>
 
                             {/* Public routes */}
