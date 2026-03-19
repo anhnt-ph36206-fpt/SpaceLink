@@ -91,7 +91,7 @@ class Order extends Model
     // Order cancelled by user
     public function cancelledBy()
     {
-        return $this->belongsTo(User::class, 'cancelled_by');
+        return $this->belongsTo(User::class , 'cancelled_by');
     }
 
     // Order voucher usages

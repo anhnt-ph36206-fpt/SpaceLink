@@ -17,7 +17,7 @@ class OrderController extends Controller
     // =========================================================================
     public function index(Request $request)
     {
-        $user  = $request->user();
+        $user = $request->user();
         $query = Order::where('user_id', $user->id)->latest();
 
         if ($request->filled('status')) {
@@ -28,8 +28,8 @@ class OrderController extends Controller
             $query->where('payment_status', $request->payment_status);
         }
 
-        $perPage = min((int) $request->get('per_page', 10), 50);
-        $orders  = $query->paginate($perPage);
+        $perPage = min((int)$request->get('per_page', 10), 50);
+        $orders = $query->paginate($perPage);
 
         return OrderResource::collection($orders);
     }
@@ -39,7 +39,7 @@ class OrderController extends Controller
     // =========================================================================
     public function show(Request $request, string $id)
     {
-        $user  = $request->user();
+        $user = $request->user();
         $order = Order::with([
             'items',
             'statusHistory' => fn($q) => $q->orderBy('id', 'asc'),
@@ -48,14 +48,14 @@ class OrderController extends Controller
         // Bảo vệ: chỉ xem đơn của chính mình
         if ($order->user_id !== $user->id) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Bạn không có quyền xem đơn hàng này.',
             ], 403);
         }
 
         return response()->json([
             'status' => 'success',
-            'data'   => new OrderResource($order),
+            'data' => new OrderResource($order),
         ]);
     }
 
@@ -64,13 +64,13 @@ class OrderController extends Controller
     // =========================================================================
     public function cancel(Request $request, string $id)
     {
-        $user  = $request->user();
+        $user = $request->user();
         $order = Order::findOrFail($id);
 
         // Kiểm tra quyền sở hữu
         if ($order->user_id !== $user->id) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Bạn không có quyền hủy đơn hàng này.',
             ], 403);
         }
@@ -78,7 +78,7 @@ class OrderController extends Controller
         // Chỉ cho phép hủy khi đang ở trạng thái pending
         if ($order->status !== 'pending') {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => "Không thể hủy đơn hàng đang ở trạng thái \"{$order->status}\". Chỉ có thể hủy đơn hàng đang chờ xử lý (pending).",
             ], 422);
         }
@@ -87,19 +87,19 @@ class OrderController extends Controller
 
         DB::transaction(function () use ($order, $user, $reason) {
             $order->update([
-                'status'           => 'cancelled',
+                'status' => 'cancelled',
                 'cancelled_reason' => $reason,
-                'cancelled_by'     => $user->id,
-                'cancelled_at'     => now(),
+                'cancelled_by' => $user->id,
+                'cancelled_at' => now(),
             ]);
 
             // Ghi lịch sử
             OrderStatusHistory::create([
-                'order_id'    => $order->id,
+                'order_id' => $order->id,
                 'from_status' => 'pending',
-                'to_status'   => 'cancelled',
-                'note'        => $reason,
-                'changed_by'  => $user->id,
+                'to_status' => 'cancelled',
+                'note' => $reason,
+                'changed_by' => $user->id,
             ]);
 
             // Hoàn lại tồn kho: cả variant lẫn product
@@ -115,9 +115,53 @@ class OrderController extends Controller
         });
 
         return response()->json([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => 'Đã hủy đơn hàng thành công.',
-            'data'    => new OrderResource($order->fresh()),
+            'data' => new OrderResource($order->fresh()),
+        ]);
+    }
+
+    // =========================================================================
+    // POST /api/client/orders/{id}/confirm-received — Khách xác nhận đã nhận hàng
+    // =========================================================================
+    public function confirmReceived(Request $request, string $id)
+    {
+        $user = $request->user();
+        $order = Order::findOrFail($id);
+
+        if ($order->user_id !== $user->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bạn không có quyền thực hiện thao tác này.',
+            ], 403);
+        }
+
+        if ($order->status !== 'delivered') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Chỉ có thể xác nhận nhận hàng khi đơn đang ở trạng thái "Đã giao hàng".',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($order, $user) {
+            $order->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+
+            OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'from_status' => 'delivered',
+                'to_status' => 'completed',
+                'note' => 'Khách hàng xác nhận đã nhận được hàng.',
+                'changed_by' => $user->id,
+            ]);
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Cảm ơn bạn đã xác nhận nhận hàng!',
+            'data' => new OrderResource($order->fresh()),
         ]);
     }
 
@@ -126,7 +170,7 @@ class OrderController extends Controller
     // =========================================================================
     public function retryVnpayPayment(Request $request, string $id)
     {
-        $user  = $request->user();
+        $user = $request->user();
         $order = Order::findOrFail($id);
 
         // Kiểm tra quyền sở hữu
@@ -137,40 +181,41 @@ class OrderController extends Controller
         // Chỉ cho phép nếu: phương thức VNPAY + chưa thanh toán + đang pending
         if ($order->payment_method !== 'vnpay' || $order->payment_status !== 'unpaid' || $order->status !== 'pending') {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Đơn hàng không hợp lệ để thanh toán lại. (Yêu cầu: phương thức VNPAY, chưa thanh toán, trạng thái pending)',
             ], 422);
         }
 
         // Tái sử dụng đú ng logic hash của VNPAY trong CheckoutController
-        $vnp_TmnCode   = config('vnpay.vnp_TmnCode');
+        $vnp_TmnCode = config('vnpay.vnp_TmnCode');
         $vnp_HashSecret = config('vnpay.vnp_HashSecret');
-        $vnp_Url       = config('vnpay.vnp_Url');
+        $vnp_Url = config('vnpay.vnp_Url');
         $vnp_Returnurl = config('vnpay.vnp_Returnurl');
 
         $inputData = [
-            'vnp_Version'  => '2.1.0',
-            'vnp_TmnCode'  => $vnp_TmnCode,
-            'vnp_Amount'   => $order->total_amount * 100,
-            'vnp_Command'  => 'pay',
+            'vnp_Version' => '2.1.0',
+            'vnp_TmnCode' => $vnp_TmnCode,
+            'vnp_Amount' => $order->total_amount * 100,
+            'vnp_Command' => 'pay',
             'vnp_CreateDate' => date('YmdHis'),
             'vnp_CurrCode' => 'VND',
-            'vnp_IpAddr'   => $request->ip(),
-            'vnp_Locale'   => 'vn',
+            'vnp_IpAddr' => $request->ip(),
+            'vnp_Locale' => 'vn',
             'vnp_OrderInfo' => 'Thanh toan lai don hang ' . $order->order_code,
             'vnp_OrderType' => 'billpayment',
             'vnp_ReturnUrl' => $vnp_Returnurl,
-            'vnp_TxnRef'   => $order->order_code,
+            'vnp_TxnRef' => $order->order_code,
         ];
 
         ksort($inputData);
         $hashdata = '';
-        $query    = '';
+        $query = '';
         $i = 0;
         foreach ($inputData as $key => $value) {
             if ($i == 1) {
                 $hashdata .= '&' . urlencode($key) . '=' . urlencode($value);
-            } else {
+            }
+            else {
                 $hashdata .= urlencode($key) . '=' . urlencode($value);
                 $i = 1;
             }
@@ -180,10 +225,10 @@ class OrderController extends Controller
         $paymentUrl = $vnp_Url . '?' . $query . 'vnp_SecureHash=' . hash_hmac('sha512', $hashdata, $vnp_HashSecret);
 
         return response()->json([
-            'status'      => 'success',
-            'message'     => 'Tạo lại link thanh toán VNPAY thành công.',
+            'status' => 'success',
+            'message' => 'Tạo lại link thanh toán VNPAY thành công.',
             'payment_url' => $paymentUrl,
-            'data'        => $order->only('id', 'order_code', 'total_amount'),
+            'data' => $order->only('id', 'order_code', 'total_amount'),
         ]);
     }
 }

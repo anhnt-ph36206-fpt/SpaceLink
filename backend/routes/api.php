@@ -112,6 +112,7 @@ Route::prefix('client')->name('client.')->group(function () {
         Route::get('/orders',                      [ClientOrderController::class, 'index']);
         Route::get('/orders/{id}',                 [ClientOrderController::class, 'show']);
         Route::post('/orders/{id}/cancel',         [ClientOrderController::class, 'cancel']);
+        Route::post('/orders/{id}/confirm-received', [ClientOrderController::class , 'confirmReceived']);
         Route::get('/orders/{id}/retry-vnpay',     [ClientOrderController::class, 'retryVnpayPayment']);
 
         // Review sản phẩm
