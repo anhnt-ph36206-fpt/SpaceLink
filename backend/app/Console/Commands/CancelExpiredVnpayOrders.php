@@ -12,6 +12,7 @@ class CancelExpiredVnpayOrders extends Command
      * @var string
      */
     protected $signature = 'orders:cancel-expired-vnpay';
+
     protected $description = 'Tự động hủy các đơn hàng thanh toán VNPAY chưa được thanh toán sau 15 phút';
 
     public function handle()
@@ -29,7 +30,7 @@ class CancelExpiredVnpayOrders extends Command
                     \App\Models\ProductVariant::where('id', $item->variant_id)->increment('quantity', $item->quantity);
                 }
             }
-            
+
             // Xóa Vocher Usage nếu có
             if ($order->voucher_id) {
                 \App\Models\VoucherUsage::where('voucher_id', $order->voucher_id)
@@ -41,15 +42,15 @@ class CancelExpiredVnpayOrders extends Command
             // Đổi trạng thái Huỷ
             $order->update([
                 'status' => 'cancelled',
-                'payment_status' => 'failed',
-                'note' => ltrim($order->note . ' [Hệ thống tự động hủy do giao dịch VNPAY quá hạn 15 phút]'),
+                'payment_status' => 'unpaid',
+                'note' => ltrim($order->note.' [Hệ thống tự động hủy do giao dịch VNPAY quá hạn 15 phút]'),
             ]);
-            
+
             // Ghi Log
             \App\Models\OrderStatusHistory::create([
                 'order_id' => $order->id,
                 'status' => 'cancelled',
-                'note' => 'Hệ thống tự động hủy do giao dịch VNPAY quá hạn 15 phút'
+                'note' => 'Hệ thống tự động hủy do giao dịch VNPAY quá hạn 15 phút',
             ]);
 
             $count++;
