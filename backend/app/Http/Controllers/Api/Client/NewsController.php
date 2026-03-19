@@ -15,8 +15,7 @@ class NewsController extends Controller
     public function index(Request $request)
     {
         $query = News::with('author:id,fullname')
-            ->where('is_active', true)
-            ->where('published_at', '<=', now());
+            ->where('is_active', true);
 
         if ($request->has('is_featured')) {
             $query->where('is_featured', filter_var($request->is_featured, FILTER_VALIDATE_BOOLEAN));

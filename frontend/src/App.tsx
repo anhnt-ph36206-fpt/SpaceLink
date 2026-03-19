@@ -18,6 +18,8 @@ import NotFoundPage from './pages/NotFoundPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
+import NewsDetailPage from './pages/NewsDetailPage';
+import NewsListPage from './pages/NewsListPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminCategoryPage from './pages/admin/categories/AdminCategoryPage';
 import AdminOrderPage from './pages/admin/AdminOrderPage';
@@ -29,6 +31,7 @@ import ProductDetail from "./pages/admin/products/ProductDetail";
 import AdminAttributeGroupPage from "./pages/admin/attribute-groups/AdminAttributeGroupPage";
 import AdminBrandPage from './pages/admin/brands/AdminBrandPage';
 import AdminBannerPage from './pages/admin/banners/AdminBannerPage';
+import AdminNewsPage from './pages/admin/news/AdminNewsPage';
 import SearchPage from './components/home/SearchPage';
 import ComparePage from './pages/ComparePage';
 import { ToastContainer } from 'react-toastify';
@@ -56,6 +59,7 @@ function App() {
                                 <Route path="categories" element={<AdminCategoryPage />} />
                                 <Route path="brands" element={<AdminBrandPage />} />
                                 <Route path="banners" element={<AdminBannerPage />} />
+                                <Route path="news" element={<AdminNewsPage />} />
                                 <Route path="attribute-groups" element={<AdminAttributeGroupPage />} />
 
                                 <Route path="products">
@@ -84,6 +88,8 @@ function App() {
                                 <Route path="/contact" element={<ContactPage />} />
                                 <Route path="/search" element={<SearchPage />} />
                                 <Route path="/compare" element={<ComparePage />} />
+                                <Route path="/news" element={<NewsListPage />} />
+                                <Route path="/news/:slug" element={<NewsDetailPage />} />
                                 <Route path="/payment-return" element={<PaymentReturnPage />} />
                                 <Route path="*" element={<NotFoundPage />} />
                             </Route>

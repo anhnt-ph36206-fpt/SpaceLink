@@ -39,4 +39,18 @@ class News extends Model
     {
         return $this->belongsTo(User::class, 'author_id');
     }
+
+    /**
+     * Accessor: full URL for thumbnail
+     * Sử dụng host động từ request (giống Banner) để tránh phụ thuộc APP_URL
+     */
+    public function getThumbnailUrlAttribute(): ?string
+    {
+        if (!$this->thumbnail) return null;
+        if (str_starts_with($this->thumbnail, 'http')) return $this->thumbnail;
+        $host = request()->getSchemeAndHttpHost();
+        return $host . '/storage/' . $this->thumbnail;
+    }
+
+    protected $appends = ['thumbnail_url'];
 }

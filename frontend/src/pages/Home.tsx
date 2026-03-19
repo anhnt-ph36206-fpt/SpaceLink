@@ -8,6 +8,7 @@ import { BackToTop } from '../components/layout/BackToTop'
 import { HeroCarousel } from '../components/home/HeroCarousel'
 import { ServicesBar } from '../components/home/ServicesBar'
 import { ProductOffers } from '../components/home/ProductOffers'
+import { NewsSection } from '../components/home/NewsSection'
 import { OurProducts } from '../components/home/OurProducts'
 import { ProductBanner } from '../components/home/ProductBanner'
 import { ProductListCarousel } from '../components/home/ProductListCarousel'
@@ -23,6 +24,7 @@ export function Home() {
       <HeroCarousel />
       <ServicesBar />
       <ProductOffers />
+      <NewsSection />
       <OurProducts />
       <ProductBanner />
       <ProductListCarousel />
