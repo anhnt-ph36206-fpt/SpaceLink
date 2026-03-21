@@ -600,14 +600,12 @@ const ProductDetailPage: React.FC = () => {
 
                             {/* Stock status */}
                             <p className={`small mb-3 ${selectedVariant ? (stock > 0 ? 'text-success' : 'text-danger') : 'text-muted'}`}>
-                                {selectedVariant ? (
+                                {selectedVariant && (
                                     stock > 0 ? (
                                         <><i className="fas fa-check-circle me-1" />Còn {stock} sản phẩm</>
                                     ) : (
                                         <><i className="fas fa-times-circle me-1" />Hết hàng</>
                                     )
-                                ) : (
-                                    <><i className="fas fa-info-circle me-1" />Chọn biến thể để xem tồn kho</>
                                 )}
                             </p>
 

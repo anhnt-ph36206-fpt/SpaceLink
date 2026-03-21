@@ -271,10 +271,24 @@ class OrderController extends Controller
         // Chỉ cho phép sau khi đã giao/hoặc đã hoàn thành
         if (! in_array($order->status, ['delivered', 'completed'], true)) {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => "Không thể yêu cầu hoàn trả khi đơn đang ở trạng thái \"{$order->status}\".",
             ], 422);
         }
+
+        // ── Kiểm tra thời hạn hoàn trả 7 ngày ──────────────────────────────
+        // Tính từ: completed_at (nếu completed) hoặc delivered_at (nếu vẫn delivered)
+        $RETURN_WINDOW_DAYS = 7;
+        $referenceDate = $order->completed_at ?? $order->delivered_at;
+
+        if ($referenceDate && now()->diffInDays($referenceDate) >= $RETURN_WINDOW_DAYS) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => "Đã quá {$RETURN_WINDOW_DAYS} ngày kể từ khi nhận hàng. Bạn không thể yêu cầu hoàn trả.",
+                'expired' => true,
+            ], 422);
+        }
+
 
         $reason = $request->input('reason');
 

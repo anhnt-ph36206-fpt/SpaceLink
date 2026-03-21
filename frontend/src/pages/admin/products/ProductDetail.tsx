@@ -295,15 +295,17 @@ const ProductDetail: React.FC = () => {
                                                     align: 'center',
                                                     render: (_, r) => (
                                                         <Switch
-                                                            size="small" checked={r.is_active}
+                                                            size="small"
+                                                            checked={r.is_active}
+                                                            loading={updatingVariantId === r.id}
                                                             onChange={v => {
+                                                                // Optimistic UI
                                                                 setProduct(prev => {
                                                                     if (!prev) return prev;
-                                                                    return {
-                                                                        ...prev,
-                                                                        variants: (prev.variants || []).map(vnt => vnt.id === r.id ? { ...vnt, is_active: v } : vnt)
-                                                                    };
+                                                                    return { ...prev, variants: (prev.variants || []).map(vnt => vnt.id === r.id ? { ...vnt, is_active: v } : vnt) };
                                                                 });
+                                                                // Gọi API ngay — trước đây chỉ update state không lưu DB
+                                                                handleUpdateVariantQuick(r.id, { price: r.price, sale_price: r.sale_price, quantity: r.quantity, is_active: v, sku: r.sku });
                                                             }}
                                                         />
                                                     )
