@@ -101,6 +101,35 @@ class CheckoutController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Danh sách sản phẩm trống.'], 400);
         }
 
+        // 2b. Pre-flight stock check: validate nhanh toàn bộ items TRƯỚC khi vào transaction
+        // Phát hiện sớm, trả lỗi rõ ràng, tránh lock DB không cần thiết
+        $stockErrors = [];
+        foreach ($cartItems as $item) {
+            if (! $item->variant_id) continue;
+
+            // Đọc stock hiện tại (không lock — đây chỉ là kiểm tra sớm, lock thật sẽ trong transaction)
+            $currentVariant = ProductVariant::select('id', 'quantity', 'is_active')
+                ->find($item->variant_id);
+
+            if (! $currentVariant || ! $currentVariant->is_active) {
+                $stockErrors[] = "Sản phẩm \"{$item->product->name}\" đã ngừng bán.";
+            } elseif ($currentVariant->quantity < $item->quantity) {
+                $available = $currentVariant->quantity;
+                $stockErrors[] = $available === 0
+                    ? "Sản phẩm \"{$item->product->name}\" đã hết hàng."
+                    : "Sản phẩm \"{$item->product->name}\" chỉ còn {$available} trong kho (bạn đang mua {$item->quantity}).";
+            }
+        }
+
+        if (! empty($stockErrors)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => implode(' | ', $stockErrors),
+                'errors'  => $stockErrors,
+            ], 409);
+        }
+
+
         // 2. Shipping Address
         $address = null;
         if ($request->filled('shipping_address_id')) {
@@ -181,31 +210,42 @@ class CheckoutController extends Controller
                     $price = $this->resolvePrice($item, $lockedVariants);
                     $variant = $item->variant_id ? $lockedVariants->get($item->variant_id) : null;
                     $variantInfo = $variant ? [
-                        'sku' => $variant->sku,
+                        'sku'   => $variant->sku,
                         'image' => $variant->image,
                         'attrs' => $variant->attributes?->map(fn ($a) => ['name' => $a->name, 'value' => $a->value])->toArray(),
                     ] : null;
 
                     OrderItem::create([
-                        'order_id' => $order->id,
-                        'product_id' => $item->product_id,
-                        'variant_id' => $item->variant_id,
+                        'order_id'     => $order->id,
+                        'product_id'   => $item->product_id,
+                        'variant_id'   => $item->variant_id,
                         'product_name' => $item->product->name,
-                        'product_image' => $item->product->images->first()?->image_url ?? $variant?->image,
-                        'product_sku' => $variant?->sku ?? $item->product->sku,
+                        'product_image'=> $item->product->images->first()?->image_url ?? $variant?->image,
+                        'product_sku'  => $variant?->sku ?? $item->product->sku,
                         'variant_info' => $variantInfo,
-                        'price' => $price,
-                        'quantity' => $item->quantity,
-                        'total' => $price * $item->quantity,
+                        'price'        => $price,
+                        'quantity'     => $item->quantity,
+                        'total'        => $price * $item->quantity,
                     ]);
 
-                    // Trừ tồn kho variant
+                    // Trừ tồn kho variant — sàng lọc an toàn: chỉ decrement nếu còn đủ hàng
+                    // (chống oversell ngay cả khi 2 request cùng thông qua lock bất đồng bộ)
                     if ($item->variant_id) {
-                        ProductVariant::where('id', $item->variant_id)->decrement('quantity', $item->quantity);
+                        $affected = ProductVariant::where('id', $item->variant_id)
+                            ->where('quantity', '>=', $item->quantity)  // atomic guard
+                            ->decrement('quantity', $item->quantity);
+
+                        if ($affected === 0) {
+                            // Race condition đã xảy ra — tồn kho đã bị ai đó móc mất
+                            throw new \App\Exceptions\StockException(
+                                "Sản phẩm \"{$item->product->name}\" vừa hết hàng. Vui lòng kiểm tra lại giỏ hàng."
+                            );
+                        }
                     }
 
-                    // Trừ tồn kho tổng của product (luôn thực hiện)
+                    // Trừ tồn kho tổng của product (safe decrement — không để về âm)
                     Product::where('id', $item->product_id)
+                        ->where('quantity', '>=', $item->quantity)
                         ->decrement('quantity', $item->quantity);
                 }
 

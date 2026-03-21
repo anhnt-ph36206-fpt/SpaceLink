@@ -77,6 +77,9 @@ interface Order {
     reason?: string | null;
     reason_for_refusal?: string | null;
     refund_amount?: number | null;
+    refund_bank?: string | null;
+    refund_account_name?: string | null;
+    refund_account_number?: string | null;
     transaction_code?: string | null;
     items?: number[] | null;
     evidences?: Array<{
@@ -179,6 +182,72 @@ const formatVND = (v: number) =>
 
 const API_BASE = '/admin/orders';
 const ORANGE = '#ea580c';
+
+/**
+ * Business rules: Khi nào admin có thể cập nhật trạng thái thanh toán?
+ *
+ * - COD cancelled   → ẨN (tiền chưa thu, đơn đã hủy)
+ * - COD completed   → Có thể toggle paid/unpaid nếu chưa thu tiền
+ * - VNPAY/Banking pending → “unpaid” do IPN chưa về, admin có thể toggle
+ * - VNPAY already paid    → chỉ chuyển refunded khi đơn returned+approved
+ * - returned + approved   → chỉ refunded/partial_refund
+ * - returned + pending    → chờ duyệt, chưa cho sửa payment
+ * - completed + not returned → Ẩn nút (không cần thực hiện gì thêm)
+ */
+const getPaymentUpdateRule = (order: Order) => {
+  const { status, payment_status, payment_method, product_return } = order;
+
+  // 1. Đơn hủy COD → Ẩn hoàn toàn
+  if (status === 'cancelled' && payment_method === 'cod') {
+    return { canUpdate: false, reason: 'COD đã hủy, không cần cập nhật thanh toán' };
+  }
+
+  // 2. Returned — chỉ cho phép khi product_return đã approved
+  if (status === 'returned') {
+    if (product_return?.status === 'approved') {
+      return { canUpdate: true, reason: 'Cập nhật hoàn tiền', mode: 'refund' as const };
+    }
+    return { canUpdate: false, reason: 'Chờ duyệt hoàn trả trước khi cập nhật thanh toán' };
+  }
+
+  // 3. Đã hoàn tiền → Ẩn
+  if (['refunded', 'partial_refund'].includes(payment_status)) {
+    return { canUpdate: false, reason: 'Đã hoàn tiền' };
+  }
+
+  // 4. Completed không có hoàn trả và đã thanh toán → Ẩn (giao dịch xong)
+  if (status === 'completed' && payment_status === 'paid') {
+    return { canUpdate: false, reason: 'Giao dịch đã hoàn tất' };
+  }
+
+  // 5. Các trường hợp còn lại: pending/confirmed/processing/shipping/delivered + paid/unpaid
+  return { canUpdate: true, reason: 'Cập nhật trạng thái thanh toán', mode: 'normal' as const };
+};
+
+
+// Print CSS — inject to head (only once)
+const PRINT_STYLE_ID = 'admin-order-print-style';
+if (!document.getElementById(PRINT_STYLE_ID)) {
+  const style = document.createElement('style');
+  style.id = PRINT_STYLE_ID;
+  style.textContent = `
+    @media print {
+      /* Ẩn navbar, sidebar, header, buttons, modals */
+      nav, header, .ant-layout-sider, [class*="sidebar"],
+      [class*="navbar"], [class*="Sidebar"], .ant-modal-mask,
+      .ant-modal-wrap, .no-print, button:not(.print-visible) { display: none !important; }
+      /* Reset layout */
+      body { margin: 0 !important; padding: 0 !important; }
+      .ant-layout-content, main, #root > * { padding: 0 !important; margin: 0 !important; }
+      /* Show page max-width */
+      .print-area { max-width: 100% !important; padding: 16px !important; }
+      /* Đảm bảo bảng và các card in ra được */
+      .ant-card { break-inside: avoid; box-shadow: none !important; border: 1px solid #ddd !important; }
+      .ant-table { font-size: 11px !important; }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 // ── Variant helper ────────────────────────────────────────────
 const parseVariantAttrs = (info: VariantInfo | null | undefined): VariantAttr[] => {
@@ -374,12 +443,13 @@ const AdminOrderDetailPage: React.FC = () => {
   const isCancelled = order.status === 'cancelled' || order.status === 'returned';
   const validNext = VALID_TRANSITIONS[order.status] ?? [];
   const currentStep = isCancelled ? -1 : statusCfg.step;
+  const paymentRule = getPaymentUpdateRule(order);
 
   const cardStyle = { borderRadius: 14, border: '1px solid #f0f0f0', marginBottom: 18, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' };
   const rowStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' as const };
 
   return (
-    <div style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }} className="print-area">
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22, flexWrap: 'wrap', gap: 14 }}>
@@ -404,9 +474,15 @@ const AdminOrderDetailPage: React.FC = () => {
           </div>
         </div>
 
-        <Space wrap>
+        <Space wrap className="no-print">
           <Button icon={<ReloadOutlined />} onClick={fetchOrder} style={{ borderRadius: 10, height: 40 }}>Làm mới</Button>
-          <Button icon={<PrinterOutlined />} onClick={() => window.print()} style={{ borderRadius: 10, height: 40 }}>In đơn</Button>
+          <Button
+            icon={<PrinterOutlined />}
+            onClick={() => window.print()}
+            style={{ borderRadius: 10, height: 40 }}
+          >
+            In đơn
+          </Button>
           {validNext.length > 0 && (
             <Button
               type="primary" icon={<SendOutlined />} onClick={openStatusModal}
@@ -415,15 +491,16 @@ const AdminOrderDetailPage: React.FC = () => {
               Cập nhật trạng thái
             </Button>
           )}
-          {!(order.status === 'cancelled' && order.payment_method === 'cod') && (
-            <Button
-              icon={<DollarOutlined />}
-              onClick={openPaymentModal}
-              disabled={order.status === 'returned' && order.product_return?.status !== 'approved'}
-              style={{ borderRadius: 10, height: 40, borderColor: '#198754', color: '#198754' }}
-            >
-              Cập nhật thanh toán
-            </Button>
+          {paymentRule.canUpdate && (
+            <Tooltip title={paymentRule.reason}>
+              <Button
+                icon={<DollarOutlined />}
+                onClick={openPaymentModal}
+                style={{ borderRadius: 10, height: 40, borderColor: '#198754', color: '#198754' }}
+              >
+                Cập nhật thanh toán
+              </Button>
+            </Tooltip>
           )}
         </Space>
       </div>
@@ -660,8 +737,11 @@ const AdminOrderDetailPage: React.FC = () => {
                 <Text type="secondary" style={{ fontSize: 13 }}>Thanh toán</Text>
                 <Space>
                   <StatusTag status={order.payment_status} config={PAYMENT_STATUS_CONFIG} />
-                  {!(order.status === 'cancelled' && order.payment_method === 'cod') && (
-                    <Button size="small" icon={<EditOutlined />} onClick={openPaymentModal} style={{ borderRadius: 6 }} />
+                  {/* Chỉ hiện nút edit khi được phép */}
+                  {paymentRule.canUpdate && (
+                    <Tooltip title={paymentRule.reason}>
+                      <Button size="small" icon={<EditOutlined />} onClick={openPaymentModal} style={{ borderRadius: 6 }} />
+                    </Tooltip>
                   )}
                 </Space>
               </div>
@@ -881,12 +961,22 @@ const AdminOrderDetailPage: React.FC = () => {
         style={{ top: 100 }}
       >
         <Form form={paymentForm} layout="vertical" style={{ marginTop: 14 }}>
+          {/* Hiển thị thông tin hiện tại */}
+          <div style={{ background: '#f8f9fa', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#495057' }}>
+            Đang ở: <strong>{ORDER_STATUS_CONFIG[order.status]?.label}</strong>
+            {' | '}Thanh toán: <strong>{PAYMENT_STATUS_CONFIG[order.payment_status]?.label}</strong>
+            {paymentRule.mode === 'refund' && (
+              <span style={{ color: '#b45309', marginLeft: 8 }}>⚠ Chế độ hoàn tiền</span>
+            )}
+          </div>
           <Form.Item name="payment_status" label="Trạng thái thanh toán" rules={[{ required: true }]}>
             <Select
               style={{ borderRadius: 8 }}
               options={Object.entries(PAYMENT_STATUS_CONFIG)
                 .filter(([k]) => {
-                  if (order.status === 'returned') return ['refunded', 'partial_refund'].includes(k);
+                  // Chế độ hoàn: chỉ refunded/partial_refund
+                  if (paymentRule.mode === 'refund') return ['refunded', 'partial_refund'].includes(k);
+                  // Chế độ thường: unpaid/paid
                   return ['unpaid', 'paid'].includes(k);
                 })
                 .map(([k, cfg]) => ({
