@@ -18,10 +18,15 @@ import NotFoundPage from './pages/NotFoundPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
+import OrderDetailPage from './pages/OrderDetailPage';
+import NewsDetailPage from './pages/NewsDetailPage';
+import NewsListPage from './pages/NewsListPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminCategoryPage from './pages/admin/categories/AdminCategoryPage';
 import AdminOrderPage from './pages/admin/AdminOrderPage';
+import AdminOrderDetailPage from './pages/admin/AdminOrderDetailPage';
 import AdminUserPage from './pages/admin/AdminUserPage';
+import AdminReviewPage from './pages/admin/reviews/AdminReviewPage';
 import ProductList from "./pages/admin/products/list";
 import ProductCreate from "./pages/admin/products/create";
 import ProductEdit from "./pages/admin/products/edit";
@@ -29,6 +34,7 @@ import ProductDetail from "./pages/admin/products/ProductDetail";
 import AdminAttributeGroupPage from "./pages/admin/attribute-groups/AdminAttributeGroupPage";
 import AdminBrandPage from './pages/admin/brands/AdminBrandPage';
 import AdminBannerPage from './pages/admin/banners/AdminBannerPage';
+import AdminNewsPage from './pages/admin/news/AdminNewsPage';
 import SearchPage from './components/home/SearchPage';
 import ComparePage from './pages/ComparePage';
 import { ToastContainer } from 'react-toastify';
@@ -56,6 +62,7 @@ function App() {
                                 <Route path="categories" element={<AdminCategoryPage />} />
                                 <Route path="brands" element={<AdminBrandPage />} />
                                 <Route path="banners" element={<AdminBannerPage />} />
+                                <Route path="news" element={<AdminNewsPage />} />
                                 <Route path="attribute-groups" element={<AdminAttributeGroupPage />} />
 
                                 <Route path="products">
@@ -66,7 +73,9 @@ function App() {
                                 </Route>
 
                                 <Route path="orders" element={<AdminOrderPage />} />
+                                <Route path="orders/:id" element={<AdminOrderDetailPage />} />
                                 <Route path="users" element={<AdminUserPage />} />
+                                <Route path="reviews" element={<AdminReviewPage />} />
                             </Route>
 
                             {/* Public routes */}
@@ -79,11 +88,14 @@ function App() {
                                     <Route path="/checkout" element={<CheckoutPage />} />
                                     <Route path="/order/success/:orderCode" element={<OrderSuccessPage />} />
                                     <Route path="/profile" element={<ProfilePage />} />
+                                    <Route path="/orders/:id" element={<OrderDetailPage />} />
                                 </Route>
                                 <Route path="/bestseller" element={<BestsellerPage />} />
                                 <Route path="/contact" element={<ContactPage />} />
                                 <Route path="/search" element={<SearchPage />} />
                                 <Route path="/compare" element={<ComparePage />} />
+                                <Route path="/news" element={<NewsListPage />} />
+                                <Route path="/news/:slug" element={<NewsDetailPage />} />
                                 <Route path="/payment-return" element={<PaymentReturnPage />} />
                                 <Route path="*" element={<NotFoundPage />} />
                             </Route>

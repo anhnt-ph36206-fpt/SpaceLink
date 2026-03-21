@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Button, Result, Card, Typography, Descriptions, Tag, Breadcrumb } from 'antd';
+import { axiosInstance } from '../api/axios';
 import {
     HomeOutlined,
     ShoppingOutlined,
@@ -50,6 +51,8 @@ const PaymentReturnPage: React.FC = () => {
         status: 'info'
     };
 
+    const didUpdatePayment = useRef(false);
+
     const formatPayDate = (raw: string) => {
         if (raw.length !== 14) return raw;
         return `${raw.slice(6, 8)}/${raw.slice(4, 6)}/${raw.slice(0, 4)} ${raw.slice(8, 10)}:${raw.slice(10, 12)}:${raw.slice(12, 14)}`;
@@ -57,6 +60,7 @@ const PaymentReturnPage: React.FC = () => {
 
     useEffect(() => {
         if (!isSuccess) return;
+
         const timer = setInterval(() => {
             setCountdown((c) => {
                 if (c <= 1) {
@@ -68,6 +72,27 @@ const PaymentReturnPage: React.FC = () => {
         }, 1000);
         return () => clearInterval(timer);
     }, [isSuccess, navigate]);
+
+    // VNPay redirect: chủ động gọi API để cập nhật `payment_status` ngay lập tức.
+    // Backend vẫn cho phép admin chỉnh sửa; vnpay-ipn chỉ cập nhật khi đơn đang ở trạng thái `unpaid`.
+    useEffect(() => {
+        if (!isSuccess) return;
+        if (didUpdatePayment.current) return;
+        didUpdatePayment.current = true;
+
+        const params: Record<string, string> = {};
+        searchParams.forEach((value, key) => {
+            params[key] = value;
+        });
+
+        (async () => {
+            try {
+                await axiosInstance.get('/payment/vnpay-ipn', { params });
+            } catch {
+                // Không chặn luồng UI: chỉ cố gắng cập nhật.
+            }
+        })();
+    }, [isSuccess, txnRef, searchParams]);
 
     return (
         <div className="payment-return-container py-5 min-vh-100 bg-light d-flex align-items-center">

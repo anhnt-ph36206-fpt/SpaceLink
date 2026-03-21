@@ -1,18 +1,18 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Table, Button, Modal, Space, Tag, Typography, message, Card,
-  Row, Col, Select, Input, Descriptions, Badge, Tooltip, Form,
-  Divider, Timeline, DatePicker, Drawer, Spin, Image,
+  Table, Button, Space, Tag, Typography, message, Card,
+  Row, Col, Select, Input, Badge, Tooltip, DatePicker, Modal,
+  Form, Statistic,
 } from 'antd';
 import {
   SearchOutlined, ShoppingCartOutlined, EyeOutlined, ReloadOutlined,
   CheckCircleOutlined, ClockCircleOutlined, CarOutlined, CloseCircleOutlined,
-  DollarOutlined, FilterOutlined, HistoryOutlined, SendOutlined,
-  SyncOutlined, GiftOutlined, RollbackOutlined,
+  DollarOutlined, FilterOutlined, SyncOutlined, RollbackOutlined,
+  SendOutlined, RiseOutlined, ShoppingOutlined, FileExcelOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { axiosInstance } from '../../api/axios';
-
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -20,49 +20,11 @@ const { RangePicker } = DatePicker;
 // ============================================================
 // Types
 // ============================================================
-interface OrderItem {
-  id: number;
-  product_id: number;
-  variant_id?: number;
-  product_name: string;
-  product_image?: string;
-  product_sku?: string;
-  variant_info?: Record<string, string>;
-  price: number;
-  quantity: number;
-  total: number;
-}
-
-interface StatusHistory {
-  from: string;
-  to: string;
-  note?: string;
-  changed_by?: number;
-  created_at: string;
-}
-
-interface ShippingInfo {
-  fullname?: string;
-  phone?: string;
-  email?: string;
-  province?: string;
-  district?: string;
-  ward?: string;
-  address?: string;
-}
-
-interface OrderUser {
-  id: number;
-  fullname?: string;
-  email?: string;
-  phone?: string;
-}
-
 interface Order {
   id: number;
   order_code: string;
-  user?: OrderUser;
-  shipping: ShippingInfo;
+  user?: { id: number; fullname?: string; email?: string; phone?: string };
+  shipping: { fullname?: string; phone?: string; email?: string };
   subtotal: number;
   discount_amount: number;
   shipping_fee: number;
@@ -71,22 +33,20 @@ interface Order {
   payment_status: string;
   payment_method?: string;
   voucher_code?: string;
-  voucher_discount?: number;
   note?: string;
-  admin_note?: string;
   cancelled_reason?: string;
-  cancelled_at?: string;
   tracking_code?: string;
-  shipping_partner?: string;
-  estimated_delivery?: string;
-  confirmed_at?: string;
-  shipped_at?: string;
-  delivered_at?: string;
-  completed_at?: string;
   created_at: string;
-  updated_at?: string;
-  items?: OrderItem[];
-  status_history?: StatusHistory[];
+  product_return?: {
+    id?: number;
+    status?: string;
+    reason?: string | null;
+    reason_for_refusal?: string | null;
+    refund_amount?: number | null;
+    transaction_code?: string | null;
+    items?: number[] | null;
+    created_at?: string;
+  };
 }
 
 interface PaginationMeta {
@@ -100,27 +60,40 @@ interface PaginationMeta {
 // Config
 // ============================================================
 const ORDER_STATUS_CONFIG: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
-  pending:    { color: 'orange',   label: 'Chờ xác nhận',   icon: <ClockCircleOutlined /> },
-  confirmed:  { color: 'blue',     label: 'Đã xác nhận',    icon: <CheckCircleOutlined /> },
-  processing: { color: 'purple',   label: 'Đang xử lí',     icon: <SyncOutlined spin /> },
-  shipping:   { color: 'geekblue', label: 'Đang giao hàng', icon: <CarOutlined /> },
-  delivered:  { color: 'cyan',     label: 'Đã giao hàng',   icon: <CheckCircleOutlined /> },
-  completed:  { color: 'success',  label: 'Hoàn thành',     icon: <CheckCircleOutlined /> },
-  cancelled:  { color: 'error',    label: 'Đã hủy',         icon: <CloseCircleOutlined /> },
-  returned:   { color: 'default',  label: 'Hoàn trả',       icon: <RollbackOutlined /> },
+  pending: { color: 'orange', label: 'Chờ xác nhận', icon: <ClockCircleOutlined /> },
+  confirmed: { color: 'blue', label: 'Đã xác nhận', icon: <CheckCircleOutlined /> },
+  processing: { color: 'purple', label: 'Đang đóng gói', icon: <SyncOutlined spin /> },
+  shipping: { color: 'geekblue', label: 'Đang vận chuyển', icon: <CarOutlined /> },
+  delivered: { color: 'cyan', label: 'Đã giao hàng', icon: <CheckCircleOutlined /> },
+  completed: { color: 'success', label: 'Đã nhận hàng', icon: <CheckCircleOutlined /> },
+  cancelled: { color: 'error', label: 'Đã hủy', icon: <CloseCircleOutlined /> },
+  returned: { color: 'default', label: 'Hoàn trả', icon: <RollbackOutlined /> },
 };
 
 const PAYMENT_STATUS_CONFIG: Record<string, { color: string; label: string }> = {
-  pending:  { color: 'orange',  label: 'Chưa thanh toán' },
-  paid:     { color: 'success', label: 'Đã thanh toán' },
-  failed:   { color: 'error',   label: 'Thất bại' },
+  unpaid: { color: 'orange', label: 'Chưa thanh toán' },
+  paid: { color: 'success', label: 'Đã thanh toán' },
   refunded: { color: 'default', label: 'Đã hoàn tiền' },
+  partial_refund: { color: 'default', label: 'Hoàn một phần' },
 };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  cod:     'COD',
-  vnpay:   'VNPay',
+  cod: 'COD',
+  vnpay: 'VNPay',
   banking: 'Chuyển khoản',
+};
+
+// Luồng Shopee-like: admin chỉ lên đến shipping, delivered admin xác nhận giao xong
+// completed do khách hàng tự bấm "Đã nhận hàng"
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['processing', 'cancelled'],
+  processing: ['shipping', 'cancelled'],
+  shipping: ['delivered'],     // Admin cập nhật khi đơn vị VT giao xong
+  delivered: [],
+  completed: [],
+  cancelled: [],
+  returned: [],
 };
 
 const formatVND = (v: number) =>
@@ -128,15 +101,49 @@ const formatVND = (v: number) =>
 
 const API_BASE = '/admin/orders';
 
-// ============================================================
-// Status Tag helper
-// ============================================================
-const StatusTag: React.FC<{ status: string; config: Record<string, { color: string; label: string; icon?: React.ReactNode }> }> = ({
-  status, config,
-}) => {
+// ── Export helpers (module-level, không cần React state) ────────────────
+const csvEscape = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+const exportOrdersToCSV = (
+  orders: Order[],
+  filename: string,
+  statusCfg: Record<string, { label: string }>,
+  paymentCfg: Record<string, { label: string }>,
+  methodLabels: Record<string, string>,
+) => {
+  const HEADERS = [
+    'Mã đơn', 'Khách hàng', 'SĐT', 'Email',
+    'Trạng thái đơn', 'Thanh toán', 'Phương thức TT',
+    'Tạm tính', 'Giảm giá', 'Phí ship', 'Tổng cộng',
+    'Voucher', 'Ngày đặt',
+  ];
+  const rows = orders.map(o => [
+    o.order_code,
+    o.shipping?.fullname ?? o.user?.fullname ?? '—',
+    o.shipping?.phone   ?? o.user?.phone    ?? '—',
+    o.user?.email       ?? o.shipping?.email ?? '—',
+    statusCfg[o.status]?.label            ?? o.status,
+    paymentCfg[o.payment_status]?.label   ?? o.payment_status,
+    methodLabels[o.payment_method ?? '']  ?? o.payment_method ?? '—',
+    o.subtotal, o.discount_amount, o.shipping_fee, o.total_amount,
+    o.voucher_code ?? '—',
+    o.created_at,
+  ]);
+  const csv = [HEADERS.map(csvEscape).join(','), ...rows.map(r => r.map(csvEscape).join(','))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+const StatusTag: React.FC<{
+  status: string;
+  config: Record<string, { color: string; label: string; icon?: React.ReactNode }>;
+}> = ({ status, config }) => {
   const cfg = config[status] ?? { color: 'default', label: status };
   return (
-    <Tag color={cfg.color} icon={cfg.icon} style={{ borderRadius: 20, margin: 0 }}>
+    <Tag color={cfg.color} icon={cfg.icon} style={{ borderRadius: 20, margin: 0, fontWeight: 600 }}>
       {cfg.label}
     </Tag>
   );
@@ -146,6 +153,8 @@ const StatusTag: React.FC<{ status: string; config: Record<string, { color: stri
 // Main Component
 // ============================================================
 const AdminOrderPage: React.FC = () => {
+  const navigate = useNavigate();
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [meta, setMeta] = useState<PaginationMeta>({ total: 0, per_page: 15, current_page: 1, last_page: 1 });
@@ -157,54 +166,49 @@ const AdminOrderPage: React.FC = () => {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
   const [dateRange, setDateRange] = useState<[string, string] | null>(null);
 
-  // Detail drawer
-  const [detailOrder, setDetailOrder] = useState<Order | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
-
-  // Status update modal
-  const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [updatingOrder, setUpdatingOrder] = useState<Order | null>(null);
+  // Quick status update modal (inline trên list page)
+  const [quickStatusOrder, setQuickStatusOrder] = useState<Order | null>(null);
+  const [quickStatusModalOpen, setQuickStatusModalOpen] = useState(false);
   const [statusForm] = Form.useForm();
   const [savingStatus, setSavingStatus] = useState(false);
 
-  // Payment status modal
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  // Quick payment status modal
+  const [quickPaymentOrder, setQuickPaymentOrder] = useState<Order | null>(null);
+  const [quickPaymentModalOpen, setQuickPaymentModalOpen] = useState(false);
   const [paymentForm] = Form.useForm();
   const [savingPayment, setSavingPayment] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  // --------------------------------------------------------
+  // ─────────────────────────────────────────────────────────
   // Fetch orders list
-  // --------------------------------------------------------
+  // ─────────────────────────--------------------------------------------------------
   const fetchOrders = useCallback(async (page = 1) => {
     setLoading(true);
     try {
       const params: Record<string, string | number> = { per_page: 15, page };
-      if (search)               params.search         = search;
-      if (statusFilter)         params.status         = statusFilter;
-      if (paymentStatusFilter)  params.payment_status = paymentStatusFilter;
-      if (paymentMethodFilter)  params.payment_method = paymentMethodFilter;
+      if (search) params.search = search;
+      if (statusFilter) params.status = statusFilter;
+      if (paymentStatusFilter) params.payment_status = paymentStatusFilter;
+      if (paymentMethodFilter) params.payment_method = paymentMethodFilter;
       if (dateRange) {
         params.date_from = dateRange[0];
-        params.date_to   = dateRange[1];
+        params.date_to = dateRange[1];
       }
 
       const res = await axiosInstance.get(API_BASE, { params });
       const payload = res.data;
-
-      // Laravel pagination: { data: [], meta: {}, links: {} } or { data: { data: [], ... } }
       const list: Order[] = payload?.data?.data ?? payload?.data ?? [];
       const m = payload?.data?.meta ?? payload?.meta ?? {};
       setOrders(list);
       setMeta({
-        total:        m.total        ?? list.length,
-        per_page:     m.per_page     ?? 15,
+        total: m.total ?? list.length,
+        per_page: m.per_page ?? 15,
         current_page: m.current_page ?? page,
-        last_page:    m.last_page    ?? 1,
+        last_page: m.last_page ?? 1,
       });
-    } catch (err: any) {
-      console.error(err);
-      message.error(err?.response?.data?.message ?? 'Không thể tải danh sách đơn hàng');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      message.error(error?.response?.data?.message ?? 'Không thể tải danh sách đơn hàng');
     } finally {
       setLoading(false);
     }
@@ -213,48 +217,28 @@ const AdminOrderPage: React.FC = () => {
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   // --------------------------------------------------------
-  // Fetch single order detail
+  // Quick Status update
   // --------------------------------------------------------
-  const openDetail = async (order: Order) => {
-    setDrawerOpen(true);
-    setDetailOrder(order);
-    setDetailLoading(true);
-    try {
-      const res = await axiosInstance.get(`${API_BASE}/${order.id}`);
-      const d: Order = res.data?.data ?? res.data;
-      setDetailOrder(d);
-    } catch {
-      // fallback: keep the list row data
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  // --------------------------------------------------------
-  // Update order status
-  // --------------------------------------------------------
-  const openStatusModal = (order: Order) => {
-    setUpdatingOrder(order);
+  const openQuickStatus = (order: Order, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setQuickStatusOrder(order);
     statusForm.resetFields();
     statusForm.setFieldsValue({ status: order.status });
-    setStatusModalOpen(true);
+    setQuickStatusModalOpen(true);
   };
 
-  const handleStatusSave = async () => {
-    if (!updatingOrder) return;
+  const handleQuickStatusSave = async () => {
+    if (!quickStatusOrder) return;
     try {
       const values = await statusForm.validateFields();
       setSavingStatus(true);
-      await axiosInstance.patch(`${API_BASE}/${updatingOrder.id}/status`, values);
+      await axiosInstance.patch(`${API_BASE}/${quickStatusOrder.id}/status`, values);
       message.success('Đã cập nhật trạng thái đơn hàng!');
-      setStatusModalOpen(false);
+      setQuickStatusModalOpen(false);
       fetchOrders(meta.current_page);
-      // Reload drawer if open
-      if (drawerOpen && detailOrder?.id === updatingOrder.id) {
-        openDetail(updatingOrder);
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.response?.data?.errors?.status?.[0] ?? 'Có lỗi xảy ra';
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string; errors?: { status?: string[] } } } };
+      const msg = error?.response?.data?.message ?? error?.response?.data?.errors?.status?.[0] ?? 'Có lỗi xảy ra';
       message.error(msg);
     } finally {
       setSavingStatus(false);
@@ -262,44 +246,79 @@ const AdminOrderPage: React.FC = () => {
   };
 
   // --------------------------------------------------------
-  // Update payment status
+  // Quick Payment status update
   // --------------------------------------------------------
-  const openPaymentModal = (order: Order) => {
-    setUpdatingOrder(order);
+  const openQuickPayment = (order: Order, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (order.status === 'returned' && order.product_return?.status !== 'approved') {
+      message.error('Chỉ có thể cập nhật hoàn tiền sau khi đã duyệt yêu cầu hoàn trả.');
+      return;
+    }
+
+    setQuickPaymentOrder(order);
     paymentForm.resetFields();
-    paymentForm.setFieldsValue({ payment_status: order.payment_status });
-    setPaymentModalOpen(true);
+    const initialPaymentStatus =
+      order.status === 'returned'
+        ? (['refunded', 'partial_refund'].includes(order.payment_status) ? order.payment_status : 'refunded')
+        : order.payment_status;
+
+    paymentForm.setFieldsValue({ payment_status: initialPaymentStatus });
+    setQuickPaymentModalOpen(true);
   };
 
-  const handlePaymentSave = async () => {
-    if (!updatingOrder) return;
+  const handleQuickPaymentSave = async () => {
+    if (!quickPaymentOrder) return;
     try {
       const values = await paymentForm.validateFields();
       setSavingPayment(true);
-      await axiosInstance.patch(`${API_BASE}/${updatingOrder.id}/payment-status`, values);
+      await axiosInstance.patch(`${API_BASE}/${quickPaymentOrder.id}/payment-status`, values);
       message.success('Đã cập nhật trạng thái thanh toán!');
-      setPaymentModalOpen(false);
+      setQuickPaymentModalOpen(false);
       fetchOrders(meta.current_page);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Có lỗi xảy ra';
-      message.error(msg);
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      message.error(error?.response?.data?.message ?? 'Có lỗi xảy ra');
     } finally {
       setSavingPayment(false);
     }
   };
 
   // --------------------------------------------------------
-  // Statistics (from current fetched page – for quick summary)
+  // Stats
   // --------------------------------------------------------
-  const stats = Object.keys(ORDER_STATUS_CONFIG).map((key) => ({
-    key,
-    ...ORDER_STATUS_CONFIG[key],
-    count: orders.filter((o) => o.status === key).length,
-  }));
-
-  const deliveredRevenue = orders
+  const totalRevenue = orders
     .filter((o) => o.status === 'delivered' || o.status === 'completed')
     .reduce((s, o) => s + o.total_amount, 0);
+
+  const pendingCount = orders.filter(o => o.status === 'pending').length;
+  const shippingCount = orders.filter(o => o.status === 'shipping').length;
+
+  // ── Export Excel ─────────────────────────────────────────────
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params: Record<string, string | number> = { per_page: 2000, page: 1 };
+      if (search)              params.search         = search;
+      if (statusFilter)        params.status         = statusFilter;
+      if (paymentStatusFilter) params.payment_status = paymentStatusFilter;
+      if (paymentMethodFilter) params.payment_method = paymentMethodFilter;
+      if (dateRange) { params.date_from = dateRange[0]; params.date_to = dateRange[1]; }
+
+      const res  = await axiosInstance.get(API_BASE, { params });
+      const list: Order[] = res.data?.data?.data ?? res.data?.data ?? [];
+
+      const today     = new Date().toISOString().slice(0, 10);
+      const statusTag = statusFilter ? `_${statusFilter}` : '';
+      exportOrdersToCSV(list, `don-hang${statusTag}_${today}.csv`,
+        ORDER_STATUS_CONFIG, PAYMENT_STATUS_CONFIG, PAYMENT_METHOD_LABELS);
+      message.success(`Đã xuất ${list.length} đơn hàng!`);
+    } catch {
+      message.error('Không thể xuất dữ liệu. Vui lòng thử lại.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // --------------------------------------------------------
   // Table columns
@@ -309,8 +328,8 @@ const AdminOrderPage: React.FC = () => {
       title: 'Mã đơn hàng',
       dataIndex: 'order_code',
       key: 'order_code',
-      width: 160,
-      render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text>,
+      width: 155,
+      render: (v: string) => <Text code style={{ fontSize: 12, fontWeight: 700 }}>{v}</Text>,
     },
     {
       title: 'Khách hàng',
@@ -331,14 +350,20 @@ const AdminOrderPage: React.FC = () => {
     {
       title: 'Thanh toán',
       key: 'payment',
-      width: 140,
+      width: 145,
       render: (_: unknown, r: Order) => (
         <Space direction="vertical" size={4}>
-          <Tag color={r.payment_method === 'vnpay' ? 'blue' : r.payment_method === 'banking' ? 'geekblue' : 'orange'}
-            style={{ borderRadius: 20, margin: 0, fontSize: 11 }}>
+          <Tag
+            color={r.payment_method === 'vnpay' ? 'blue' : r.payment_method === 'banking' ? 'geekblue' : 'orange'}
+            style={{ borderRadius: 20, margin: 0, fontSize: 11 }}
+          >
             {PAYMENT_METHOD_LABELS[r.payment_method ?? ''] ?? r.payment_method ?? '—'}
           </Tag>
-          <StatusTag status={r.payment_status} config={PAYMENT_STATUS_CONFIG} />
+          <Tooltip title="Nhấn để cập nhật thanh toán">
+            <div style={{ cursor: 'pointer' }} onClick={(e) => openQuickPayment(r, e)}>
+              <StatusTag status={r.payment_status} config={PAYMENT_STATUS_CONFIG} />
+            </div>
+          </Tooltip>
         </Space>
       ),
     },
@@ -346,7 +371,7 @@ const AdminOrderPage: React.FC = () => {
       title: 'Tổng tiền',
       dataIndex: 'total_amount',
       key: 'total_amount',
-      width: 145,
+      width: 140,
       align: 'right',
       render: (v: number) => <Text strong style={{ color: '#0d6efd', fontSize: 14 }}>{formatVND(v)}</Text>,
       sorter: (a: Order, b: Order) => a.total_amount - b.total_amount,
@@ -355,46 +380,50 @@ const AdminOrderPage: React.FC = () => {
       title: 'Trạng thái đơn',
       dataIndex: 'status',
       key: 'status',
-      width: 170,
-      render: (v: string, r: Order) => (
-        <Tooltip title="Nhấn để cập nhật trạng thái">
-          <div
-            style={{ cursor: 'pointer' }}
-            onClick={() => openStatusModal(r)}
-          >
-            <StatusTag status={v} config={ORDER_STATUS_CONFIG} />
-          </div>
-        </Tooltip>
-      ),
+      width: 165,
+      render: (v: string, r: Order) => {
+        const validNext = VALID_TRANSITIONS[r.status] ?? [];
+        return (
+          <Tooltip title={validNext.length > 0 ? 'Nhấn để cập nhật trạng thái' : 'Trạng thái cuối'}>
+            <div
+              style={{ cursor: validNext.length > 0 ? 'pointer' : 'default' }}
+              onClick={(e) => validNext.length > 0 && openQuickStatus(r, e)}
+            >
+              <StatusTag status={v} config={ORDER_STATUS_CONFIG} />
+            </div>
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Ngày đặt',
       dataIndex: 'created_at',
       key: 'created_at',
       width: 115,
-      render: (v: string) => (
-        <Text type="secondary" style={{ fontSize: 13 }}>{v ?? '—'}</Text>
-      ),
+      render: (v: string) => <Text type="secondary" style={{ fontSize: 12 }}>{v ?? '—'}</Text>,
     },
     {
       title: '',
       key: 'action',
-      width: 90,
+      width: 100,
       align: 'center',
       render: (_: unknown, r: Order) => (
         <Space>
-          <Tooltip title="Xem chi tiết">
+          <Tooltip title="Xem chi tiết đơn hàng">
             <Button
-              type="text"
-              icon={<EyeOutlined style={{ color: '#0d6efd' }} />}
-              onClick={() => openDetail(r)}
+              type="primary"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${r.id}`); }}
+              style={{ borderRadius: 8, background: 'linear-gradient(135deg,#0d6efd,#084298)', border: 'none' }}
             />
           </Tooltip>
           <Tooltip title="Cập nhật thanh toán">
             <Button
-              type="text"
+              size="small"
               icon={<DollarOutlined style={{ color: '#198754' }} />}
-              onClick={() => openPaymentModal(r)}
+              onClick={(e) => openQuickPayment(r, e)}
+              style={{ borderRadius: 8, borderColor: '#198754' }}
             />
           </Tooltip>
         </Space>
@@ -418,52 +447,107 @@ const AdminOrderPage: React.FC = () => {
             Tổng cộng {meta.total} đơn hàng
           </Text>
         </div>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => fetchOrders(1)}
-          style={{ borderRadius: 10, height: 40 }}
-        >
-          Làm mới
-        </Button>
+        <Space>
+          <Button
+            icon={<FileExcelOutlined />}
+            loading={exporting}
+            onClick={handleExport}
+            style={{ borderRadius: 10, height: 40, borderColor: '#16a34a', color: '#16a34a', fontWeight: 600 }}
+          >
+            Xuất Excel
+          </Button>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => fetchOrders(1)}
+            style={{ borderRadius: 10, height: 40 }}
+          >
+            Làm mới
+          </Button>
+        </Space>
       </div>
 
-      {/* ── Summary Cards ── */}
-      <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
-        {stats.map((s) => (
-          <Col key={s.key} xs={12} sm={8} md={6} lg={3}>
-            <Card
-              style={{
-                borderRadius: 12,
-                border: '1px solid #f0f0f0',
-                textAlign: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: statusFilter === s.key
-                  ? '0 4px 16px rgba(13,110,253,0.2)'
-                  : '0 2px 8px rgba(0,0,0,0.05)',
-                borderColor: statusFilter === s.key ? '#0d6efd' : '#f0f0f0',
-              }}
-              styles={{ body: { padding: '12px 8px' } }}
-              onClick={() => setStatusFilter(statusFilter === s.key ? '' : s.key)}
-            >
-              <Badge color={s.color} text="" />
-              <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a2e' }}>{s.count}</div>
-              <div style={{ fontSize: 11, color: '#868e96', marginTop: 2, lineHeight: 1.3 }}>{s.label}</div>
-            </Card>
-          </Col>
-        ))}
+      {/* ── Quick Stats ── */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+        {Object.entries(ORDER_STATUS_CONFIG).map(([key, cfg]) => {
+          const count = orders.filter(o => o.status === key).length;
+          return (
+            <Col key={key} xs={12} sm={8} md={6} lg={3}>
+              <Card
+                style={{
+                  borderRadius: 12,
+                  border: '1px solid #f0f0f0',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: statusFilter === key
+                    ? '0 4px 16px rgba(13,110,253,0.2)'
+                    : '0 2px 8px rgba(0,0,0,0.05)',
+                  borderColor: statusFilter === key ? '#0d6efd' : '#f0f0f0',
+                  transform: statusFilter === key ? 'translateY(-2px)' : 'none',
+                }}
+                styles={{ body: { padding: '12px 8px' } }}
+                onClick={() => setStatusFilter(statusFilter === key ? '' : key)}
+              >
+                <Badge color={cfg.color} text="" />
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>{count}</div>
+                <div style={{ fontSize: 10, color: '#868e96', marginTop: 2, lineHeight: 1.3 }}>{cfg.label}</div>
+              </Card>
+            </Col>
+          );
+        })}
         <Col xs={12} sm={8} md={6} lg={3}>
           <Card
             style={{ borderRadius: 12, border: '1px solid #f0f0f0', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
             styles={{ body: { padding: '12px 8px' } }}
           >
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#198754' }}>
-              {(deliveredRevenue / 1_000_000).toFixed(1)}M
-            </div>
-            <div style={{ fontSize: 11, color: '#868e96', marginTop: 2 }}>Doanh thu (trang)</div>
+            <Statistic
+              value={totalRevenue / 1_000_000}
+              precision={1}
+              suffix="M"
+              valueStyle={{ fontSize: 16, fontWeight: 800, color: '#198754' }}
+            />
+            <div style={{ fontSize: 10, color: '#868e96', marginTop: 2 }}>Doanh thu trang</div>
           </Card>
         </Col>
       </Row>
+
+      {/* ── Alert badges ── */}
+      {(pendingCount > 0 || shippingCount > 0) && (
+        <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+          {pendingCount > 0 && (
+            <Col>
+              <div style={{
+                background: '#fff8e6', border: '1px solid #ffd666', borderRadius: 10,
+                padding: '8px 14px', fontSize: 13, color: '#b45309',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <ClockCircleOutlined />
+                <strong>{pendingCount}</strong> đơn đang chờ xác nhận
+                <Button
+                  type="link"
+                  size="small"
+                  style={{ padding: 0, color: '#b45309', fontWeight: 600, fontSize: 12 }}
+                  onClick={() => setStatusFilter('pending')}
+                >
+                  Xem ngay →
+                </Button>
+              </div>
+            </Col>
+          )}
+          {shippingCount > 0 && (
+            <Col>
+              <div style={{
+                background: '#e6f4ff', border: '1px solid #91caff', borderRadius: 10,
+                padding: '8px 14px', fontSize: 13, color: '#0369a1',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <CarOutlined />
+                <strong>{shippingCount}</strong> đơn đang giao
+              </div>
+            </Col>
+          )}
+        </Row>
+      )}
 
       {/* ── Filters ── */}
       <Card
@@ -488,7 +572,7 @@ const AdminOrderPage: React.FC = () => {
               style={{ width: '100%' }}
               allowClear
               value={statusFilter || undefined}
-              onChange={(v) => { setStatusFilter(v || ''); }}
+              onChange={(v) => setStatusFilter(v || '')}
               options={Object.entries(ORDER_STATUS_CONFIG).map(([k, cfg]) => ({
                 value: k,
                 label: <Tag color={cfg.color} style={{ margin: 0, borderRadius: 20 }}>{cfg.label}</Tag>,
@@ -501,7 +585,7 @@ const AdminOrderPage: React.FC = () => {
               style={{ width: '100%' }}
               allowClear
               value={paymentStatusFilter || undefined}
-              onChange={(v) => { setPaymentStatusFilter(v || ''); }}
+              onChange={(v) => setPaymentStatusFilter(v || '')}
               options={Object.entries(PAYMENT_STATUS_CONFIG).map(([k, cfg]) => ({
                 value: k,
                 label: <Tag color={cfg.color} style={{ margin: 0, borderRadius: 20 }}>{cfg.label}</Tag>,
@@ -514,10 +598,10 @@ const AdminOrderPage: React.FC = () => {
               style={{ width: '100%' }}
               allowClear
               value={paymentMethodFilter || undefined}
-              onChange={(v) => { setPaymentMethodFilter(v || ''); }}
+              onChange={(v) => setPaymentMethodFilter(v || '')}
               options={[
-                { value: 'cod',     label: 'COD' },
-                { value: 'vnpay',   label: 'VNPay' },
+                { value: 'cod', label: 'COD' },
+                { value: 'vnpay', label: 'VNPay' },
                 { value: 'banking', label: 'Chuyển khoản' },
               ]}
             />
@@ -539,6 +623,19 @@ const AdminOrderPage: React.FC = () => {
               Lọc
             </Button>
           </Col>
+          {(search || statusFilter || paymentStatusFilter || paymentMethodFilter || dateRange) && (
+            <Col>
+              <Button
+                onClick={() => {
+                  setSearch(''); setStatusFilter(''); setPaymentStatusFilter('');
+                  setPaymentMethodFilter(''); setDateRange(null);
+                }}
+                style={{ borderRadius: 10, height: 38 }}
+              >
+                Xóa bộ lọc
+              </Button>
+            </Col>
+          )}
         </Row>
       </Card>
 
@@ -553,6 +650,11 @@ const AdminOrderPage: React.FC = () => {
           rowKey="id"
           loading={loading}
           scroll={{ x: 980 }}
+          onRow={(record) => ({
+            onClick: () => navigate(`/admin/orders/${record.id}`),
+            style: { cursor: 'pointer' },
+          })}
+          rowHoverable
           pagination={{
             total: meta.total,
             pageSize: meta.per_page,
@@ -564,331 +666,158 @@ const AdminOrderPage: React.FC = () => {
         />
       </Card>
 
-      {/* ── Order Detail Drawer ── */}
-      <Drawer
-        title={
-          <Space>
-            <ShoppingCartOutlined style={{ color: '#0d6efd' }} />
-            <span>
-              Chi tiết đơn hàng –{' '}
-              <Text code>{detailOrder?.order_code}</Text>
-            </span>
-          </Space>
-        }
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        width={680}
-        extra={
-          detailOrder && (
-            <Space>
-              <Button
-                size="small"
-                icon={<SendOutlined />}
-                onClick={() => { setDrawerOpen(false); openStatusModal(detailOrder); }}
-                style={{ borderRadius: 8 }}
-              >
-                Đổi trạng thái
-              </Button>
-              <Button
-                size="small"
-                icon={<DollarOutlined />}
-                onClick={() => { setDrawerOpen(false); openPaymentModal(detailOrder); }}
-                style={{ borderRadius: 8 }}
-              >
-                Đổi thanh toán
-              </Button>
-            </Space>
-          )
-        }
-      >
-        {detailLoading ? (
-          <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" /></div>
-        ) : detailOrder ? (
-          <div>
-            {/* Status badges */}
-            <Space style={{ marginBottom: 16 }} wrap>
-              <StatusTag status={detailOrder.status} config={ORDER_STATUS_CONFIG} />
-              <StatusTag status={detailOrder.payment_status} config={PAYMENT_STATUS_CONFIG} />
-              {detailOrder.payment_method && (
-                <Tag color="blue" style={{ borderRadius: 20, margin: 0 }}>
-                  {PAYMENT_METHOD_LABELS[detailOrder.payment_method] ?? detailOrder.payment_method}
-                </Tag>
-              )}
-            </Space>
-
-            {/* Customer & Shipping */}
-            <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
-              <Descriptions.Item label="Khách hàng" span={2}>
-                <Text strong>{detailOrder.shipping?.fullname ?? detailOrder.user?.fullname ?? '—'}</Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="Email">
-                {detailOrder.user?.email ?? detailOrder.shipping?.email ?? '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="SĐT">
-                {detailOrder.shipping?.phone ?? detailOrder.user?.phone ?? '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Địa chỉ giao" span={2}>
-                {[
-                  detailOrder.shipping?.address,
-                  detailOrder.shipping?.ward,
-                  detailOrder.shipping?.district,
-                  detailOrder.shipping?.province,
-                ].filter(Boolean).join(', ') || '—'}
-              </Descriptions.Item>
-              {detailOrder.note && (
-                <Descriptions.Item label="Ghi chú KH" span={2}>{detailOrder.note}</Descriptions.Item>
-              )}
-              {detailOrder.admin_note && (
-                <Descriptions.Item label="Ghi chú admin" span={2}>
-                  <Text type="warning">{detailOrder.admin_note}</Text>
-                </Descriptions.Item>
-              )}
-              {detailOrder.tracking_code && (
-                <Descriptions.Item label="Mã vận đơn">{detailOrder.tracking_code}</Descriptions.Item>
-              )}
-              {detailOrder.shipping_partner && (
-                <Descriptions.Item label="Đơn vị giao">{detailOrder.shipping_partner}</Descriptions.Item>
-              )}
-              {detailOrder.cancelled_reason && (
-                <Descriptions.Item label="Lý do hủy" span={2}>
-                  <Text type="danger">{detailOrder.cancelled_reason}</Text>
-                </Descriptions.Item>
-              )}
-            </Descriptions>
-
-            {/* Items */}
-            {detailOrder.items && detailOrder.items.length > 0 && (
-              <>
-                <Divider orientation="left" style={{ fontSize: 13, color: '#495057', margin: '12px 0' }}>
-                  <GiftOutlined style={{ marginRight: 6 }} />Sản phẩm ({detailOrder.items.length})
-                </Divider>
-                <div style={{ marginBottom: 16 }}>
-                  {detailOrder.items.map((item, i) => (
-                    <div
-                      key={item.id ?? i}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 12,
-                        padding: '10px 0',
-                        borderBottom: i < detailOrder.items!.length - 1 ? '1px solid #f0f0f0' : 'none',
-                      }}
-                    >
-                      {item.product_image ? (
-                        <Image
-                          src={item.product_image}
-                          width={54} height={54}
-                          style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid #f0f0f0' }}
-                          fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-                        />
-                      ) : (
-                        <div style={{ width: 54, height: 54, borderRadius: 8, background: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #f0f0f0' }}>
-                          <ShoppingCartOutlined style={{ color: '#adb5bd', fontSize: 20 }} />
-                        </div>
-                      )}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: 14 }}>{item.product_name}</div>
-                        {item.product_sku && (
-                          <Text type="secondary" style={{ fontSize: 12 }}>SKU: {item.product_sku}</Text>
-                        )}
-                        {item.variant_info && (() => {
-                          const info = item.variant_info as any;
-                          // Format mới: { sku, image, attrs: [{name, value}] }
-                          if (Array.isArray(info.attrs)) {
-                            return info.attrs.length > 0 ? (
-                              <div style={{ marginTop: 2 }}>
-                                {info.attrs.map((a: { name: string; value: string }, idx: number) => (
-                                  <Tag key={idx} style={{ fontSize: 11, borderRadius: 12, margin: '0 4px 0 0' }}>
-                                    {a.name}: {a.value}
-                                  </Tag>
-                                ))}
-                              </div>
-                            ) : null;
-                          }
-                          // Format cũ: Record<string, string> phẳng
-                          const entries = Object.entries(info).filter(([, v]) => typeof v === 'string');
-                          return entries.length > 0 ? (
-                            <div style={{ marginTop: 2 }}>
-                              {entries.map(([k, v]) => (
-                                <Tag key={k} style={{ fontSize: 11, borderRadius: 12, margin: '0 4px 0 0' }}>
-                                  {k}: {v as string}
-                                </Tag>
-                              ))}
-                            </div>
-                          ) : null;
-                        })()}
-                      </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ color: '#6c757d', fontSize: 12 }}>
-                          {formatVND(item.price)} × {item.quantity}
-                        </div>
-                        <Text strong style={{ color: '#0d6efd' }}>{formatVND(item.total)}</Text>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Totals */}
-                  <div style={{ background: '#f8f9fa', borderRadius: 10, padding: '12px 16px', marginTop: 12 }}>
-                    {detailOrder.discount_amount > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <Text type="secondary">Giảm giá</Text>
-                        <Text type="success">– {formatVND(detailOrder.discount_amount)}</Text>
-                      </div>
-                    )}
-                    {detailOrder.voucher_code && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <Text type="secondary">Voucher ({detailOrder.voucher_code})</Text>
-                        <Text type="success">– {formatVND(detailOrder.voucher_discount ?? 0)}</Text>
-                      </div>
-                    )}
-                    {detailOrder.shipping_fee > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <Text type="secondary">Phí giao hàng</Text>
-                        <Text>{formatVND(detailOrder.shipping_fee)}</Text>
-                      </div>
-                    )}
-                    <Divider style={{ margin: '8px 0' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Text strong style={{ fontSize: 15 }}>Tổng cộng</Text>
-                      <Text strong style={{ fontSize: 15, color: '#0d6efd' }}>{formatVND(detailOrder.total_amount)}</Text>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Status History */}
-            {detailOrder.status_history && detailOrder.status_history.length > 0 && (
-              <>
-                <Divider orientation="left" style={{ fontSize: 13, color: '#495057', margin: '12px 0' }}>
-                  <HistoryOutlined style={{ marginRight: 6 }} />Lịch sử trạng thái
-                </Divider>
-                <Timeline
-                  items={detailOrder.status_history.map((h) => ({
-                    color: ORDER_STATUS_CONFIG[h.to]?.color ?? 'gray',
-                    children: (
-                      <div>
-                        <Space wrap>
-                          <Tag color={ORDER_STATUS_CONFIG[h.from]?.color} style={{ borderRadius: 20, margin: 0, fontSize: 11 }}>
-                            {ORDER_STATUS_CONFIG[h.from]?.label ?? h.from}
-                          </Tag>
-                          <span style={{ color: '#adb5bd' }}>→</span>
-                          <Tag color={ORDER_STATUS_CONFIG[h.to]?.color} style={{ borderRadius: 20, margin: 0, fontSize: 11 }}>
-                            {ORDER_STATUS_CONFIG[h.to]?.label ?? h.to}
-                          </Tag>
-                        </Space>
-                        {h.note && <div style={{ color: '#6c757d', fontSize: 12, marginTop: 4 }}>{h.note}</div>}
-                        <div style={{ color: '#adb5bd', fontSize: 11, marginTop: 2 }}>{h.created_at}</div>
-                      </div>
-                    ),
-                  }))}
-                />
-              </>
-            )}
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center', padding: 60, color: '#adb5bd' }}>Không có dữ liệu</div>
-        )}
-      </Drawer>
-
-      {/* ── Update Status Modal ── */}
+      {/* ── Quick Status Modal ── */}
       <Modal
         title={
           <Space>
             <SendOutlined style={{ color: '#0d6efd' }} />
-            <span>Cập nhật trạng thái – <Text code>{updatingOrder?.order_code}</Text></span>
+            <span>Cập nhật trạng thái – <Text code>{quickStatusOrder?.order_code}</Text></span>
           </Space>
         }
-        open={statusModalOpen}
-        onOk={handleStatusSave}
-        onCancel={() => setStatusModalOpen(false)}
+        open={quickStatusModalOpen}
+        onOk={handleQuickStatusSave}
+        onCancel={() => setQuickStatusModalOpen(false)}
         okText="Lưu thay đổi"
         cancelText="Hủy"
         confirmLoading={savingStatus}
         okButtonProps={{ style: { background: 'linear-gradient(135deg,#0d6efd,#084298)', border: 'none', borderRadius: 8 } }}
         cancelButtonProps={{ style: { borderRadius: 8 } }}
-        width={480}
-        style={{ top: 60 }}
+        width={500}
+        style={{ top: 80 }}
       >
-        <Form form={statusForm} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="status" label="Trạng thái đơn hàng" rules={[{ required: true, message: 'Chọn trạng thái' }]}>
-            <Select
-              options={Object.entries(ORDER_STATUS_CONFIG).map(([k, cfg]) => ({
-                value: k,
-                label: (
-                  <Tag color={cfg.color} icon={cfg.icon} style={{ borderRadius: 20, margin: 0 }}>
-                    {cfg.label}
-                  </Tag>
-                ),
-              }))}
-              style={{ borderRadius: 8 }}
-            />
-          </Form.Item>
+        {quickStatusOrder && (
+          <>
+            <div style={{ background: '#f8f9fa', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#495057' }}>
+              <strong>Trạng thái hiện tại:</strong>{' '}
+              <StatusTag status={quickStatusOrder.status} config={ORDER_STATUS_CONFIG} />
+              {VALID_TRANSITIONS[quickStatusOrder.status]?.length > 0 && (
+                <div style={{ marginTop: 6, color: '#6c757d' }}>
+                  → Có thể chuyển sang:{' '}
+                  {VALID_TRANSITIONS[quickStatusOrder.status].map(s => ORDER_STATUS_CONFIG[s]?.label ?? s).join(', ')}
+                </div>
+              )}
+            </div>
 
-          {/* Conditional fields */}
-          <Form.Item shouldUpdate={(prev, cur) => prev.status !== cur.status} noStyle>
-            {({ getFieldValue }) => {
-              const st = getFieldValue('status');
-              return (
-                <>
-                  {st === 'cancelled' && (
-                    <Form.Item
-                      name="cancelled_reason"
-                      label="Lý do hủy"
-                      rules={[{ required: true, message: 'Nhập lý do hủy đơn' }]}
-                    >
-                      <Input.TextArea rows={3} placeholder="Nhập lý do hủy đơn..." style={{ borderRadius: 8 }} />
-                    </Form.Item>
-                  )}
-                  {st === 'shipping' && (
-                    <Row gutter={12}>
-                      <Col span={12}>
-                        <Form.Item name="tracking_code" label="Mã vận đơn">
-                          <Input placeholder="VD: GHN12345678" style={{ borderRadius: 8 }} />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item name="shipping_partner" label="Đơn vị giao hàng">
-                          <Input placeholder="VD: GHN, GHTK, Viettel Post" style={{ borderRadius: 8 }} />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                  )}
-                </>
-              );
-            }}
-          </Form.Item>
+            <Form form={statusForm} layout="vertical">
+              <Form.Item
+                name="status"
+                label="Trạng thái mới"
+                rules={[{ required: true, message: 'Chọn trạng thái' }]}
+              >
+                <Select
+                  options={Object.entries(ORDER_STATUS_CONFIG)
+                    .filter(([k]) => VALID_TRANSITIONS[quickStatusOrder.status]?.includes(k))
+                    .map(([k, cfg]) => ({
+                      value: k,
+                      label: (
+                        <Tag color={cfg.color} icon={cfg.icon} style={{ borderRadius: 20, margin: 0 }}>
+                          {cfg.label}
+                        </Tag>
+                      ),
+                    }))}
+                  placeholder="Chọn trạng thái mới"
+                  style={{ borderRadius: 8 }}
+                />
+              </Form.Item>
 
-          <Form.Item name="note" label="Ghi chú nội bộ (tuỳ chọn)">
-            <Input.TextArea rows={2} placeholder="Ghi chú cho admin..." style={{ borderRadius: 8 }} />
-          </Form.Item>
-        </Form>
+              <Form.Item shouldUpdate={(prev, cur) => prev.status !== cur.status} noStyle>
+                {({ getFieldValue }) => {
+                  const st = getFieldValue('status');
+                  return (
+                    <>
+                      {st === 'cancelled' && (
+                        <Form.Item
+                          name="cancelled_reason"
+                          label="Lý do hủy"
+                          rules={[{ required: true, message: 'Nhập lý do hủy đơn' }]}
+                        >
+                          <Input.TextArea rows={3} placeholder="Nhập lý do hủy đơn..." style={{ borderRadius: 8 }} />
+                        </Form.Item>
+                      )}
+                      {st === 'shipping' && (
+                        <Row gutter={12}>
+                          <Col span={12}>
+                            <Form.Item name="tracking_code" label="Mã vận đơn">
+                              <Input placeholder="VD: GHN12345678" style={{ borderRadius: 8 }} />
+                            </Form.Item>
+                          </Col>
+                          <Col span={12}>
+                            <Form.Item name="shipping_partner" label="Đơn vị giao hàng">
+                              <Select
+                                placeholder="Chọn đơn vị"
+                                style={{ borderRadius: 8 }}
+                                options={[
+                                  { value: 'GHN', label: 'Giao Hàng Nhanh (GHN)' },
+                                  { value: 'GHTK', label: 'Giao Hàng Tiết Kiệm (GHTK)' },
+                                  { value: 'VTP', label: 'Viettel Post' },
+                                  { value: 'VNPost', label: 'Vietnam Post' },
+                                  { value: 'JTExpress', label: 'J&T Express' },
+                                ]}
+                                allowClear
+                              />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                      )}
+                    </>
+                  );
+                }}
+              </Form.Item>
+
+              <Form.Item name="note" label="Ghi chú nội bộ (tuỳ chọn)">
+                <Input.TextArea rows={2} placeholder="Ghi chú cho admin..." style={{ borderRadius: 8 }} />
+              </Form.Item>
+            </Form>
+
+            <div style={{ textAlign: 'right', marginTop: -8 }}>
+              <Button
+                type="link"
+                icon={<RiseOutlined />}
+                onClick={() => { setQuickStatusModalOpen(false); navigate(`/admin/orders/${quickStatusOrder.id}`); }}
+                style={{ color: '#0d6efd', padding: 0, fontSize: 12 }}
+              >
+                Xem toàn bộ chi tiết đơn hàng →
+              </Button>
+            </div>
+          </>
+        )}
       </Modal>
 
-      {/* ── Update Payment Status Modal ── */}
+      {/* ── Quick Payment Modal ── */}
       <Modal
         title={
           <Space>
             <DollarOutlined style={{ color: '#198754' }} />
-            <span>Cập nhật thanh toán – <Text code>{updatingOrder?.order_code}</Text></span>
+            <span>Cập nhật thanh toán – <Text code>{quickPaymentOrder?.order_code}</Text></span>
           </Space>
         }
-        open={paymentModalOpen}
-        onOk={handlePaymentSave}
-        onCancel={() => setPaymentModalOpen(false)}
+        open={quickPaymentModalOpen}
+        onOk={handleQuickPaymentSave}
+        onCancel={() => setQuickPaymentModalOpen(false)}
         okText="Lưu thay đổi"
         cancelText="Hủy"
         confirmLoading={savingPayment}
         okButtonProps={{ style: { background: 'linear-gradient(135deg,#198754,#0f5132)', border: 'none', borderRadius: 8 } }}
         cancelButtonProps={{ style: { borderRadius: 8 } }}
         width={420}
-        style={{ top: 60 }}
+        style={{ top: 80 }}
       >
         <Form form={paymentForm} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="payment_status" label="Trạng thái thanh toán" rules={[{ required: true, message: 'Chọn trạng thái' }]}>
+          <Form.Item
+            name="payment_status"
+            label="Trạng thái thanh toán"
+            rules={[{ required: true, message: 'Chọn trạng thái' }]}
+          >
             <Select
-              options={Object.entries(PAYMENT_STATUS_CONFIG).map(([k, cfg]) => ({
-                value: k,
-                label: <Tag color={cfg.color} style={{ borderRadius: 20, margin: 0 }}>{cfg.label}</Tag>,
-              }))}
+              options={Object.entries(PAYMENT_STATUS_CONFIG)
+                .filter(([k]) => {
+                  if (quickPaymentOrder?.status === 'returned') return ['refunded', 'partial_refund'].includes(k);
+                  return ['unpaid', 'paid'].includes(k);
+                })
+                .map(([k, cfg]) => ({
+                  value: k,
+                  label: <Tag color={cfg.color} style={{ borderRadius: 20, margin: 0 }}>{cfg.label}</Tag>,
+                }))}
               style={{ borderRadius: 8 }}
             />
           </Form.Item>
@@ -897,6 +826,12 @@ const AdminOrderPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* ── Info tip ── */}
+      <div style={{ marginTop: 12, fontSize: 12, color: '#adb5bd', textAlign: 'center' }}>
+        <ShoppingOutlined style={{ marginRight: 4 }} />
+        Nhấn vào hàng để xem chi tiết đơn hàng đầy đủ
+      </div>
     </div>
   );
 };

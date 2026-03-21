@@ -27,22 +27,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
     const { addToCompare, removeFromCompare, isInCompare, compareList } = useCompare();
     const inCompare = isInCompare(product.id);
     const isFull = compareList.length >= 4 && !inCompare;
-
-    // --- LOGIC TẠO HIỆU ỨNG SO LE GIỐNG HOME ---
-    // Mỗi sản phẩm chậm hơn cái trước 0.1 giây.
-    // Dùng % 4 để cứ sau 4 sản phẩm (1 hàng) thì reset lại delay để người dùng không phải chờ quá lâu
     const delayTime = (index % 4) * 0.1 + 0.1;
-
-    const renderStars = (rating: number | undefined) => {
-        const stars = [];
-        const finalRating = rating ? Math.round(rating) : 5;
-        for (let i = 1; i <= 5; i++) {
-            stars.push(
-                <i key={i} className={`fas fa-star ${i <= finalRating ? 'text-primary' : 'text-muted'} small`}></i>
-            );
-        }
-        return stars;
-    };
 
     const handleCompareToggle = () => {
         if (inCompare) {
@@ -58,92 +43,122 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
                 category: product.category,
                 rating: product.rating,
             });
-            if (!success) {
-                toast.warning('Chỉ có thể so sánh tối đa 4 sản phẩm!');
-            } else {
-                toast.success(`Đã thêm "${product.name}" vào so sánh`);
-            }
+            if (!success) toast.warning('Chỉ có thể so sánh tối đa 4 sản phẩm!');
+            else toast.success(`Đã thêm "${product.name}" vào so sánh`);
         }
     };
 
     return (
-        <div className="col-6 col-sm-6 col-md-4">
-            <div
-                className="product-item rounded wow fadeInUp"
-                data-wow-delay={`${delayTime}s`}
-            >
-                <div className="product-item-inner border rounded">
-                    <div className="product-item-inner-item position-relative overflow-hidden">
+        <div className="col-6 col-sm-6 col-md-4 col-lg-3">
+            <style>{`
+                .pc-card { border-radius: 12px; overflow: hidden; background: #fff;
+                    border: 1px solid #eee; transition: transform 0.28s ease, box-shadow 0.28s ease;
+                    display: flex; flex-direction: column; height: 100%; }
+                .pc-card:hover { transform: translateY(-6px); box-shadow: 0 12px 36px rgba(0,0,0,0.13) !important; border-color: transparent; }
+                .pc-img-wrap { overflow: hidden; background: #fafafa; height: 180px; display: flex; align-items: center; justify-content: center; }
+                .pc-img-wrap img { transition: transform 0.38s ease; max-height: 160px; object-fit: contain; width: 100%; padding: 8px; }
+                .pc-card:hover .pc-img-wrap img { transform: scale(1.08); }
+                .pc-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.12);
+                    display: flex; align-items: center; justify-content: center;
+                    opacity: 0; transition: opacity 0.28s ease; }
+                .pc-card:hover .pc-overlay { opacity: 1; }
+                .pc-eye-btn { width: 38px; height: 38px; border-radius: 50%; background: #fff;
+                    border: none; display: flex; align-items: center; justify-content: center;
+                    color: var(--bs-primary); font-size: 1rem; cursor: pointer;
+                    transition: background 0.2s, transform 0.2s;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.18); }
+                .pc-eye-btn:hover { background: var(--bs-primary); color: #fff; transform: scale(1.12); }
+                .pc-add-btn { width: 100%; border: none; border-radius: 8px; padding: 8px 0;
+                    background: var(--bs-primary); color: #fff;
+                    font-family: 'Roboto', sans-serif; font-weight: 600; font-size: 0.82rem;
+                    cursor: pointer; transition: background 0.2s, transform 0.15s;
+                    display: flex; align-items: center; justify-content: center; gap: 6px; }
+                .pc-add-btn:hover { filter: brightness(1.1); transform: scale(1.02); }
+                .pc-cmp-btn { width: 100%; border: 1.5px solid #dee2e6; border-radius: 8px;
+                    padding: 6px 0; background: #fff; font-size: 0.76rem;
+                    font-family: 'Roboto', sans-serif; font-weight: 500; color: #6c757d;
+                    cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; }
+                .pc-cmp-btn:hover:not(:disabled) { border-color: var(--bs-primary); color: var(--bs-primary); background: #fff8f0; }
+                .pc-cmp-btn.active { border-color: #ffc107; background: #fff8e1; color: #856404; }
+                .pc-badge { position: absolute; top: 10px; right: 10px; font-size: 0.68rem;
+                    font-weight: 700; padding: 3px 10px; border-radius: 20px; z-index: 2; }
+            `}</style>
 
-                        <div className="rounded-top text-center p-3" style={{ height: '200px', backgroundColor: '#fff' }}>
-                            <Link to={`/product/${product.id}`} className="d-block h-100 w-100 position-relative">
-                                <img
-                                    src={product.image || undefined}
-                                    className="img-fluid"
-                                    alt={product.name}
-                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                />
-                            </Link>
-                        </div>
+            <div className="pc-card wow fadeInUp" data-wow-delay={`${delayTime}s`}>
+                {/* ── Image area ── */}
+                <div className="pc-img-wrap position-relative">
+                    <Link to={`/product/${product.id}`} className="d-block h-100 w-100">
+                        <img
+                            src={product.image || undefined}
+                            alt={product.name}
+                            onError={e => { (e.target as HTMLImageElement).src = '/assets/client/img/no-image.png' }}
+                        />
+                    </Link>
 
-                        {product.isNew && <div className="product-new">New</div>}
-                        {product.isSale && <div className="product-sale">Sale</div>}
+                    {/* Hover overlay với nút xem nhanh */}
+                    <Link to={`/product/${product.id}`} className="pc-overlay">
+                        <button className="pc-eye-btn" title="Xem chi tiết">
+                            <i className="fa fa-eye" />
+                        </button>
+                    </Link>
 
-                        <div className="product-details">
-                            <Link to={`/product/${product.id}`} className="btn btn-primary rounded-circle p-2 d-flex justify-content-center align-items-center" style={{ width: 40, height: 40 }}>
-                                <i className="fa fa-eye"></i>
-                            </Link>
-                        </div>
-                    </div>
-
-                    <div className="text-center rounded-bottom p-4">
-                        <Link to="#" className="d-block mb-2 text-decoration-none text-muted text-uppercase small">
-                            {product.category || "Điện thoại"}
-                        </Link>
-
-                        <Link to={`/product/${product.id}`} className="d-block h6 text-decoration-none text-dark" title={product.name} style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.4' }}>
-                            {product.name}
-                        </Link>
-
-                        <div className="mt-2">
-                            {product.oldPrice && product.oldPrice > product.price && (
-                                <del className="me-2 text-muted" style={{ fontSize: '0.85rem' }}>
-                                    {formatPrice(product.oldPrice)}
-                                </del>
-                            )}
-                            <span className="text-danger fw-bold" style={{ fontSize: '1.05rem' }}>
-                                {formatPrice(product.price)}
-                            </span>
-                        </div>
-                    </div>
+                    {/* Badges */}
+                    {product.isSale && (
+                        <span className="pc-badge bg-primary text-white">Sale</span>
+                    )}
+                    {product.isNew && !product.isSale && (
+                        <span className="pc-badge bg-success text-white">New</span>
+                    )}
                 </div>
 
-                <div className="product-item-add border border-top-0 rounded-bottom text-center p-4 pt-0">
-                    <button
-                        className="btn btn-primary rounded-pill px-4 py-2 mb-3 fw-bold transition-all"
-                        style={{ width: '100%', borderRadius: '50px' }}
-                        onClick={() => onAddToCart && onAddToCart(product)}
-                    >
-                        <i className="fas fa-shopping-bag me-2"></i> Thêm vào giỏ
-                    </button>
+                {/* ── Content ── */}
+                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', flex: 1, gap: 6 }}>
+                    {/* Category */}
+                    <span className="text-muted text-uppercase" style={{ fontSize: '0.7rem', fontFamily: "'Roboto', sans-serif", letterSpacing: '0.05em' }}>
+                        {product.category || 'Sản phẩm'}
+                    </span>
 
-                    {/* So sánh button */}
-                    <button
-                        className={`btn btn-sm w-100 mb-3 ${inCompare ? 'btn-warning' : 'btn-outline-secondary'}`}
-                        style={{ borderRadius: '50px', fontWeight: 600, fontSize: 12 }}
-                        onClick={handleCompareToggle}
-                        disabled={isFull}
-                        title={isFull ? 'Đã đủ 4 sản phẩm so sánh' : inCompare ? 'Xóa khỏi so sánh' : 'Thêm vào so sánh'}
+                    {/* Name */}
+                    <Link
+                        to={`/product/${product.id}`}
+                        className="text-decoration-none text-dark fw-semibold"
+                        title={product.name}
+                        style={{
+                            fontFamily: "'Roboto', sans-serif", fontSize: '0.88rem', lineHeight: 1.4,
+                            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                        }}
                     >
-                        <i className={`fas fa-${inCompare ? 'check' : 'balance-scale'} me-1`}></i>
-                        {inCompare ? 'Đang so sánh' : isFull ? 'Đủ 4 sản phẩm' : 'So sánh'}
-                    </button>
+                        {product.name}
+                    </Link>
 
-                    <div className="d-flex justify-content-between align-items-center">
-                        <div className="small text-muted">Đánh giá:</div>
-                        <div className="d-flex text-warning small">
-                            {renderStars(product.rating)}
-                        </div>
+                    {/* Price */}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                        <span className="fw-bold text-danger" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '0.95rem' }}>
+                            {formatPrice(product.price)}
+                        </span>
+                        {product.oldPrice && product.oldPrice > product.price && (
+                            <del className="text-muted" style={{ fontSize: '0.76rem', fontFamily: "'Roboto', sans-serif" }}>
+                                {formatPrice(product.oldPrice)}
+                            </del>
+                        )}
+                    </div>
+
+                    {/* ── Action buttons ── */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 'auto', paddingTop: 8 }}>
+                        <button className="pc-add-btn" onClick={() => onAddToCart && onAddToCart(product)}>
+                            <i className="fas fa-shopping-bag" style={{ fontSize: '0.8rem' }} />
+                            Thêm vào giỏ
+                        </button>
+
+                        <button
+                            className={`pc-cmp-btn ${inCompare ? 'active' : ''}`}
+                            onClick={handleCompareToggle}
+                            disabled={isFull}
+                            title={isFull ? 'Đã đủ 4 sản phẩm so sánh' : inCompare ? 'Xóa khỏi so sánh' : 'So sánh'}
+                        >
+                            <i className={`fas fa-${inCompare ? 'check-circle' : 'balance-scale'}`} style={{ fontSize: '0.78rem' }} />
+                            {inCompare ? 'Đang so sánh' : isFull ? 'Đã đủ 4' : 'So sánh'}
+                        </button>
                     </div>
                 </div>
             </div>

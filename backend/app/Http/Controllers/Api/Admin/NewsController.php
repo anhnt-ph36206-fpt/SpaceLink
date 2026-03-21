@@ -7,6 +7,7 @@ use App\Models\News;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 
 class NewsController extends Controller
 {
@@ -33,17 +34,17 @@ class NewsController extends Controller
 
     /**
      * POST /api/admin/news
-     * Create new news
+     * Create new news (accepts multipart/form-data with optional 'thumbnail' file)
      */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'title'       => 'required|string|max:255',
-            'summary'     => 'nullable|string|max:500',
-            'content'     => 'required|string',
-            'thumbnail'   => 'nullable|string',
-            'is_featured' => 'boolean',
-            'is_active'   => 'boolean',
+            'title'        => 'required|string|max:255',
+            'summary'      => 'nullable|string|max:500',
+            'content'      => 'required|string',
+            'thumbnail'    => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'is_featured'  => 'boolean',
+            'is_active'    => 'boolean',
             'published_at' => 'nullable|date',
         ]);
 
@@ -56,12 +57,18 @@ class NewsController extends Controller
         }
 
         try {
-            $data = $request->all();
+            $data = $request->except('thumbnail');
             $data['author_id'] = $request->user()->id;
             $data['slug'] = Str::slug($request->title) . '-' . uniqid();
-            
+
             if (!$request->filled('published_at')) {
                 $data['published_at'] = now();
+            }
+
+            // Handle thumbnail file upload
+            if ($request->hasFile('thumbnail')) {
+                $path = $request->file('thumbnail')->store('news', 'public');
+                $data['thumbnail'] = $path;
             }
 
             $news = News::create($data);
@@ -102,17 +109,17 @@ class NewsController extends Controller
 
     /**
      * PUT /api/admin/news/{id}
-     * Update news
+     * Update news (accepts multipart/form-data with optional 'thumbnail' file)
      */
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'title'       => 'string|max:255',
-            'summary'     => 'nullable|string|max:500',
-            'content'     => 'string',
-            'thumbnail'   => 'nullable|string',
-            'is_featured' => 'boolean',
-            'is_active'   => 'boolean',
+            'title'        => 'nullable|string|max:255',
+            'summary'      => 'nullable|string|max:500',
+            'content'      => 'nullable|string',
+            'thumbnail'    => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'is_featured'  => 'boolean',
+            'is_active'    => 'boolean',
             'published_at' => 'nullable|date',
         ]);
 
@@ -126,10 +133,21 @@ class NewsController extends Controller
 
         try {
             $news = News::findOrFail($id);
-            $data = $request->all();
-            
+            $data = $request->except(['thumbnail', '_method']);
+
+            // Regenerate slug if title changed
             if ($request->filled('title') && $request->title !== $news->title) {
                 $data['slug'] = Str::slug($request->title) . '-' . uniqid();
+            }
+
+            // Handle new thumbnail file upload
+            if ($request->hasFile('thumbnail')) {
+                // Delete old thumbnail from storage (if stored locally)
+                if ($news->thumbnail && !str_starts_with($news->thumbnail, 'http')) {
+                    Storage::disk('public')->delete($news->thumbnail);
+                }
+                $path = $request->file('thumbnail')->store('news', 'public');
+                $data['thumbnail'] = $path;
             }
 
             $news->update($data);
@@ -137,7 +155,7 @@ class NewsController extends Controller
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Cập nhật tin tức thành công.',
-                'data'    => $news
+                'data'    => $news->fresh()
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -156,6 +174,12 @@ class NewsController extends Controller
     {
         try {
             $news = News::findOrFail($id);
+
+            // Delete thumbnail from storage if local
+            if ($news->thumbnail && !str_starts_with($news->thumbnail, 'http')) {
+                Storage::disk('public')->delete($news->thumbnail);
+            }
+
             $news->delete();
 
             return response()->json([

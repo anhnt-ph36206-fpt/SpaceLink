@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Client\Order\RequestReturnRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
+use App\Models\ProductReturn;
+use App\Models\ReturnEvidence;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -17,8 +21,8 @@ class OrderController extends Controller
     // =========================================================================
     public function index(Request $request)
     {
-        $user  = $request->user();
-        $query = Order::where('user_id', $user->id)->latest();
+        $user = $request->user();
+        $query = Order::with('items')->where('user_id', $user->id)->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -29,7 +33,7 @@ class OrderController extends Controller
         }
 
         $perPage = min((int) $request->get('per_page', 10), 50);
-        $orders  = $query->paginate($perPage);
+        $orders = $query->paginate($perPage);
 
         return OrderResource::collection($orders);
     }
@@ -39,23 +43,24 @@ class OrderController extends Controller
     // =========================================================================
     public function show(Request $request, string $id)
     {
-        $user  = $request->user();
+        $user = $request->user();
         $order = Order::with([
             'items',
-            'statusHistory' => fn($q) => $q->orderBy('id', 'asc'),
+            'statusHistory' => fn ($q) => $q->orderBy('id', 'asc'),
+            'productReturn',
         ])->findOrFail($id);
 
         // Bảo vệ: chỉ xem đơn của chính mình
         if ($order->user_id !== $user->id) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Bạn không có quyền xem đơn hàng này.',
             ], 403);
         }
 
         return response()->json([
             'status' => 'success',
-            'data'   => new OrderResource($order),
+            'data' => new OrderResource($order),
         ]);
     }
 
@@ -64,13 +69,13 @@ class OrderController extends Controller
     // =========================================================================
     public function cancel(Request $request, string $id)
     {
-        $user  = $request->user();
+        $user = $request->user();
         $order = Order::findOrFail($id);
 
         // Kiểm tra quyền sở hữu
         if ($order->user_id !== $user->id) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Bạn không có quyền hủy đơn hàng này.',
             ], 403);
         }
@@ -78,7 +83,7 @@ class OrderController extends Controller
         // Chỉ cho phép hủy khi đang ở trạng thái pending
         if ($order->status !== 'pending') {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => "Không thể hủy đơn hàng đang ở trạng thái \"{$order->status}\". Chỉ có thể hủy đơn hàng đang chờ xử lý (pending).",
             ], 422);
         }
@@ -87,19 +92,35 @@ class OrderController extends Controller
 
         DB::transaction(function () use ($order, $user, $reason) {
             $order->update([
-                'status'           => 'cancelled',
+                'status' => 'cancelled',
                 'cancelled_reason' => $reason,
-                'cancelled_by'     => $user->id,
-                'cancelled_at'     => now(),
+                'cancelled_by' => $user->id,
+                'cancelled_at' => now(),
             ]);
+
+            // Nếu đơn đã thanh toán (VNPAY/Banking), cần lưu thông tin hoàn tiền
+            if ($order->payment_status === 'paid' && in_array($order->payment_method, ['vnpay', 'banking'])) {
+                ProductReturn::updateOrCreate(
+                    ['order_id' => $order->id],
+                    [
+                        'user_id' => $user->id,
+                        'reason' => 'Hủy đơn hàng đã thanh toán: ' . $reason,
+                        'status' => 'pending',
+                        'refund_bank' => request('refund_bank'),
+                        'refund_account_name' => request('refund_account_name'),
+                        'refund_account_number' => request('refund_account_number'),
+                        'items' => $order->items->pluck('id')->all(),
+                    ]
+                );
+            }
 
             // Ghi lịch sử
             OrderStatusHistory::create([
-                'order_id'    => $order->id,
+                'order_id' => $order->id,
                 'from_status' => 'pending',
-                'to_status'   => 'cancelled',
-                'note'        => $reason,
-                'changed_by'  => $user->id,
+                'to_status' => 'cancelled',
+                'note' => $reason,
+                'changed_by' => $user->id,
             ]);
 
             // Hoàn lại tồn kho: cả variant lẫn product
@@ -115,9 +136,53 @@ class OrderController extends Controller
         });
 
         return response()->json([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => 'Đã hủy đơn hàng thành công.',
-            'data'    => new OrderResource($order->fresh()),
+            'data' => new OrderResource($order->fresh()),
+        ]);
+    }
+
+    // =========================================================================
+    // POST /api/client/orders/{id}/confirm-received — Khách xác nhận đã nhận hàng
+    // =========================================================================
+    public function confirmReceived(Request $request, string $id)
+    {
+        $user = $request->user();
+        $order = Order::findOrFail($id);
+
+        if ($order->user_id !== $user->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bạn không có quyền thực hiện thao tác này.',
+            ], 403);
+        }
+
+        if ($order->status !== 'delivered') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Chỉ có thể xác nhận nhận hàng khi đơn đang ở trạng thái "Đã giao hàng".',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($order, $user) {
+            $order->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+
+            OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'from_status' => 'delivered',
+                'to_status' => 'completed',
+                'note' => 'Khách hàng xác nhận đã nhận được hàng.',
+                'changed_by' => $user->id,
+            ]);
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Cảm ơn bạn đã xác nhận nhận hàng!',
+            'data' => new OrderResource($order->fresh()),
         ]);
     }
 
@@ -126,7 +191,7 @@ class OrderController extends Controller
     // =========================================================================
     public function retryVnpayPayment(Request $request, string $id)
     {
-        $user  = $request->user();
+        $user = $request->user();
         $order = Order::findOrFail($id);
 
         // Kiểm tra quyền sở hữu
@@ -137,53 +202,167 @@ class OrderController extends Controller
         // Chỉ cho phép nếu: phương thức VNPAY + chưa thanh toán + đang pending
         if ($order->payment_method !== 'vnpay' || $order->payment_status !== 'unpaid' || $order->status !== 'pending') {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Đơn hàng không hợp lệ để thanh toán lại. (Yêu cầu: phương thức VNPAY, chưa thanh toán, trạng thái pending)',
             ], 422);
         }
 
         // Tái sử dụng đú ng logic hash của VNPAY trong CheckoutController
-        $vnp_TmnCode   = config('vnpay.vnp_TmnCode');
+        $vnp_TmnCode = config('vnpay.vnp_TmnCode');
         $vnp_HashSecret = config('vnpay.vnp_HashSecret');
-        $vnp_Url       = config('vnpay.vnp_Url');
+        $vnp_Url = config('vnpay.vnp_Url');
         $vnp_Returnurl = config('vnpay.vnp_Returnurl');
 
         $inputData = [
-            'vnp_Version'  => '2.1.0',
-            'vnp_TmnCode'  => $vnp_TmnCode,
-            'vnp_Amount'   => $order->total_amount * 100,
-            'vnp_Command'  => 'pay',
+            'vnp_Version' => '2.1.0',
+            'vnp_TmnCode' => $vnp_TmnCode,
+            'vnp_Amount' => $order->total_amount * 100,
+            'vnp_Command' => 'pay',
             'vnp_CreateDate' => date('YmdHis'),
             'vnp_CurrCode' => 'VND',
-            'vnp_IpAddr'   => $request->ip(),
-            'vnp_Locale'   => 'vn',
-            'vnp_OrderInfo' => 'Thanh toan lai don hang ' . $order->order_code,
+            'vnp_IpAddr' => $request->ip(),
+            'vnp_Locale' => 'vn',
+            'vnp_OrderInfo' => 'Thanh toan lai don hang '.$order->order_code,
             'vnp_OrderType' => 'billpayment',
             'vnp_ReturnUrl' => $vnp_Returnurl,
-            'vnp_TxnRef'   => $order->order_code,
+            'vnp_TxnRef' => $order->order_code,
         ];
 
         ksort($inputData);
         $hashdata = '';
-        $query    = '';
+        $query = '';
         $i = 0;
         foreach ($inputData as $key => $value) {
             if ($i == 1) {
-                $hashdata .= '&' . urlencode($key) . '=' . urlencode($value);
+                $hashdata .= '&'.urlencode($key).'='.urlencode($value);
             } else {
-                $hashdata .= urlencode($key) . '=' . urlencode($value);
+                $hashdata .= urlencode($key).'='.urlencode($value);
                 $i = 1;
             }
-            $query .= urlencode($key) . '=' . urlencode($value) . '&';
+            $query .= urlencode($key).'='.urlencode($value).'&';
         }
 
-        $paymentUrl = $vnp_Url . '?' . $query . 'vnp_SecureHash=' . hash_hmac('sha512', $hashdata, $vnp_HashSecret);
+        $paymentUrl = $vnp_Url.'?'.$query.'vnp_SecureHash='.hash_hmac('sha512', $hashdata, $vnp_HashSecret);
 
         return response()->json([
-            'status'      => 'success',
-            'message'     => 'Tạo lại link thanh toán VNPAY thành công.',
+            'status' => 'success',
+            'message' => 'Tạo lại link thanh toán VNPAY thành công.',
             'payment_url' => $paymentUrl,
-            'data'        => $order->only('id', 'order_code', 'total_amount'),
+            'data' => $order->only('id', 'order_code', 'total_amount'),
+        ]);
+    }
+
+    // =========================================================================
+    // POST /api/client/orders/{id}/return-request — Khách yêu cầu hoàn trả/không nhận hàng
+    // =========================================================================
+    public function requestReturn(RequestReturnRequest $request, string $id): JsonResponse
+    {
+        $user = $request->user();
+        $order = Order::with(['items', 'productReturn'])->findOrFail($id);
+
+        // Bảo vệ: chỉ thao tác trên đơn của chính mình
+        if ($order->user_id !== $user->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bạn không có quyền thực hiện thao tác này.',
+            ], 403);
+        }
+
+        // Chỉ cho phép sau khi đã giao/hoặc đã hoàn thành
+        if (! in_array($order->status, ['delivered', 'completed'], true)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => "Không thể yêu cầu hoàn trả khi đơn đang ở trạng thái \"{$order->status}\".",
+            ], 422);
+        }
+
+        // ── Kiểm tra thời hạn hoàn trả 7 ngày ──────────────────────────────
+        // Tính từ: completed_at (nếu completed) hoặc delivered_at (nếu vẫn delivered)
+        $RETURN_WINDOW_DAYS = 7;
+        $referenceDate = $order->completed_at ?? $order->delivered_at;
+
+        if ($referenceDate && now()->diffInDays($referenceDate) >= $RETURN_WINDOW_DAYS) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => "Đã quá {$RETURN_WINDOW_DAYS} ngày kể từ khi nhận hàng. Bạn không thể yêu cầu hoàn trả.",
+                'expired' => true,
+            ], 422);
+        }
+
+
+        $reason = $request->input('reason');
+
+        // Nếu đã có yêu cầu hoàn trả đang xử lý thì không tạo thêm
+        if ($order->productReturn && in_array($order->productReturn->status, ['pending', 'approved', 'refunded'], true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Yêu cầu hoàn trả này đã được tạo và đang chờ xử lý.',
+            ], 422);
+        }
+
+        $itemIds = $order->items->pluck('id')->all();
+
+        $evidenceFiles = $request->file('evidence_images');
+
+        DB::transaction(function () use ($order, $user, $reason, $itemIds, $evidenceFiles, $request) {
+            $oldStatus = $order->status;
+            $productReturn = $order->productReturn;
+            $refundData = [
+                'order_id' => $order->id,
+                'user_id' => $user->id,
+                'reason' => $reason,
+                'status' => 'pending',
+                'items' => $itemIds,
+                'refund_bank' => $request->input('refund_bank'),
+                'refund_account_name' => $request->input('refund_account_name'),
+                'refund_account_number' => $request->input('refund_account_number'),
+            ];
+
+            if ($productReturn) {
+                // Reset fields if re-requesting
+                $productReturn->update(array_merge($refundData, [
+                    'reason_for_refusal' => null,
+                    'refund_amount' => null,
+                    'transaction_code' => null,
+                ]));
+            } else {
+                $productReturn = ProductReturn::create($refundData);
+            }
+
+            // Đặt trạng thái đơn = returned để UI chuyển sang luồng hoàn trả (client chỉ "yêu cầu", admin sẽ duyệt/từ chối)
+            $order->update(['status' => 'returned']);
+
+            OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'from_status' => $oldStatus,
+                'to_status' => 'returned',
+                'note' => 'Khách hàng yêu cầu hoàn trả: '.$reason,
+                'changed_by' => $user->id,
+            ]);
+
+            if (is_array($evidenceFiles) && count($evidenceFiles) > 0) {
+                foreach ($evidenceFiles as $file) {
+                    if (! $file) {
+                        continue;
+                    }
+
+                    $path = $file->store('product-returns/evidences', 'public');
+
+                    ReturnEvidence::create([
+                        'product_return_id' => $productReturn->id,
+                        'file_path' => $path,
+                        'file_type' => $file->getClientMimeType(),
+                    ]);
+                }
+            }
+        });
+
+        $order->load(['productReturn.evidences']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Đã gửi yêu cầu hoàn trả thành công. Vui lòng chờ admin duyệt.',
+            'data' => new OrderResource($order),
         ]);
     }
 }

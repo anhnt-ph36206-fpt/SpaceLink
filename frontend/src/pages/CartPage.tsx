@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart, type CartItem } from '../context/CartContext';
-import { Modal, Button, Spin, Tag, Tooltip, Divider, Typography } from 'antd';
-import { ShoppingOutlined, CloseOutlined, InfoCircleOutlined, SwapOutlined, MinusOutlined, PlusOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Modal, Button, Spin, Tag, Tooltip, Divider, Typography, Checkbox, Popconfirm } from 'antd';
+import { ShoppingOutlined, CloseOutlined, InfoCircleOutlined, SwapOutlined, MinusOutlined, PlusOutlined, CheckCircleOutlined, ExclamationCircleOutlined, DeleteOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
 
@@ -16,13 +16,64 @@ const imgUrl = (path?: string) => {
 };
 
 const CartPage: React.FC = () => {
-    const { items, removeFromCart, updateQty, totalPrice, totalItems, loading, updatingItems } = useCart();
+    const { items, removeFromCart, updateQty, loading, updatingItems } = useCart();
     const navigate = useNavigate();
+
+    // -- Checkbox State --
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+    // Sync selectedIds when items change (remove items that no longer exist)
+    useEffect(() => {
+        setSelectedIds(prev => {
+            const existingIds = new Set(items.map(i => i.id));
+            const next = new Set<number>();
+            prev.forEach(id => { if (existingIds.has(id)) next.add(id); });
+            return next;
+        });
+    }, [items]);
+
+    // Auto-select all on first load
+    useEffect(() => {
+        if (items.length > 0 && selectedIds.size === 0) {
+            setSelectedIds(new Set(items.map(i => i.id)));
+        }
+    }, [items]);
+
+    const isAllSelected = items.length > 0 && selectedIds.size === items.length;
+    const isIndeterminate = selectedIds.size > 0 && selectedIds.size < items.length;
+
+    const toggleAll = () => {
+        if (isAllSelected) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(items.map(i => i.id)));
+        }
+    };
+
+    const toggleItem = (id: number) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    // Computed values for selected items
+    const selectedItems = useMemo(() => items.filter(i => selectedIds.has(i.id)), [items, selectedIds]);
+    const selectedTotalPrice = useMemo(() => selectedItems.reduce((s, i) => s + i.lineTotal, 0), [selectedItems]);
+    const selectedTotalQty = useMemo(() => selectedItems.reduce((s, i) => s + i.quantity, 0), [selectedItems]);
 
     // -- State for Variant Switching --
     const [editingItem, setEditingItem] = useState<CartItem | null>(null);
     const [selectedAttrs, setSelectedAttrs] = useState<Record<string, number>>({}); // groupName -> attrId
     const [isUpdating, setIsUpdating] = useState(false);
+
+    // -- Delete selected --
+    const handleDeleteSelected = async () => {
+        for (const id of selectedIds) {
+            await removeFromCart(id);
+        }
+    };
 
     // Group available attributes for the editing item
     const attrGroups = useMemo(() => {
@@ -42,15 +93,14 @@ const CartPage: React.FC = () => {
 
     const matchingVariant = useMemo(() => {
         if (!editingItem || !editingItem.availableVariants) return null;
-        const selectedIds = Object.values(selectedAttrs);
+        const selectedIds2 = Object.values(selectedAttrs);
         return editingItem.availableVariants.find(v =>
-            selectedIds.every(sid => v.attributes.some((a: any) => a.id === sid))
+            selectedIds2.every(sid => v.attributes.some((a: any) => a.id === sid)) && v.quantity > 0
         ) || null;
     }, [editingItem, selectedAttrs]);
 
     const handleOpenEdit = (item: CartItem) => {
         setEditingItem(item);
-        // Initialize with item's current variant attributes
         if (item.availableVariants) {
             const currentVariant = item.availableVariants.find(v => v.id === item.variantId);
             if (currentVariant) {
@@ -72,6 +122,15 @@ const CartPage: React.FC = () => {
         } finally {
             setIsUpdating(false);
         }
+    };
+
+    const handleCheckout = () => {
+        if (selectedItems.length === 0) return;
+        navigate('/checkout', {
+            state: {
+                selectedCartItemIds: Array.from(selectedIds),
+            }
+        });
     };
 
     if (loading && items.length === 0) {
@@ -102,19 +161,57 @@ const CartPage: React.FC = () => {
         <div className="container py-4">
             <h1 className="h4 mb-4 fw-bold d-flex align-items-center gap-2">
                 <ShoppingOutlined className="text-primary" />
-                Giỏ hàng của tôi ({totalItems})
+                Giỏ hàng của tôi ({items.length})
             </h1>
 
             <div className="row g-4">
                 {/* Product List */}
                 <div className="col-lg-8">
                     <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
+                        {/* Header row: Select All + Delete Selected */}
+                        <div className="px-3 py-2 d-flex align-items-center justify-content-between border-bottom bg-light">
+                            <div className="d-flex align-items-center gap-2">
+                                <Checkbox
+                                    checked={isAllSelected}
+                                    indeterminate={isIndeterminate}
+                                    onChange={toggleAll}
+                                >
+                                    <span className="fw-semibold text-dark" style={{ fontSize: 13 }}>
+                                        Chọn tất cả ({items.length} sản phẩm)
+                                    </span>
+                                </Checkbox>
+                            </div>
+                            {selectedIds.size > 0 && (
+                                <Popconfirm
+                                    title={`Xóa ${selectedIds.size} sản phẩm đã chọn?`}
+                                    description="Thao tác này không thể hoàn tác."
+                                    okText="Xóa"
+                                    cancelText="Hủy"
+                                    okButtonProps={{ danger: true }}
+                                    onConfirm={handleDeleteSelected}
+                                >
+                                    <button className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" style={{ borderRadius: 8, fontSize: 13 }}>
+                                        <DeleteOutlined />
+                                        Xóa đã chọn ({selectedIds.size})
+                                    </button>
+                                </Popconfirm>
+                            )}
+                        </div>
+
                         <div className="card-body p-0">
                             {items.map((item, idx) => (
                                 <div
                                     key={item.id}
-                                    className={`p-3 d-flex gap-3 align-items-center ${idx !== items.length - 1 ? 'border-bottom' : ''}`}
+                                    className={`p-3 d-flex gap-3 align-items-center cart-item-row ${selectedIds.has(item.id) ? 'cart-item-selected' : ''} ${idx !== items.length - 1 ? 'border-bottom' : ''}`}
                                 >
+                                    {/* Checkbox */}
+                                    <div style={{ flexShrink: 0 }}>
+                                        <Checkbox
+                                            checked={selectedIds.has(item.id)}
+                                            onChange={() => toggleItem(item.id)}
+                                        />
+                                    </div>
+
                                     {/* Image */}
                                     <div
                                         style={{
@@ -215,11 +312,16 @@ const CartPage: React.FC = () => {
                 <div className="col-lg-4">
                     <div className="card border-0 shadow-sm rounded-4 position-sticky" style={{ top: 20 }}>
                         <div className="card-body p-4">
-                            <h5 className="fw-bold mb-4">Tổng cộng</h5>
+                            <h5 className="fw-bold mb-1">Tổng cộng</h5>
+                            <p className="text-muted small mb-4">
+                                {selectedIds.size > 0
+                                    ? `Đã chọn ${selectedIds.size} / ${items.length} sản phẩm`
+                                    : 'Chưa chọn sản phẩm nào'}
+                            </p>
 
                             <div className="d-flex justify-content-between mb-2">
-                                <span className="text-muted">Tạm tính ({totalItems} món)</span>
-                                <span>{formatVND(totalPrice)}</span>
+                                <span className="text-muted">Tạm tính ({selectedTotalQty} món)</span>
+                                <span>{formatVND(selectedTotalPrice)}</span>
                             </div>
                             <div className="d-flex justify-content-between mb-4">
                                 <span className="text-muted">Phí vận chuyển</span>
@@ -230,16 +332,20 @@ const CartPage: React.FC = () => {
 
                             <div className="d-flex justify-content-between mb-4 align-items-center">
                                 <span className="fw-bold h5 mb-0">Thành tiền</span>
-                                <span className="text-danger fw-bold h4 mb-0">{formatVND(totalPrice)}</span>
+                                <span className="text-danger fw-bold h4 mb-0">{formatVND(selectedTotalPrice)}</span>
                             </div>
 
-                            <button
-                                className="btn btn-primary w-100 py-3 rounded-pill fw-bold"
-                                onClick={() => navigate('/checkout')}
-                                style={{ fontSize: 16 }}
-                            >
-                                TIẾN HÀNH THANH TOÁN
-                            </button>
+                            <Tooltip title={selectedIds.size === 0 ? 'Vui lòng chọn ít nhất 1 sản phẩm' : ''}>
+                                <button
+                                    className="btn btn-primary w-100 py-3 rounded-pill fw-bold"
+                                    onClick={handleCheckout}
+                                    disabled={selectedIds.size === 0}
+                                    style={{ fontSize: 16 }}
+                                >
+                                    <ShoppingCartOutlined className="me-2" />
+                                    THANH TOÁN ({selectedIds.size})
+                                </button>
+                            </Tooltip>
 
                             <Link to="/products" className="btn btn-link w-100 text-muted mt-2 text-decoration-none small">
                                 Tiếp tục mua sắm
@@ -260,7 +366,12 @@ const CartPage: React.FC = () => {
                         key="submit"
                         type="primary"
                         loading={isUpdating}
-                        disabled={!matchingVariant || matchingVariant.id === editingItem?.variantId || matchingVariant.quantity === 0}
+                        disabled={
+                            !matchingVariant ||
+                            matchingVariant.id === editingItem?.variantId ||
+                            matchingVariant.quantity === 0 ||
+                            (editingItem?.quantity ?? 0) > matchingVariant.quantity
+                        }
                         onClick={handleUpdateVariant}
                         style={{ borderRadius: 8, fontWeight: 600 }}
                     >
@@ -288,7 +399,7 @@ const CartPage: React.FC = () => {
                                 <div className="mt-2 d-flex align-items-center gap-2">
                                     <span className="text-danger fw-bold fs-5">{formatVND(matchingVariant?.price || editingItem.price)}</span>
                                     {matchingVariant && matchingVariant.id !== editingItem.variantId && (
-                                        <Tag color="blue" size="small">Giá mới</Tag>
+                                        <Tag color="blue">Giá mới</Tag>
                                     )}
                                 </div>
                                 <div className={`small mt-1 ${matchingVariant?.quantity ? (matchingVariant.quantity > 0 ? 'text-success' : 'text-danger') : 'text-muted'}`}>
@@ -316,7 +427,6 @@ const CartPage: React.FC = () => {
                                         const isSelected = selectedAttrs[group] === attr.id;
                                         const isColor = !!attr.color_code;
 
-                                        // Check availability
                                         const isAvailable = editingItem?.availableVariants?.some(v => {
                                             const hasThisAttr = v.attributes.some((a: any) => a.id === attr.id);
                                             const otherGroupsMatch = Object.entries(selectedAttrs).every(
@@ -371,6 +481,19 @@ const CartPage: React.FC = () => {
                 .hover-primary:hover { color: #0d6efd !important; }
                 .hover-border-primary:hover { border-color: #0d6efd !important; color: #0d6efd !important; }
                 .cursor-pointer { cursor: pointer; }
+
+                .cart-item-row {
+                    transition: background 0.2s;
+                }
+                .cart-item-selected {
+                    background: #f0f6ff;
+                }
+                .cart-item-row:hover {
+                    background: #fafafa;
+                }
+                .cart-item-selected:hover {
+                    background: #e8f0fe;
+                }
             `}</style>
         </div>
     );

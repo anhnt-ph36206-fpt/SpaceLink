@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import type { User } from '../types/user';
 import { axiosInstance } from '../api/axios';
 import type { AxiosError } from 'axios';
@@ -56,13 +56,7 @@ const ORDER_STATUS_CFG: Record<string, { color: string; bg: string; label: strin
   returned:   { color: '#64748b', bg: '#f8fafc', label: 'Hoàn trả',        icon: 'fa-undo' },
 };
 
-const PAYMENT_STATUS_CFG: Record<string, { color: string; label: string }> = {
-  pending:  { color: '#d97706', label: 'Chưa TT' },
-  paid:     { color: '#16a34a', label: 'Đã TT' },
-  unpaid:   { color: '#d97706', label: 'Chưa TT' },
-  failed:   { color: '#dc2626', label: 'Thất bại' },
-  refunded: { color: '#6b7280', label: 'Hoàn tiền' },
-};
+// Payment status dùng trong OrderDetailPage (tách riêng)
 
 const formatVND = (v: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
@@ -85,7 +79,13 @@ type PasswordForm = {
 const ProfilePage: React.FC = () => {
   const { user, updateUser, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'info' | 'password' | 'orders'>('info');
+  const location = useLocation();
+
+  // Đọc tab từ state của navigate (khi redirect từ OrderDetailPage)
+  const initialTab = (location.state as { tab?: string })?.tab;
+  const [activeTab, setActiveTab] = useState<'info' | 'password' | 'orders'>(
+    initialTab === 'orders' ? 'orders' : 'info'
+  );
 
   // ── Orders state ─────────────────────────────────────────────
   const [orders, setOrders] = useState<ClientOrder[]>([]);
@@ -93,8 +93,6 @@ const ProfilePage: React.FC = () => {
   const [orderStatusFilter, setOrderStatusFilter] = useState('');
   const [orderPage, setOrderPage] = useState(1);
   const [orderTotal, setOrderTotal] = useState(0);
-  const [selectedOrder, setSelectedOrder] = useState<ClientOrder | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
   const [cancelModalOrder, setCancelModalOrder] = useState<ClientOrder | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -164,18 +162,6 @@ const ProfilePage: React.FC = () => {
     if (activeTab === 'orders') fetchOrders(1);
   }, [activeTab, fetchOrders]);
 
-  // ── Fetch order detail ────────────────────────────────────────
-  const openOrderDetail = async (order: ClientOrder) => {
-    setSelectedOrder(order);
-    setDetailLoading(true);
-    try {
-      const res = await axiosInstance.get(`/client/orders/${order.id}`);
-      const d: ClientOrder = res.data?.data ?? res.data;
-      setSelectedOrder(d);
-    } catch { /* keep list data */ }
-    finally { setDetailLoading(false); }
-  };
-
   // ── Cancel order ─────────────────────────────────────────────
   const handleCancelOrder = async () => {
     if (!cancelModalOrder) return;
@@ -188,9 +174,6 @@ const ProfilePage: React.FC = () => {
       setCancelModalOrder(null);
       setCancelReason('');
       fetchOrders(orderPage);
-      if (selectedOrder?.id === cancelModalOrder.id) {
-        openOrderDetail(cancelModalOrder);
-      }
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Không thể hủy đơn hàng';
       showOrderToast(msg, 'error');
@@ -1157,257 +1140,96 @@ const ProfilePage: React.FC = () => {
                         </div>
                       ) : (
                         <>
-                          {/* Two-column layout on large screen */}
-                          <div className={selectedOrder ? 'row g-3' : ''}>
-                            <div className={selectedOrder ? 'col-lg-5' : ''}>
-                              {orders.map(order => {
-                                const cfg = ORDER_STATUS_CFG[order.status] ?? { color:'#64748b', bg:'#f8fafc', label: order.status, icon:'fa-circle' };
-                                return (
-                                  <div key={order.id} className="order-card">
-                                    <div className="order-card-head">
-                                      <div>
-                                        <div className="order-code">#{order.order_code}</div>
-                                        <div className="order-date">{order.created_at}</div>
-                                      </div>
-                                      <span className="order-status-badge" style={{ color: cfg.color, background: cfg.bg }}>
-                                        <i className={`fas ${cfg.icon}`} />{cfg.label}
-                                      </span>
-                                    </div>
-                                    <div className="order-card-body">
-                                      <div className="order-items-preview">
-                                        {(order.items ?? []).slice(0, 4).map((item, i) =>
-                                          item.product_image
-                                            ? <img key={i} src={item.product_image} alt={item.product_name} className="order-item-img" />
-                                            : <div key={i} className="order-item-img-placeholder"><i className="fas fa-box" /></div>
-                                        )}
-                                        {(order.items?.length ?? 0) > 4 && (
-                                          <div className="order-item-img-placeholder" style={{ fontSize:12, fontWeight:700 }}>
-                                            +{(order.items?.length ?? 0) - 4}
-                                          </div>
-                                        )}
-                                      </div>
-                                      {order.cancelled_reason && (
-                                        <div style={{ fontSize:12, color:'#b91c1c', marginTop:4 }}>
-                                          <i className="fas fa-info-circle me-1" />Lý do: {order.cancelled_reason}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="order-card-foot">
-                                      <span className="order-total">{formatVND(order.total_amount)}</span>
-                                      <div className="order-actions">
-                                        <button
-                                          className="btn-order-detail"
-                                          onClick={() => openOrderDetail(order)}
-                                        >
-                                          <i className="fas fa-eye me-1" />Chi tiết
-                                        </button>
-                                        {canCancel(order.status) && (
-                                          <button
-                                            className="btn-order-cancel"
-                                            onClick={() => { setCancelModalOrder(order); setCancelReason(''); }}
-                                          >
-                                            <i className="fas fa-times me-1" />Hủy đơn
-                                          </button>
-                                        )}
-                                        {['confirmed','processing','shipping'].includes(order.status) && (
-                                          <span style={{ fontSize:11, color:'#8590a3', alignSelf:'center' }}>
-                                            <i className="fas fa-lock me-1" />Không thể hủy
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-
-                              {/* Pagination */}
-                              {orderTotal > 5 && (
-                                <div className="order-pagination">
-                                  <button
-                                    className="order-page-btn"
-                                    disabled={orderPage <= 1}
-                                    onClick={() => fetchOrders(orderPage - 1)}
-                                  ><i className="fas fa-chevron-left" /></button>
-                                  {Array.from({ length: Math.ceil(orderTotal / 5) }, (_, i) => i + 1).map(p => (
-                                    <button
-                                      key={p}
-                                      className={`order-page-btn ${p === orderPage ? 'active' : ''}`}
-                                      onClick={() => fetchOrders(p)}
-                                    >{p}</button>
-                                  ))}
-                                  <button
-                                    className="order-page-btn"
-                                    disabled={orderPage >= Math.ceil(orderTotal / 5)}
-                                    onClick={() => fetchOrders(orderPage + 1)}
-                                  ><i className="fas fa-chevron-right" /></button>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Detail panel */}
-                            {selectedOrder && (
-                              <div className="col-lg-7">
-                                <div className="order-detail-panel">
-                                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                          <div>
+                            {orders.map(order => {
+                              const cfg = ORDER_STATUS_CFG[order.status] ?? { color:'#64748b', bg:'#f8fafc', label: order.status, icon:'fa-circle' };
+                              return (
+                                <div key={order.id} className="order-card">
+                                  <div className="order-card-head">
                                     <div>
-                                      <div style={{ fontWeight:700, fontSize:15, color:'#1a1d23' }}>#{selectedOrder.order_code}</div>
-                                      <div style={{ fontSize:12, color:'#8590a3' }}>{selectedOrder.created_at}</div>
+                                      <div className="order-code">#{order.order_code}</div>
+                                      <div className="order-date">{order.created_at}</div>
                                     </div>
-                                    <button
-                                      style={{ background:'none', border:'none', cursor:'pointer', color:'#8590a3', fontSize:18 }}
-                                      onClick={() => setSelectedOrder(null)}
-                                    ><i className="fas fa-times" /></button>
+                                    <span className="order-status-badge" style={{ color: cfg.color, background: cfg.bg }}>
+                                      <i className={`fas ${cfg.icon}`} />{cfg.label}
+                                    </span>
                                   </div>
-
-                                  {detailLoading ? (
-                                    <div style={{ textAlign:'center', padding:30 }}><span className="spinner-border text-primary" /></div>
-                                  ) : (
-                                    <>
-                                      {/* Shipping */}
-                                      <div style={{ background:'#f8f9fc', borderRadius:10, padding:'12px 14px', marginBottom:14 }}>
-                                        <div style={{ fontSize:12, fontWeight:700, color:'#3d4555', marginBottom:8 }}>
-                                          <i className="fas fa-map-marker-alt me-2 text-primary" />Địa chỉ giao hàng
-                                        </div>
-                                        <div style={{ fontSize:13, fontWeight:600 }}>{selectedOrder.shipping?.fullname}</div>
-                                        <div style={{ fontSize:12, color:'#6c757d' }}>{selectedOrder.shipping?.phone}</div>
-                                        <div style={{ fontSize:12, color:'#6c757d', marginTop:2 }}>
-                                          {[selectedOrder.shipping?.address, selectedOrder.shipping?.ward, selectedOrder.shipping?.district, selectedOrder.shipping?.province].filter(Boolean).join(', ')}
-                                        </div>
-                                      </div>
-
-                                      {/* Items */}
-                                      {selectedOrder.items && selectedOrder.items.length > 0 && (
-                                        <div className="order-detail-items" style={{ marginBottom:14 }}>
-                                          <div style={{ fontSize:12, fontWeight:700, color:'#3d4555', marginBottom:8 }}>
-                                            <i className="fas fa-box me-2 text-primary" />Sản phẩm ({selectedOrder.items.length})
-                                          </div>
-                                          {selectedOrder.items.map((item, i) => (
-                                            <div key={i} className="od-item">
-                                              {item.product_image
-                                                ? <img src={item.product_image} alt={item.product_name} className="order-item-img" />
-                                                : <div className="order-item-img-placeholder"><i className="fas fa-box" /></div>
-                                              }
-                                              <div className="od-item-info">
-                                                <div className="od-item-name">{item.product_name}</div>
-                                                {item.product_sku && <div className="od-item-sku">SKU: {item.product_sku}</div>}
-                                                {item.variant_info && (() => {
-                                                  const info = item.variant_info as any;
-                                                  // Format mới: { sku, image, attrs: [{name, value}] }
-                                                  if (Array.isArray(info.attrs)) {
-                                                    return info.attrs.map((a: { name: string; value: string }, idx: number) => (
-                                                      <span key={idx} style={{ fontSize:11, background:'#eaecf0', borderRadius:10, padding:'1px 7px', marginRight:4 }}>
-                                                        {a.name}: {a.value}
-                                                      </span>
-                                                    ));
-                                                  }
-                                                  // Format cũ: Record<string, string> phẳng
-                                                  return Object.entries(info)
-                                                    .filter(([, v]) => typeof v === 'string')
-                                                    .map(([k, v]) => (
-                                                      <span key={k} style={{ fontSize:11, background:'#eaecf0', borderRadius:10, padding:'1px 7px', marginRight:4 }}>
-                                                        {k}: {v as string}
-                                                      </span>
-                                                    ));
-                                                })()}
-                                                <div style={{ fontSize:12, color:'#8590a3', marginTop:3 }}>
-                                                  {formatVND(item.price)} × {item.quantity}
-                                                </div>
-                                              </div>
-                                              <div className="od-item-price">{formatVND(item.total)}</div>
-                                            </div>
-                                          ))}
-                                          {/* Tổng */}
-                                          <div style={{ background:'#f0f4ff', borderRadius:10, padding:'10px 14px', marginTop:10 }}>
-                                            {selectedOrder.discount_amount > 0 && (
-                                              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:4 }}>
-                                                <span style={{ color:'#6c757d' }}>Giảm giá</span>
-                                                <span style={{ color:'#16a34a' }}>– {formatVND(selectedOrder.discount_amount)}</span>
-                                              </div>
-                                            )}
-                                            {selectedOrder.voucher_code && (
-                                              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:4 }}>
-                                                <span style={{ color:'#6c757d' }}>Voucher ({selectedOrder.voucher_code})</span>
-                                                <span style={{ color:'#16a34a' }}>– {formatVND(selectedOrder.voucher_discount ?? 0)}</span>
-                                              </div>
-                                            )}
-                                            {selectedOrder.shipping_fee > 0 && (
-                                              <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:4 }}>
-                                                <span style={{ color:'#6c757d' }}>Phí giao hàng</span>
-                                                <span>{formatVND(selectedOrder.shipping_fee)}</span>
-                                              </div>
-                                            )}
-                                            <div style={{ display:'flex', justifyContent:'space-between', fontWeight:700, fontSize:14, borderTop:'1px solid #dde3f2', paddingTop:8, marginTop:4 }}>
-                                              <span>Tổng cộng</span>
-                                              <span style={{ color:'#0d6efd' }}>{formatVND(selectedOrder.total_amount)}</span>
-                                            </div>
-                                          </div>
+                                  <div className="order-card-body">
+                                    <div className="order-items-preview">
+                                      {(order.items ?? []).slice(0, 4).map((item, i) =>
+                                        item.product_image
+                                          ? (
+                                              <>
+                                                <img key={i} src={item.product_image} alt={item.product_name} className="order-item-img" />
+                                                <span className={'text-truncate'}>{item.product_name}</span>
+                                              </>
+                                            )
+                                          : <div key={i} className="order-item-img-placeholder"><i className="fas fa-box" /></div>
+                                      )}
+                                      {(order.items?.length ?? 0) > 4 && (
+                                        <div className="order-item-img-placeholder" style={{ fontSize:12, fontWeight:700 }}>
+                                          +{(order.items?.length ?? 0) - 4}
                                         </div>
                                       )}
-
-                                      {/* Payment & status */}
-                                      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14 }}>
-                                        {(() => {
-                                          const cfg = ORDER_STATUS_CFG[selectedOrder.status] ?? { color:'#64748b', bg:'#f8fafc', label:selectedOrder.status, icon:'fa-circle' };
-                                          return (
-                                            <span className="order-status-badge" style={{ color:cfg.color, background:cfg.bg }}>
-                                              <i className={`fas ${cfg.icon}`} />{cfg.label}
-                                            </span>
-                                          );
-                                        })()}
-                                        {(() => {
-                                          const pc = PAYMENT_STATUS_CFG[selectedOrder.payment_status] ?? { color:'#6b7280', label: selectedOrder.payment_status };
-                                          return (
-                                            <span style={{ fontSize:11, fontWeight:700, color:pc.color, background:'#f8f9fa', border:`1.5px solid ${pc.color}44`, borderRadius:20, padding:'4px 10px' }}>
-                                              {pc.label}
-                                            </span>
-                                          );
-                                        })()}
-                                        {selectedOrder.tracking_code && (
-                                          <span style={{ fontSize:11, color:'#5a6275', background:'#f0f4ff', border:'1.5px solid #d0dcff', borderRadius:20, padding:'4px 10px' }}>
-                                            <i className="fas fa-truck me-1" />{selectedOrder.tracking_code}
-                                          </span>
-                                        )}
+                                    </div>
+                                    {order.cancelled_reason && (
+                                      <div style={{ fontSize:12, color:'#b91c1c', marginTop:4 }}>
+                                        <i className="fas fa-info-circle me-1" />Lý do: {order.cancelled_reason}
                                       </div>
-
-                                      {/* Cancel button in detail */}
-                                      {canCancel(selectedOrder.status) && (
+                                    )}
+                                  </div>
+                                  <div className="order-card-foot">
+                                    <span className="order-total">{formatVND(order.total_amount)}</span>
+                                    <div className="order-actions">
+                                      <button
+                                        className="btn-order-detail"
+                                        onClick={() => navigate(`/orders/${order.id}`)}
+                                      >
+                                        <i className="fas fa-eye me-1" />Chi tiết
+                                      </button>
+                                      {canCancel(order.status) && (
                                         <button
                                           className="btn-order-cancel"
-                                          style={{ width:'100%', marginBottom:14 }}
-                                          onClick={() => { setCancelModalOrder(selectedOrder); setCancelReason(''); }}
+                                          onClick={() => { setCancelModalOrder(order); setCancelReason(''); }}
                                         >
-                                          <i className="fas fa-times-circle me-2" />Hủy đơn hàng này
+                                          <i className="fas fa-times me-1" />Hủy đơn
                                         </button>
                                       )}
-
-                                      {/* Status history timeline */}
-                                      {selectedOrder.status_history && selectedOrder.status_history.length > 0 && (
-                                        <div>
-                                          <div style={{ fontSize:12, fontWeight:700, color:'#3d4555', marginBottom:10 }}>
-                                            <i className="fas fa-history me-2 text-primary" />Lịch sử trạng thái
-                                          </div>
-                                          <ul className="order-timeline">
-                                            {selectedOrder.status_history.map((h, i) => {
-                                              const toCfg = ORDER_STATUS_CFG[h.to];
-                                              return (
-                                                <li key={i}>
-                                                  <span className="tl-label">
-                                                    {ORDER_STATUS_CFG[h.from]?.label ?? h.from} → {toCfg?.label ?? h.to}
-                                                  </span>
-                                                  {h.note && <div className="tl-note">{h.note}</div>}
-                                                  <div className="tl-time">{h.created_at}</div>
-                                                </li>
-                                              );
-                                            })}
-                                          </ul>
-                                        </div>
+                                      {['confirmed','processing','shipping'].includes(order.status) && (
+                                        <span style={{ fontSize:11, color:'#8590a3', alignSelf:'center' }}>
+                                          <i className="fas fa-lock me-1" />Không thể hủy
+                                        </span>
                                       )}
-                                    </>
-                                  )}
+                                    </div>
+                                  </div>
                                 </div>
+                              );
+                            })}
+
+                            {/* Pagination */}
+                            {orderTotal > 5 && (
+                              <div className="order-pagination">
+                                <button
+                                  className="order-page-btn"
+                                  disabled={orderPage <= 1}
+                                  onClick={() => fetchOrders(orderPage - 1)}
+                                ><i className="fas fa-chevron-left" /></button>
+                                {Array.from({ length: Math.ceil(orderTotal / 5) }, (_, i) => i + 1).map(p => (
+                                  <button
+                                    key={p}
+                                    className={`order-page-btn ${p === orderPage ? 'active' : ''}`}
+                                    onClick={() => fetchOrders(p)}
+                                  >{p}</button>
+                                ))}
+                                <button
+                                  className="order-page-btn"
+                                  disabled={orderPage >= Math.ceil(orderTotal / 5)}
+                                  onClick={() => fetchOrders(orderPage + 1)}
+                                ><i className="fas fa-chevron-right" /></button>
                               </div>
                             )}
                           </div>
+
                         </>
                       )}
                     </div>
