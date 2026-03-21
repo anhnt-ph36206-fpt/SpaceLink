@@ -140,30 +140,30 @@ const Header: React.FC = () => {
 
                     <div className="col-lg-4 text-center text-lg-end">
                         <div className="d-inline-flex align-items-center" style={{ height: '45px' }}>
-                            <Link to="#" className="text-muted me-2 text-decoration-none">
+                            <Link to={user ? "/profile" : "/login"} state={{ tab: 'orders' }} className="text-muted me-2 text-decoration-none">
                                 <small>Tra cứu đơn hàng</small>
                             </Link>
 
                             <span className="text-muted mx-2">|</span>
 
                             <div className="dropdown">
-                                <a href="#" className="dropdown-toggle text-muted ms-2" data-bs-toggle="dropdown">
-                                    <small><i className="fa fa-home me-2"></i> {user ? `Xin Chào, ${user.fullname}` : 'My Dashboard'}</small>
-                                </a>
+                                <span className="dropdown-toggle text-muted ms-2" data-bs-toggle="dropdown" style={{ cursor: 'pointer' }}>
+                                    <small><i className="fa fa-user me-2"></i> {user ? `Xin Chào, ${user.fullname}` : 'Tài khoản'}</small>
+                                </span>
                                 <div className="dropdown-menu rounded">
                                     {!user ? (
                                         <>
-                                            <Link to="/login" className="dropdown-item">Login</Link>
-                                            <Link to="/register" className="dropdown-item">Register</Link>
+                                            <Link to="/login" className="dropdown-item">Đăng nhập</Link>
+                                            <Link to="/register" className="dropdown-item">Đăng ký</Link>
                                         </>
                                     ) : (
                                         <>
-                                            <Link to="/profile" className="dropdown-item">My Account</Link>
-                                            <button onClick={logout} className="dropdown-item">Log Out</button>
+                                            <Link to="/profile" className="dropdown-item">Tài khoản của tôi</Link>
+                                            <button onClick={logout} className="dropdown-item w-100 text-start bg-transparent border-0">Đăng xuất</button>
                                         </>
                                     )}
-                                    <Link to="/wishlist" className="dropdown-item">Wishlist</Link>
-                                    <Link to="/cart" className="dropdown-item">My Card</Link>
+                                    <Link to="/wishlist" className="dropdown-item">Yêu thích</Link>
+                                    <Link to="/cart" className="dropdown-item">Giỏ hàng</Link>
                                 </div>
                             </div>
                         </div >
