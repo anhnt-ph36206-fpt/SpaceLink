@@ -38,6 +38,8 @@ import AdminBannerPage from './pages/admin/banners/AdminBannerPage';
 import AdminNewsPage from './pages/admin/news/AdminNewsPage';
 import SearchPage from './components/home/SearchPage';
 import ComparePage from './pages/ComparePage';
+import WishlistPage from './pages/WishlistPage';
+import { WishlistProvider } from './context/WishlistContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -54,8 +56,9 @@ function App() {
             <AuthProvider>
                 <CartProvider>
                     <CompareProvider>
-                        <ToastContainer position="top-right" autoClose={3000} />
-                        <Routes>
+                        <WishlistProvider>
+                            <ToastContainer position="top-right" autoClose={3000} />
+                            <Routes>
 
                             {/* ADMIN */}
                             <Route path="/admin" element={<AdminLayout />}>
@@ -96,6 +99,7 @@ function App() {
                                 <Route path="/contact" element={<ContactPage />} />
                                 <Route path="/search" element={<SearchPage />} />
                                 <Route path="/compare" element={<ComparePage />} />
+                                <Route path="/wishlist" element={<WishlistPage />} />
                                 <Route path="/news" element={<NewsListPage />} />
                                 <Route path="/news/:slug" element={<NewsDetailPage />} />
                                 <Route path="/payment-return" element={<PaymentReturnPage />} />
@@ -106,6 +110,7 @@ function App() {
                             <Route path="/register" element={<RegisterPage />} />
 
                         </Routes>
+                        </WishlistProvider>
                     </CompareProvider>
                 </CartProvider>
             </AuthProvider>
