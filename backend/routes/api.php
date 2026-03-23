@@ -26,6 +26,8 @@ use App\Http\Controllers\Api\Client\OrderController as ClientOrderController;
 use App\Http\Controllers\Api\Client\ProductController;
 use App\Http\Controllers\Api\Client\ProfileController;
 use App\Http\Controllers\Api\Client\ReviewController as ClientReviewController;
+use App\Http\Controllers\Api\Client\ShippingController;
+use App\Http\Controllers\Api\Client\ComplaintController as ClientComplaintController;
 use App\Http\Controllers\Api\Client\WishlistController as ClientWishlistController;
 use Illuminate\Support\Facades\Route;
 
@@ -104,9 +106,13 @@ Route::prefix('client')->name('client.')->group(function () {
         Route::get('/orders', [ClientOrderController::class, 'index']);
         Route::get('/orders/{id}', [ClientOrderController::class, 'show']);
         Route::post('/orders/{id}/cancel', [ClientOrderController::class, 'cancel']);
+        Route::post('/orders/{id}/cancel-vnpay', [ClientOrderController::class, 'cancelUnpaidVnpay']);
         Route::post('/orders/{id}/confirm-received', [ClientOrderController::class, 'confirmReceived']);
         Route::post('/orders/{id}/return-request', [ClientOrderController::class, 'requestReturn']); // Yêu cầu hoàn trả/không nhận hàng
         Route::get('/orders/{id}/retry-vnpay', [ClientOrderController::class, 'retryVnpayPayment']);
+        // Khiếu nại đơn hàng
+        Route::get('/orders/{id}/complaint', [ClientComplaintController::class, 'show']);
+        Route::post('/orders/{id}/complaint', [ClientComplaintController::class, 'store']);
 
         // Review sản phẩm
         Route::post('/reviews', [ClientReviewController::class, 'store']);

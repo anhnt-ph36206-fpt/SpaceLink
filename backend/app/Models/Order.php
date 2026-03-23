@@ -105,4 +105,10 @@ class Order extends Model
     {
         return $this->hasOne(ProductReturn::class);
     }
+
+    // Order có thể có nhiều khiếu nại
+    public function complaints()
+    {
+        return $this->hasMany(OrderComplaint::class);
+    }
 }

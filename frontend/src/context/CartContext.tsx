@@ -163,9 +163,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 });
                 toast.info('Đã xóa sản phẩm khỏi giỏ hàng');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to remove from cart:', error);
-            toast.error('Không thể xóa sản phẩm');
+            const msg = error.response?.data?.message || 'Không thể xóa sản phẩm';
+            toast.error(msg);
         } finally {
             setLoading(false);
         }

@@ -239,6 +239,10 @@ const CheckoutPage: React.FC = () => {
         if (!isBuyNow) refreshCart();
 
         if (orderData?.payment_url) {
+            // Lưu order_id để PaymentReturnPage có thể hủy đơn nếu user bấm Hủy trên VNPAY
+            if (orderData.order_id) {
+                sessionStorage.setItem('vnpay_pending_order_id', String(orderData.order_id));
+            }
             toast.info('Đang chuyển hướng đến cổng thanh toán...');
             window.location.href = orderData.payment_url;
             return;

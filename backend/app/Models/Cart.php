@@ -15,6 +15,11 @@ class Cart extends Model
         'product_id',
         'variant_id',
         'quantity',
+        'reserved_until',
+    ];
+
+    protected $casts = [
+        'reserved_until' => 'datetime',
     ];
 
     /**

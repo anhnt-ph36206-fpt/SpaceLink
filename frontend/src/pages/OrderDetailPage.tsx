@@ -244,6 +244,17 @@ const OrderDetailPage: React.FC = () => {
   const [reviewContent, setReviewContent] = useState('');
   const [reviewLoading, setReviewLoading] = useState(false);
 
+  // Complaint (Khiếu nại)
+  const [complaintOpen, setComplaintOpen] = useState(false);
+  const [complaintType, setComplaintType] = useState('other');
+  const [complaintSubject, setComplaintSubject] = useState('');
+  const [complaintContent, setComplaintContent] = useState('');
+  const [complaintLoading, setComplaintLoading] = useState(false);
+  const [existingComplaint, setExistingComplaint] = useState<{
+    type?: string; subject?: string; content?: string;
+    status?: string; admin_reply?: string | null; created_at?: string;
+  } | null>(null);
+
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -397,6 +408,34 @@ const OrderDetailPage: React.FC = () => {
       showToast(e?.response?.data?.message ?? 'Không thể gửi đánh giá hoặc bạn đã đánh giá sản phẩm này.', 'error');
     } finally {
       setReviewLoading(false);
+    }
+  };
+
+  // ── Submit Complaint ──────────────────────────────────────
+  const handleSubmitComplaint = async () => {
+    if (!order) return;
+    if (!complaintSubject.trim()) { showToast('Vui lòng nhập tiêu đề khiếu nại.', 'error'); return; }
+    if (!complaintContent.trim()) { showToast('Vui lòng nhập nội dung khiếu nại.', 'error'); return; }
+    setComplaintLoading(true);
+    try {
+      await axiosInstance.post(`/client/orders/${order.id}/complaint`, {
+        type: complaintType,
+        subject: complaintSubject,
+        content: complaintContent,
+      });
+      showToast('Đã gửi khiếu nại thành công. Chúng tôi sẽ phản hồi sớm nhất!', 'success');
+      setComplaintOpen(false);
+      setComplaintSubject('');
+      setComplaintContent('');
+      setComplaintType('other');
+      // Reload complaint
+      const res = await axiosInstance.get(`/client/orders/${order.id}/complaint`);
+      setExistingComplaint(res.data?.data ?? null);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showToast(e?.response?.data?.message ?? 'Không thể gửi khiếu nại.', 'error');
+    } finally {
+      setComplaintLoading(false);
     }
   };
 
@@ -900,6 +939,54 @@ const OrderDetailPage: React.FC = () => {
                     <i className="fas fa-lock me-2" />Đơn hàng đang xử lý, không thể hủy
                   </div>
                 )}
+                {/* Nút Khiếu nại */}
+                {order.status !== 'pending' && (
+                  <>
+                    {existingComplaint ? (
+                      <div style={{
+                        background: '#f0f9ff', border: '1.5px solid #bae6fd',
+                        borderRadius: 10, padding: '10px 14px',
+                        fontSize: 13, marginBottom: 8,
+                      }}>
+                        <div style={{ fontWeight: 700, color: '#0369a1', marginBottom: 4 }}>
+                          <i className="fas fa-headset me-2" />
+                          Khiếu nại đã gửi
+                          <span style={{
+                            marginLeft: 8, fontSize: 11, padding: '2px 8px', borderRadius: 6,
+                            background: existingComplaint.status === 'pending' ? '#fffbeb' :
+                              existingComplaint.status === 'resolved' ? '#f0fdf4' : '#fef2f2',
+                            color: existingComplaint.status === 'pending' ? '#b45309' :
+                              existingComplaint.status === 'resolved' ? '#15803d' : '#b91c1c',
+                          }}>
+                            {existingComplaint.status === 'pending' ? 'Chờ xử lý' :
+                              existingComplaint.status === 'processing' ? 'Đang xử lý' :
+                              existingComplaint.status === 'resolved' ? 'Đã giải quyết' : 'Từ chối'}
+                          </span>
+                        </div>
+                        <div style={{ color: '#334155' }}>{existingComplaint.subject}</div>
+                        {existingComplaint.admin_reply && (
+                          <div style={{ marginTop: 6, color: '#15803d', fontSize: 12 }}>
+                            <i className="fas fa-reply me-1" />Phản hồi: {existingComplaint.admin_reply}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        className="od-btn-full"
+                        style={{
+                          background: '#f0f9ff', border: '1.5px solid #0369a1',
+                          color: '#0369a1', borderRadius: 10, padding: '10px 16px',
+                          fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                          marginBottom: 8, transition: 'all .2s',
+                        }}
+                        onClick={() => setComplaintOpen(true)}
+                      >
+                        <i className="fas fa-headset" />Khiếu nại / Hỗ trợ
+                      </button>
+                    )}
+                  </>
+                )}
                 <Link to="/shop" style={{ textDecoration: 'none' }}>
                   <button className="od-btn-shop od-btn-full">
                     <i className="fas fa-shopping-bag me-2" />Tiếp tục mua sắm
@@ -910,6 +997,75 @@ const OrderDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Complaint Modal ── */}
+      {complaintOpen && (
+        <div className="od-overlay" onClick={e => { if (e.target === e.currentTarget) setComplaintOpen(false); }}>
+          <div className="od-modal">
+            <div className="od-modal-hd">
+              <div>
+                <div className="od-modal-title">
+                  <i className="fas fa-headset me-2" style={{ color: '#0369a1' }} />Khiếu nại / Hỗ trợ
+                </div>
+                <div className="od-modal-sub">Mô tả vấn đề của đơn <strong>#{order.order_code}</strong></div>
+              </div>
+              <button className="od-modal-x" onClick={() => setComplaintOpen(false)}><i className="fas fa-times" /></button>
+            </div>
+            <div className="od-modal-bd">
+              <label className="od-modal-label">Loại khiếu nại</label>
+              <select
+                className="od-textarea"
+                style={{ minHeight: 40, padding: '8px 12px' }}
+                value={complaintType}
+                onChange={e => setComplaintType(e.target.value)}
+              >
+                <option value="wrong_item">Đặt sai sản phẩm / sai biến thể</option>
+                <option value="damaged">Sản phẩm hư hỏng</option>
+                <option value="late_delivery">Giao hàng chậm</option>
+                <option value="payment_issue">Vấn đề thanh toán</option>
+                <option value="other">Khác</option>
+              </select>
+
+              <label className="od-modal-label" style={{ marginTop: 12 }}>Tiêu đề</label>
+              <input
+                className="od-textarea"
+                style={{ minHeight: 40 }}
+                placeholder="Tóm tắt vấn đề của bạn..."
+                value={complaintSubject}
+                onChange={e => setComplaintSubject(e.target.value)}
+                maxLength={255}
+              />
+
+              <label className="od-modal-label" style={{ marginTop: 12 }}>Nội dung chi tiết</label>
+              <textarea
+                className="od-textarea"
+                rows={5}
+                placeholder="Mô tả chi tiết vấn đề để chúng tôi có thể hỗ trợ bạn tốt hơn..."
+                value={complaintContent}
+                onChange={e => setComplaintContent(e.target.value)}
+                maxLength={2000}
+              />
+              <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, textAlign: 'right' }}>
+                {complaintContent.length}/2000
+              </div>
+            </div>
+            <div className="od-modal-ft">
+              <button className="od-modal-btn-no" onClick={() => setComplaintOpen(false)} disabled={complaintLoading}>Hủy</button>
+              <button
+                className="od-modal-btn-yes"
+                style={{ background: '#0369a1', borderColor: '#0369a1' }}
+                onClick={handleSubmitComplaint}
+                disabled={complaintLoading}
+              >
+                {complaintLoading
+                  ? <><span className="od-spin me-2" />Đang gửi...</>
+                  : <><i className="fas fa-paper-plane me-2" />Gửi khiếu nại</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Cancel Modal ── */}
       {cancelOpen && (
