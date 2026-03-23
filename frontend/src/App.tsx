@@ -27,6 +27,7 @@ import AdminOrderPage from './pages/admin/AdminOrderPage';
 import AdminOrderDetailPage from './pages/admin/AdminOrderDetailPage';
 import AdminUserPage from './pages/admin/AdminUserPage';
 import AdminReviewPage from './pages/admin/reviews/AdminReviewPage';
+import AdminVoucherPage from './pages/admin/vouchers/AdminVoucherPage';
 import ProductList from "./pages/admin/products/list";
 import ProductCreate from "./pages/admin/products/create";
 import ProductEdit from "./pages/admin/products/edit";
@@ -37,6 +38,8 @@ import AdminBannerPage from './pages/admin/banners/AdminBannerPage';
 import AdminNewsPage from './pages/admin/news/AdminNewsPage';
 import SearchPage from './components/home/SearchPage';
 import ComparePage from './pages/ComparePage';
+import WishlistPage from './pages/WishlistPage';
+import { WishlistProvider } from './context/WishlistContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -53,8 +56,9 @@ function App() {
             <AuthProvider>
                 <CartProvider>
                     <CompareProvider>
-                        <ToastContainer position="top-right" autoClose={3000} />
-                        <Routes>
+                        <WishlistProvider>
+                            <ToastContainer position="top-right" autoClose={3000} />
+                            <Routes>
 
                             {/* ADMIN */}
                             <Route path="/admin" element={<AdminLayout />}>
@@ -76,6 +80,7 @@ function App() {
                                 <Route path="orders/:id" element={<AdminOrderDetailPage />} />
                                 <Route path="users" element={<AdminUserPage />} />
                                 <Route path="reviews" element={<AdminReviewPage />} />
+                                <Route path="vouchers" element={<AdminVoucherPage />} />
                             </Route>
 
                             {/* Public routes */}
@@ -94,6 +99,7 @@ function App() {
                                 <Route path="/contact" element={<ContactPage />} />
                                 <Route path="/search" element={<SearchPage />} />
                                 <Route path="/compare" element={<ComparePage />} />
+                                <Route path="/wishlist" element={<WishlistPage />} />
                                 <Route path="/news" element={<NewsListPage />} />
                                 <Route path="/news/:slug" element={<NewsDetailPage />} />
                                 <Route path="/payment-return" element={<PaymentReturnPage />} />
@@ -104,6 +110,7 @@ function App() {
                             <Route path="/register" element={<RegisterPage />} />
 
                         </Routes>
+                        </WishlistProvider>
                     </CompareProvider>
                 </CartProvider>
             </AuthProvider>
