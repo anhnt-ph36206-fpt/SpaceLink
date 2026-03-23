@@ -9,7 +9,7 @@ import {
   SearchOutlined, ShoppingCartOutlined, EyeOutlined, ReloadOutlined,
   CheckCircleOutlined, ClockCircleOutlined, CarOutlined, CloseCircleOutlined,
   DollarOutlined, FilterOutlined, SyncOutlined, RollbackOutlined,
-  SendOutlined, RiseOutlined, ShoppingOutlined,
+  SendOutlined, RiseOutlined, ShoppingOutlined, FileExcelOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { axiosInstance } from '../../api/axios';
@@ -101,6 +101,42 @@ const formatVND = (v: number) =>
 
 const API_BASE = '/admin/orders';
 
+// ── Export helpers (module-level, không cần React state) ────────────────
+const csvEscape = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+const exportOrdersToCSV = (
+  orders: Order[],
+  filename: string,
+  statusCfg: Record<string, { label: string }>,
+  paymentCfg: Record<string, { label: string }>,
+  methodLabels: Record<string, string>,
+) => {
+  const HEADERS = [
+    'Mã đơn', 'Khách hàng', 'SĐT', 'Email',
+    'Trạng thái đơn', 'Thanh toán', 'Phương thức TT',
+    'Tạm tính', 'Giảm giá', 'Phí ship', 'Tổng cộng',
+    'Voucher', 'Ngày đặt',
+  ];
+  const rows = orders.map(o => [
+    o.order_code,
+    o.shipping?.fullname ?? o.user?.fullname ?? '—',
+    o.shipping?.phone   ?? o.user?.phone    ?? '—',
+    o.user?.email       ?? o.shipping?.email ?? '—',
+    statusCfg[o.status]?.label            ?? o.status,
+    paymentCfg[o.payment_status]?.label   ?? o.payment_status,
+    methodLabels[o.payment_method ?? '']  ?? o.payment_method ?? '—',
+    o.subtotal, o.discount_amount, o.shipping_fee, o.total_amount,
+    o.voucher_code ?? '—',
+    o.created_at,
+  ]);
+  const csv = [HEADERS.map(csvEscape).join(','), ...rows.map(r => r.map(csvEscape).join(','))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 const StatusTag: React.FC<{
   status: string;
   config: Record<string, { color: string; label: string; icon?: React.ReactNode }>;
@@ -141,10 +177,11 @@ const AdminOrderPage: React.FC = () => {
   const [quickPaymentModalOpen, setQuickPaymentModalOpen] = useState(false);
   const [paymentForm] = Form.useForm();
   const [savingPayment, setSavingPayment] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  // --------------------------------------------------------
+  // ─────────────────────────────────────────────────────────
   // Fetch orders list
-  // --------------------------------------------------------
+  // ─────────────────────────--------------------------------------------------------
   const fetchOrders = useCallback(async (page = 1) => {
     setLoading(true);
     try {
@@ -256,6 +293,32 @@ const AdminOrderPage: React.FC = () => {
 
   const pendingCount = orders.filter(o => o.status === 'pending').length;
   const shippingCount = orders.filter(o => o.status === 'shipping').length;
+
+  // ── Export Excel ─────────────────────────────────────────────
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params: Record<string, string | number> = { per_page: 2000, page: 1 };
+      if (search)              params.search         = search;
+      if (statusFilter)        params.status         = statusFilter;
+      if (paymentStatusFilter) params.payment_status = paymentStatusFilter;
+      if (paymentMethodFilter) params.payment_method = paymentMethodFilter;
+      if (dateRange) { params.date_from = dateRange[0]; params.date_to = dateRange[1]; }
+
+      const res  = await axiosInstance.get(API_BASE, { params });
+      const list: Order[] = res.data?.data?.data ?? res.data?.data ?? [];
+
+      const today     = new Date().toISOString().slice(0, 10);
+      const statusTag = statusFilter ? `_${statusFilter}` : '';
+      exportOrdersToCSV(list, `don-hang${statusTag}_${today}.csv`,
+        ORDER_STATUS_CONFIG, PAYMENT_STATUS_CONFIG, PAYMENT_METHOD_LABELS);
+      message.success(`Đã xuất ${list.length} đơn hàng!`);
+    } catch {
+      message.error('Không thể xuất dữ liệu. Vui lòng thử lại.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // --------------------------------------------------------
   // Table columns
@@ -384,13 +447,23 @@ const AdminOrderPage: React.FC = () => {
             Tổng cộng {meta.total} đơn hàng
           </Text>
         </div>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => fetchOrders(1)}
-          style={{ borderRadius: 10, height: 40 }}
-        >
-          Làm mới
-        </Button>
+        <Space>
+          <Button
+            icon={<FileExcelOutlined />}
+            loading={exporting}
+            onClick={handleExport}
+            style={{ borderRadius: 10, height: 40, borderColor: '#16a34a', color: '#16a34a', fontWeight: 600 }}
+          >
+            Xuất Excel
+          </Button>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => fetchOrders(1)}
+            style={{ borderRadius: 10, height: 40 }}
+          >
+            Làm mới
+          </Button>
+        </Space>
       </div>
 
       {/* ── Quick Stats ── */}

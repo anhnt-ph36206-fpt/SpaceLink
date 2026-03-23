@@ -37,6 +37,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const SESSION_KEY = 'spacelink_session_id';
+const CART_CACHE_KEY = 'spacelink_cart_cache';
 
 const getOrSetSessionId = () => {
     let id = localStorage.getItem(SESSION_KEY);
@@ -47,11 +48,36 @@ const getOrSetSessionId = () => {
     return id;
 };
 
+// Đọc giỏ hàng từ localStorage (fallback khi API chưa kịp load)
+const loadCartFromCache = (): CartItem[] => {
+    try {
+        const raw = localStorage.getItem(CART_CACHE_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+};
+
+// Lưu giỏ hàng vào localStorage
+const saveCartToCache = (items: CartItem[]) => {
+    try {
+        localStorage.setItem(CART_CACHE_KEY, JSON.stringify(items));
+    } catch {
+        // ignore storage errors
+    }
+};
+
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [items, setItems] = useState<CartItem[]>([]);
+    // Khởi tạo từ localStorage cache nếu có
+    const [items, setItems] = useState<CartItem[]>(loadCartFromCache);
     const [loading, setLoading] = useState(false);
     const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
     const { isAuthenticated } = useAuth();
+
+    // Khi items thay đổi → lưu vào localStorage
+    useEffect(() => {
+        saveCartToCache(items);
+    }, [items]);
 
     // Khởi tạo session ID nếu chưa có
     useEffect(() => {
@@ -130,12 +156,17 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             const res = await axiosInstance.delete(`/client/cart/remove/${cartItemId}`);
             if (res.data.status === 'success') {
-                setItems(prev => prev.filter(i => i.id !== cartItemId));
+                setItems(prev => {
+                    const next = prev.filter(i => i.id !== cartItemId);
+                    saveCartToCache(next);
+                    return next;
+                });
                 toast.info('Đã xóa sản phẩm khỏi giỏ hàng');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to remove from cart:', error);
-            toast.error('Không thể xóa sản phẩm');
+            const msg = error.response?.data?.message || 'Không thể xóa sản phẩm';
+            toast.error(msg);
         } finally {
             setLoading(false);
         }
@@ -211,6 +242,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const res = await axiosInstance.delete('/client/cart/clear');
             if (res.data.status === 'success') {
                 setItems([]);
+                localStorage.removeItem(CART_CACHE_KEY);
             }
         } catch (error) {
             console.error('Failed to clear cart:', error);

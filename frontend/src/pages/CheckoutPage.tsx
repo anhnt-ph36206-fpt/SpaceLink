@@ -94,10 +94,14 @@ const CheckoutPage: React.FC = () => {
     // -- Determine Items to Checkout --
     const buyNowItem: CheckoutItem | null = location.state?.buyNowItem || null;
     const isBuyNow = !!buyNowItem;
+    const selectedCartItemIds: number[] | null = location.state?.selectedCartItemIds || null;
 
     const displayItems = useMemo(() => {
         if (isBuyNow && buyNowItem) return [buyNowItem];
-        return cartItems.map(item => ({
+        const filtered = selectedCartItemIds
+            ? cartItems.filter(item => selectedCartItemIds.includes(item.id))
+            : cartItems;
+        return filtered.map(item => ({
             productId: item.productId,
             variantId: item.variantId!,
             name: item.name,
@@ -108,7 +112,7 @@ const CheckoutPage: React.FC = () => {
             sku: item.sku || '',
             stock: item.stock
         }));
-    }, [isBuyNow, buyNowItem, cartItems]);
+    }, [isBuyNow, buyNowItem, cartItems, selectedCartItemIds]);
     
     // Watch form values for reactive UI updates (borders)
     const currentPaymentMethod = Form.useWatch('payment_method', form);
@@ -235,6 +239,10 @@ const CheckoutPage: React.FC = () => {
         if (!isBuyNow) refreshCart();
 
         if (orderData?.payment_url) {
+            // Lưu order_id để PaymentReturnPage có thể hủy đơn nếu user bấm Hủy trên VNPAY
+            if (orderData.order_id) {
+                sessionStorage.setItem('vnpay_pending_order_id', String(orderData.order_id));
+            }
             toast.info('Đang chuyển hướng đến cổng thanh toán...');
             window.location.href = orderData.payment_url;
             return;

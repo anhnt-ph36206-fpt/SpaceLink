@@ -52,33 +52,21 @@ const PaymentReturnPage: React.FC = () => {
     };
 
     const didUpdatePayment = useRef(false);
+    const didCancelOrder = useRef(false);
 
     const formatPayDate = (raw: string) => {
         if (raw.length !== 14) return raw;
         return `${raw.slice(6, 8)}/${raw.slice(4, 6)}/${raw.slice(0, 4)} ${raw.slice(8, 10)}:${raw.slice(10, 12)}:${raw.slice(12, 14)}`;
     };
 
-    useEffect(() => {
-        if (!isSuccess) return;
-
-        const timer = setInterval(() => {
-            setCountdown((c) => {
-                if (c <= 1) {
-                    clearInterval(timer);
-                    navigate('/');
-                }
-                return c - 1;
-            });
-        }, 1000);
-        return () => clearInterval(timer);
-    }, [isSuccess, navigate]);
-
-    // VNPay redirect: chủ động gọi API để cập nhật `payment_status` ngay lập tức.
-    // Backend vẫn cho phép admin chỉnh sửa; vnpay-ipn chỉ cập nhật khi đơn đang ở trạng thái `unpaid`.
+    // Thanh toán thành công → gọi IPN để cập nhật DB, xóa sessionStorage
     useEffect(() => {
         if (!isSuccess) return;
         if (didUpdatePayment.current) return;
         didUpdatePayment.current = true;
+
+        // Xóa pending order id vì đã thanh toán thành công
+        sessionStorage.removeItem('vnpay_pending_order_id');
 
         const params: Record<string, string> = {};
         searchParams.forEach((value, key) => {
@@ -89,10 +77,42 @@ const PaymentReturnPage: React.FC = () => {
             try {
                 await axiosInstance.get('/payment/vnpay-ipn', { params });
             } catch {
-                // Không chặn luồng UI: chỉ cố gắng cập nhật.
+                // Không chặn luồng UI
             }
         })();
     }, [isSuccess, txnRef, searchParams]);
+
+    // Thanh toán THẤT BẠI / HỦY → tự động hủy đơn hàng và hoàn kho
+    useEffect(() => {
+        if (isSuccess) return;
+        if (didCancelOrder.current) return;
+        didCancelOrder.current = true;
+
+        const pendingOrderId = sessionStorage.getItem('vnpay_pending_order_id');
+        if (!pendingOrderId) return;
+
+        (async () => {
+            try {
+                await axiosInstance.post(`/client/orders/${pendingOrderId}/cancel-vnpay`);
+            } catch {
+                // Lỗi im lặng — đơn có thể đã được xử lý trước đó
+            } finally {
+                sessionStorage.removeItem('vnpay_pending_order_id');
+            }
+        })();
+    }, [isSuccess]);
+
+    // Đếm ngược tự chuyển trang chủ khi thanh toán thành công
+    useEffect(() => {
+        if (!isSuccess) return;
+        const timer = setInterval(() => {
+            setCountdown((c) => {
+                if (c <= 1) { clearInterval(timer); navigate('/'); }
+                return c - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [isSuccess, navigate]);
 
     return (
         <div className="payment-return-container py-5 min-vh-100 bg-light d-flex align-items-center">
@@ -191,10 +211,10 @@ const PaymentReturnPage: React.FC = () => {
                                     size="large"
                                     icon={<ShoppingOutlined />}
                                     className="rounded-pill px-4"
-                                    onClick={() => navigate('/checkout')}
+                                    onClick={() => navigate('/cart')}
                                     style={responseCode === '24' ? { background: '#F28B00', borderColor: '#F28B00' } : {}}
                                 >
-                                    Thử lại thanh toán
+                                    Về giỏ hàng và thanh toán lại
                                 </Button>
                             )}
                         </div>

@@ -10,3 +10,9 @@ Artisan::command('inspire', function () {
 use Illuminate\Support\Facades\Schedule;
 // Tự động hủy đơn hàng VNPAY quá hạn 15 phút
 Schedule::command('orders:cancel-expired-vnpay')->everyMinute();
+
+// Tự động hoàn thành đơn "delivered" sau 3 ngày (chạy lúc 02:00 sáng)
+Schedule::command('orders:auto-complete-delivered')->dailyAt('02:00');
+
+// Giải phóng giỏ hàng hết hạn, hoàn lại tồn kho mỗi 5 phút
+Schedule::command('cart:release-expired')->everyFiveMinutes();
