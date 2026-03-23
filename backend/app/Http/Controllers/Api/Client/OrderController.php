@@ -253,6 +253,69 @@ class OrderController extends Controller
     }
 
     // =========================================================================
+    // POST /api/client/orders/{id}/cancel-vnpay — Hủy đơn VNPAY chưa thanh toán
+    // Được gọi từ frontend khi user bấm Hủy trên trang VNPAY
+    // =========================================================================
+    public function cancelUnpaidVnpay(Request $request, string $id): JsonResponse
+    {
+        $user = $request->user();
+        $order = Order::with('items')->findOrFail($id);
+
+        // Kiểm tra quyền sở hữu
+        if ($order->user_id !== $user->id) {
+            return response()->json(['status' => 'error', 'message' => 'Bạn không có quyền truy cập đơn hàng này.'], 403);
+        }
+
+        // Chỉ cho phép hủy đơn VNPAY chưa thanh toán
+        if ($order->payment_method !== 'vnpay' || $order->payment_status !== 'unpaid') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Chỉ có thể hủy đơn VNPAY chưa thanh toán.',
+            ], 422);
+        }
+
+        // Bảo vệ: không hủy nếu đã cancelled hoặc đã paid
+        if (in_array($order->status, ['cancelled', 'completed', 'shipping', 'delivered'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Không thể hủy đơn đang ở trạng thái \"{$order->status}\".",
+            ], 422);
+        }
+
+        DB::transaction(function () use ($order, $user) {
+            $order->update([
+                'status'           => 'cancelled',
+                'cancelled_reason' => 'Hủy thanh toán VNPAY.',
+                'cancelled_by'     => $user->id,
+                'cancelled_at'     => now(),
+            ]);
+
+            OrderStatusHistory::create([
+                'order_id'    => $order->id,
+                'from_status' => $order->getOriginal('status'),
+                'to_status'   => 'cancelled',
+                'note'        => 'Khách hàng hủy thanh toán trên cổng VNPAY.',
+                'changed_by'  => $user->id,
+            ]);
+
+            // Hoàn lại tồn kho variant + product
+            foreach ($order->items as $item) {
+                if ($item->variant_id) {
+                    \App\Models\ProductVariant::where('id', $item->variant_id)
+                        ->increment('quantity', $item->quantity);
+                }
+                Product::where('id', $item->product_id)
+                    ->increment('quantity', $item->quantity);
+            }
+        });
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Đã hủy đơn hàng. Tồn kho đã được hoàn lại.',
+        ]);
+    }
+
+    // =========================================================================
     // POST /api/client/orders/{id}/return-request — Khách yêu cầu hoàn trả/không nhận hàng
     // =========================================================================
     public function requestReturn(RequestReturnRequest $request, string $id): JsonResponse
@@ -271,10 +334,24 @@ class OrderController extends Controller
         // Chỉ cho phép sau khi đã giao/hoặc đã hoàn thành
         if (! in_array($order->status, ['delivered', 'completed'], true)) {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => "Không thể yêu cầu hoàn trả khi đơn đang ở trạng thái \"{$order->status}\".",
             ], 422);
         }
+
+        // ── Kiểm tra thời hạn hoàn trả 7 ngày ──────────────────────────────
+        // Tính từ: completed_at (nếu completed) hoặc delivered_at (nếu vẫn delivered)
+        $RETURN_WINDOW_DAYS = 7;
+        $referenceDate = $order->completed_at ?? $order->delivered_at;
+
+        if ($referenceDate && now()->diffInDays($referenceDate) >= $RETURN_WINDOW_DAYS) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => "Đã quá {$RETURN_WINDOW_DAYS} ngày kể từ khi nhận hàng. Bạn không thể yêu cầu hoàn trả.",
+                'expired' => true,
+            ], 422);
+        }
+
 
         $reason = $request->input('reason');
 

@@ -78,6 +78,27 @@ interface ClientOrder {
   };
 }
 
+// ── Cầu hình thời đạn ──────────────────────────────────────────
+const AUTO_COMPLETE_DAYS = 3;   // delivered → completed sau N ngày
+const RETURN_WINDOW_DAYS = 7;   // cửa sổ hoàn trả kể từ khi completed
+
+/** Tính số ngày giữa 2 đốc thức (bựng Math.floor, làm tròn xuống) */
+const daysSince = (dateStr: string | undefined): number => {
+  if (!dateStr) return 0;
+  const then = new Date(dateStr).getTime();
+  const now  = Date.now();
+  return Math.floor((now - then) / 86_400_000);
+};
+
+/** Trả về số ngày còn lại trong cửa sổ hoàn trả (dương = còn, 0 = đúng ngày, âm = hết hạn) */
+const returnDaysLeft = (order: ClientOrder): number => {
+  // Ưu tiên completed_at, fallback sang delivered_at
+  const ref = order.completed_at ?? order.delivered_at;
+  if (!ref) return RETURN_WINDOW_DAYS; // chưa biết ngày → cho phép
+  return RETURN_WINDOW_DAYS - daysSince(ref);
+};
+
+
 // ── Shopee-like Status Config (Orange primary) ───────────────
 /**
  * Luồng trạng thái:
@@ -212,6 +233,9 @@ const OrderDetailPage: React.FC = () => {
   const [returnEvidenceFiles, setReturnEvidenceFiles] = useState<File[]>([]);
   const [bankInfo, setBankInfo] = useState({ bank: '', accountName: '', accountNumber: '' });
 
+  // Retry VNPAY
+  const [retryVnpayLoading, setRetryVnpayLoading] = useState(false);
+
   // ── Review States ─────────────────────────────────────────
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewItem, setReviewItem] = useState<OrderItem | null>(null);
@@ -219,6 +243,17 @@ const OrderDetailPage: React.FC = () => {
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewContent, setReviewContent] = useState('');
   const [reviewLoading, setReviewLoading] = useState(false);
+
+  // Complaint (Khiếu nại)
+  const [complaintOpen, setComplaintOpen] = useState(false);
+  const [complaintType, setComplaintType] = useState('other');
+  const [complaintSubject, setComplaintSubject] = useState('');
+  const [complaintContent, setComplaintContent] = useState('');
+  const [complaintLoading, setComplaintLoading] = useState(false);
+  const [existingComplaint, setExistingComplaint] = useState<{
+    type?: string; subject?: string; content?: string;
+    status?: string; admin_reply?: string | null; created_at?: string;
+  } | null>(null);
 
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -294,6 +329,24 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+  // ── Retry VNPAY Payment ────────────────────────────────────
+  const handleRetryVnpay = async () => {
+    if (!order) return;
+    setRetryVnpayLoading(true);
+    try {
+      const res = await axiosInstance.get(`/client/orders/${order.id}/retry-vnpay`);
+      if (res.data?.payment_url) {
+        showToast('Đang chuyển hướng đến cổng thanh toán...', 'info');
+        setTimeout(() => { window.location.href = res.data.payment_url; }, 800);
+      }
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showToast(e?.response?.data?.message ?? 'Không thể tạo lại link thanh toán', 'error');
+    } finally {
+      setRetryVnpayLoading(false);
+    }
+  };
+
   // ── Return Request ─────────────────────────────────────────
   const handleReturnRequest = async () => {
     if (!order) return;
@@ -358,6 +411,34 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+  // ── Submit Complaint ──────────────────────────────────────
+  const handleSubmitComplaint = async () => {
+    if (!order) return;
+    if (!complaintSubject.trim()) { showToast('Vui lòng nhập tiêu đề khiếu nại.', 'error'); return; }
+    if (!complaintContent.trim()) { showToast('Vui lòng nhập nội dung khiếu nại.', 'error'); return; }
+    setComplaintLoading(true);
+    try {
+      await axiosInstance.post(`/client/orders/${order.id}/complaint`, {
+        type: complaintType,
+        subject: complaintSubject,
+        content: complaintContent,
+      });
+      showToast('Đã gửi khiếu nại thành công. Chúng tôi sẽ phản hồi sớm nhất!', 'success');
+      setComplaintOpen(false);
+      setComplaintSubject('');
+      setComplaintContent('');
+      setComplaintType('other');
+      // Reload complaint
+      const res = await axiosInstance.get(`/client/orders/${order.id}/complaint`);
+      setExistingComplaint(res.data?.data ?? null);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showToast(e?.response?.data?.message ?? 'Không thể gửi khiếu nại.', 'error');
+    } finally {
+      setComplaintLoading(false);
+    }
+  };
+
   // ── Loading ─────────────────────────────────────────────────
   if (loading) return (
     <>
@@ -400,8 +481,31 @@ const OrderDetailPage: React.FC = () => {
 
   const canCancel = order.status === 'pending';
   const canConfirmReceived = order.status === 'delivered';
-  const canRequestReturn = (['delivered', 'completed'].includes(order.status)) &&
+
+  // ── Logic hoàn trả và deadline ───────────────────────────────────
+  const daysLeft    = returnDaysLeft(order);
+  const returnExpired = daysLeft <= 0;            // hết hạn 7 ngày
+
+  // Nếu delivered: countdown từ delivered_at (3 ngày tự động hoàn thành)
+  const daysUntilAutoComplete = order.status === 'delivered'
+    ? Math.max(0, AUTO_COMPLETE_DAYS - daysSince(order.delivered_at))
+    : null;
+
+  const canRequestReturn =
+    ['delivered', 'completed'].includes(order.status) &&
+    !returnExpired &&                              // Chưa hết 7 ngày
     (!order.product_return || order.product_return.status === 'rejected');
+
+  // Số ngày còn lại để hiển thị (chỉ show khi đang trong cửa sổ)
+  const showReturnCountdown =
+    ['delivered', 'completed'].includes(order.status) &&
+    !returnExpired &&
+    daysLeft <= RETURN_WINDOW_DAYS;
+
+  // Cho phép thanh toán lại khi: VNPAY + chưa thanh toán + đang pending
+  const canRetryVnpay = order.payment_method === 'vnpay' &&
+    order.payment_status === 'unpaid' &&
+    order.status === 'pending';
 
   return (
     <>
@@ -462,7 +566,19 @@ const OrderDetailPage: React.FC = () => {
                 <i className="fas fa-box-open od-cta-icon" />
                 <div>
                   <div className="od-cta-title">Bạn đã nhận được hàng chưa?</div>
-                  <div className="od-cta-sub">Đơn vị vận chuyển báo đã giao hàng thành công. Nhấn xác nhận để hoàn tất giao dịch.</div>
+                  <div className="od-cta-sub">
+                    Đơn vị vận chuyển báo đã giao hàng thành công. Nhấn xác nhận để hoàn tất giao dịch.
+                    {daysUntilAutoComplete !== null && daysUntilAutoComplete > 0 && (
+                      <span style={{ color: '#b45309', marginLeft: 6 }}>
+                        (Tự động hoàn thành sau <strong>{daysUntilAutoComplete}</strong> ngày)
+                      </span>
+                    )}
+                    {daysUntilAutoComplete === 0 && (
+                      <span style={{ color: '#b91c1c', marginLeft: 6 }}>
+                        (Sắp được tự động hoàn thành hôm nay)
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button className="od-btn-confirm-received" onClick={() => setConfirmOpen(true)}>
@@ -742,6 +858,31 @@ const OrderDetailPage: React.FC = () => {
 
               {/* Actions */}
               <div className="od-card">
+                {/* Nút Thanh toán lại cho VNPAY lỗi */}
+                {canRetryVnpay && (
+                  <button
+                    className="od-btn-full"
+                    style={{
+                      background: retryVnpayLoading
+                        ? '#bae6fd'
+                        : 'linear-gradient(135deg, #0369a1, #0284c7)',
+                      border: 'none', color: '#fff',
+                      borderRadius: 10, padding: '10px 16px',
+                      fontWeight: 700, fontSize: 14,
+                      cursor: retryVnpayLoading ? 'not-allowed' : 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      marginBottom: 8, transition: 'all .2s',
+                    }}
+                    onClick={handleRetryVnpay}
+                    disabled={retryVnpayLoading}
+                  >
+                    {retryVnpayLoading
+                      ? <><span className="od-spin me-2" />Đang tạo link...</>
+                      : <><i className="fas fa-credit-card me-2" />Thanh toán lại (VNPAY)</>
+                    }
+                  </button>
+                )}
+
                 {canConfirmReceived && (
                   <button className="od-btn-confirm-received od-btn-full" onClick={() => setConfirmOpen(true)}>
                     <i className="fas fa-check-double me-2" />Đã nhận được hàng
@@ -753,22 +894,98 @@ const OrderDetailPage: React.FC = () => {
                   </button>
                 )}
                 {canRequestReturn && (
-                  <button
-                    className="od-btn-full"
-                    style={{ background: '#fff7ed', border: '1.5px solid #b45309', color: '#b45309' }}
-                    onClick={() => {
-                      setReturnOpen(true);
-                      setReturnReason('');
-                    }}
-                  >
-                    <i className="fas fa-undo me-2" />
-                    {order.status === 'delivered' ? 'Không nhận hàng' : 'Trả hàng'}
-                  </button>
+                  <>
+                    {/* Countdown cửa sổ hoàn trả */}
+                    {showReturnCountdown && (
+                      <div style={{
+                        background: daysLeft <= 2 ? '#fef2f2' : '#fff7ed',
+                        border: `1.5px solid ${daysLeft <= 2 ? '#fecaca' : '#fed7aa'}`,
+                        borderRadius: 10, padding: '8px 12px',
+                        fontSize: 12, color: daysLeft <= 2 ? '#b91c1c' : '#b45309',
+                        marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
+                      }}>
+                        <i className={`fas ${daysLeft <= 2 ? 'fa-exclamation-triangle' : 'fa-clock'}`} />
+                        {daysLeft > 0
+                          ? <>Còn <strong>{daysLeft}</strong> ngày để yêu cầu trả hàng</>
+                          : <>Hôm nay là ngày cuối để yêu cầu trả hàng!</>}
+                      </div>
+                    )}
+                    <button
+                      className="od-btn-full"
+                      style={{ background: '#fff7ed', border: '1.5px solid #b45309', color: '#b45309' }}
+                      onClick={() => { setReturnOpen(true); setReturnReason(''); }}
+                    >
+                      <i className="fas fa-undo me-2" />
+                      {order.status === 'delivered' ? 'Không nhận hàng' : 'Trả hàng'}
+                    </button>
+                  </>
+                )}
+
+                {/* Hết hạn hoàn trả */}
+                {returnExpired && ['delivered', 'completed'].includes(order.status) &&
+                  !order.product_return && (
+                  <div style={{
+                    background: '#f8fafc', border: '1.5px solid #e2e8f0',
+                    borderRadius: 10, padding: '8px 12px',
+                    fontSize: 12, color: '#64748b',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}>
+                    <i className="fas fa-lock" />
+                    Đã qua {RETURN_WINDOW_DAYS} ngày — không thể yêu cầu hoàn trả
+                  </div>
                 )}
                 {['confirmed', 'processing', 'shipping'].includes(order.status) && (
                   <div className="od-lock-hint">
                     <i className="fas fa-lock me-2" />Đơn hàng đang xử lý, không thể hủy
                   </div>
+                )}
+                {/* Nút Khiếu nại */}
+                {order.status !== 'pending' && (
+                  <>
+                    {existingComplaint ? (
+                      <div style={{
+                        background: '#f0f9ff', border: '1.5px solid #bae6fd',
+                        borderRadius: 10, padding: '10px 14px',
+                        fontSize: 13, marginBottom: 8,
+                      }}>
+                        <div style={{ fontWeight: 700, color: '#0369a1', marginBottom: 4 }}>
+                          <i className="fas fa-headset me-2" />
+                          Khiếu nại đã gửi
+                          <span style={{
+                            marginLeft: 8, fontSize: 11, padding: '2px 8px', borderRadius: 6,
+                            background: existingComplaint.status === 'pending' ? '#fffbeb' :
+                              existingComplaint.status === 'resolved' ? '#f0fdf4' : '#fef2f2',
+                            color: existingComplaint.status === 'pending' ? '#b45309' :
+                              existingComplaint.status === 'resolved' ? '#15803d' : '#b91c1c',
+                          }}>
+                            {existingComplaint.status === 'pending' ? 'Chờ xử lý' :
+                              existingComplaint.status === 'processing' ? 'Đang xử lý' :
+                              existingComplaint.status === 'resolved' ? 'Đã giải quyết' : 'Từ chối'}
+                          </span>
+                        </div>
+                        <div style={{ color: '#334155' }}>{existingComplaint.subject}</div>
+                        {existingComplaint.admin_reply && (
+                          <div style={{ marginTop: 6, color: '#15803d', fontSize: 12 }}>
+                            <i className="fas fa-reply me-1" />Phản hồi: {existingComplaint.admin_reply}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        className="od-btn-full"
+                        style={{
+                          background: '#f0f9ff', border: '1.5px solid #0369a1',
+                          color: '#0369a1', borderRadius: 10, padding: '10px 16px',
+                          fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                          marginBottom: 8, transition: 'all .2s',
+                        }}
+                        onClick={() => setComplaintOpen(true)}
+                      >
+                        <i className="fas fa-headset" />Khiếu nại / Hỗ trợ
+                      </button>
+                    )}
+                  </>
                 )}
                 <Link to="/shop" style={{ textDecoration: 'none' }}>
                   <button className="od-btn-shop od-btn-full">
@@ -780,6 +997,75 @@ const OrderDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Complaint Modal ── */}
+      {complaintOpen && (
+        <div className="od-overlay" onClick={e => { if (e.target === e.currentTarget) setComplaintOpen(false); }}>
+          <div className="od-modal">
+            <div className="od-modal-hd">
+              <div>
+                <div className="od-modal-title">
+                  <i className="fas fa-headset me-2" style={{ color: '#0369a1' }} />Khiếu nại / Hỗ trợ
+                </div>
+                <div className="od-modal-sub">Mô tả vấn đề của đơn <strong>#{order.order_code}</strong></div>
+              </div>
+              <button className="od-modal-x" onClick={() => setComplaintOpen(false)}><i className="fas fa-times" /></button>
+            </div>
+            <div className="od-modal-bd">
+              <label className="od-modal-label">Loại khiếu nại</label>
+              <select
+                className="od-textarea"
+                style={{ minHeight: 40, padding: '8px 12px' }}
+                value={complaintType}
+                onChange={e => setComplaintType(e.target.value)}
+              >
+                <option value="wrong_item">Đặt sai sản phẩm / sai biến thể</option>
+                <option value="damaged">Sản phẩm hư hỏng</option>
+                <option value="late_delivery">Giao hàng chậm</option>
+                <option value="payment_issue">Vấn đề thanh toán</option>
+                <option value="other">Khác</option>
+              </select>
+
+              <label className="od-modal-label" style={{ marginTop: 12 }}>Tiêu đề</label>
+              <input
+                className="od-textarea"
+                style={{ minHeight: 40 }}
+                placeholder="Tóm tắt vấn đề của bạn..."
+                value={complaintSubject}
+                onChange={e => setComplaintSubject(e.target.value)}
+                maxLength={255}
+              />
+
+              <label className="od-modal-label" style={{ marginTop: 12 }}>Nội dung chi tiết</label>
+              <textarea
+                className="od-textarea"
+                rows={5}
+                placeholder="Mô tả chi tiết vấn đề để chúng tôi có thể hỗ trợ bạn tốt hơn..."
+                value={complaintContent}
+                onChange={e => setComplaintContent(e.target.value)}
+                maxLength={2000}
+              />
+              <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, textAlign: 'right' }}>
+                {complaintContent.length}/2000
+              </div>
+            </div>
+            <div className="od-modal-ft">
+              <button className="od-modal-btn-no" onClick={() => setComplaintOpen(false)} disabled={complaintLoading}>Hủy</button>
+              <button
+                className="od-modal-btn-yes"
+                style={{ background: '#0369a1', borderColor: '#0369a1' }}
+                onClick={handleSubmitComplaint}
+                disabled={complaintLoading}
+              >
+                {complaintLoading
+                  ? <><span className="od-spin me-2" />Đang gửi...</>
+                  : <><i className="fas fa-paper-plane me-2" />Gửi khiếu nại</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Cancel Modal ── */}
       {cancelOpen && (
