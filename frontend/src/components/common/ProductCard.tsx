@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCompare } from '../../context/CompareContext';
+import { useWishlist } from '../../context/WishlistContext';
 import { toast } from 'react-toastify';
 
 const formatPrice = (value: number) =>
@@ -21,11 +22,15 @@ interface ProductCardProps {
     };
     index?: number;
     onAddToCart?: (product: any) => void;
+    actionNode?: React.ReactNode;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCart }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCart, actionNode }) => {
     const { addToCompare, removeFromCompare, isInCompare, compareList } = useCompare();
+    const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+    
     const inCompare = isInCompare(product.id);
+    const inWishlist = isInWishlist(product.id);
     const isFull = compareList.length >= 4 && !inCompare;
     const delayTime = (index % 4) * 0.1 + 0.1;
 
@@ -87,6 +92,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
             <div className="pc-card wow fadeInUp" data-wow-delay={`${delayTime}s`}>
                 {/* ── Image area ── */}
                 <div className="pc-img-wrap position-relative">
+                    {actionNode && (
+                        <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 10 }}>
+                            {actionNode}
+                        </div>
+                    )}
                     <Link to={`/product/${product.id}`} className="d-block h-100 w-100">
                         <img
                             src={product.image || undefined}
@@ -96,11 +106,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
                     </Link>
 
                     {/* Hover overlay với nút xem nhanh */}
-                    <Link to={`/product/${product.id}`} className="pc-overlay">
-                        <button className="pc-eye-btn" title="Xem chi tiết">
-                            <i className="fa fa-eye" />
-                        </button>
-                    </Link>
+                    <div className="pc-overlay" style={{ gap: '10px', pointerEvents: 'none' }}>
+                        <div style={{ pointerEvents: 'auto', display: 'flex', gap: '10px' }}>
+                            <button 
+                                className="pc-eye-btn" 
+                                title={inWishlist ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"} 
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (inWishlist) removeFromWishlist(product.id);
+                                    else addToWishlist(product.id);
+                                }} 
+                                style={{ color: inWishlist ? '#dc3545' : 'var(--bs-primary)' }}
+                            >
+                                <i className={inWishlist ? "fas fa-heart" : "far fa-heart"} />
+                            </button>
+                            <Link to={`/product/${product.id}`} className="pc-eye-btn text-decoration-none" title="Xem chi tiết">
+                                <i className="fa fa-eye" />
+                            </Link>
+                        </div>
+                    </div>
 
                     {/* Badges */}
                     {product.isSale && (

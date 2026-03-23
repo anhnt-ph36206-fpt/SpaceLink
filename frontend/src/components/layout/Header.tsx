@@ -2,14 +2,10 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { useWishlist } from '../../context/WishlistContext';
 
 const formatVND = (v: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
-
-interface Category {
-    id: number;
-    name: string;
-}
 
 interface ProductSuggestion {
     id: string;
@@ -22,7 +18,7 @@ interface ProductSuggestion {
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
     const { totalItems } = useCart();
-    const [categories, setCategories] = useState<Category[]>([]);
+    const { totalItems: totalWishlistItems } = useWishlist();
 
 
     // --- STATE CHO TÌM KIẾM ---
@@ -37,16 +33,12 @@ const Header: React.FC = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [catRes, prodRes, imgRes] = await Promise.all([
-                    fetch("http://localhost:3000/categories"),
+                const [prodRes, imgRes] = await Promise.all([
                     fetch("http://localhost:3000/products"),
                     fetch("http://localhost:3000/product_images")
                 ]);
-                const cats = await catRes.json();
                 const prods = await prodRes.json();
                 const imgs = await imgRes.json();
-
-                setCategories(cats.filter((c: any) => c.is_active));
 
                 const productData = prods.map((p: any) => {
                     const thumb = imgs.find((i: any) => i.product_id === p.id && i.is_primary);
@@ -277,6 +269,18 @@ const Header: React.FC = () => {
 
                             <Link to="/login" className="me-4 text-muted d-block d-lg-none">
                                 <i className="fas fa-user fa-2x"></i>
+                            </Link>
+
+                            <Link to="/wishlist" className="d-flex align-items-center text-muted text-decoration-none me-4">
+                                <div className="position-relative">
+                                    <i className="fas fa-heart fa-2x text-primary"></i>
+                                    <span
+                                        className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark"
+                                        style={{ fontSize: '10px', border: '2px solid #fff' }}
+                                    >
+                                        {totalWishlistItems > 0 ? (totalWishlistItems > 99 ? '99+' : totalWishlistItems) : ''}
+                                    </span>
+                                </div>
                             </Link>
 
                             <Link to="/cart" className="d-flex align-items-center text-muted text-decoration-none">

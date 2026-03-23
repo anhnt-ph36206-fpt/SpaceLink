@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { axiosInstance } from "../api/axios";
 import { useCart } from "../context/CartContext";
 import { useCompare } from "../context/CompareContext";
+import { useWishlist } from "../context/WishlistContext";
 import { useAuth } from "../context/AuthContext";
 import ProductCard from "../components/common/ProductCard";
 import { toast } from "react-toastify";
@@ -88,6 +89,7 @@ const ProductDetailPage: React.FC = () => {
     const navigate = useNavigate();
     const { addToCart } = useCart();
     const { addToCompare, removeFromCompare, isInCompare, compareList } = useCompare();
+    const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
@@ -685,54 +687,83 @@ const ProductDetailPage: React.FC = () => {
                                 </button>
                             </div>
 
-                            {/* Compare button */}
-                            {(() => {
-                                const pid = String(product.id);
-                                const inCompare = isInCompare(pid);
-                                const isFull = compareList.length >= 4 && !inCompare;
-                                const handleCompareToggle = () => {
-                                    if (inCompare) {
-                                        removeFromCompare(pid);
-                                        toast.info(`Đã xóa "${product.name}" khỏi so sánh`);
-                                    } else {
-                                        const primaryImg = product.images?.find(i => i.is_primary) || product.images?.[0];
-                                        const success = addToCompare({
-                                            id: pid,
-                                            name: product.name,
-                                            image: varImgUrl(selectedVariant) || imgUrl(primaryImg) || '',
-                                            price: displayPrice,
-                                            oldPrice: discountPct > 0 ? originalPrice : undefined,
-                                            category: product.category?.name,
-                                            rating: undefined,
-                                        });
-                                        if (!success) {
-                                            toast.warning('Chỉ có thể so sánh tối đa 4 sản phẩm!');
+                            {/* Compare and Wishlist buttons */}
+                            <div className="d-flex gap-2 w-100 mt-3 flex-column flex-sm-row">
+                                {(() => {
+                                    const pid = String(product.id);
+                                    const inCompare = isInCompare(pid);
+                                    const isFull = compareList.length >= 4 && !inCompare;
+                                    const handleCompareToggle = () => {
+                                        if (inCompare) {
+                                            removeFromCompare(pid);
+                                            toast.info(`Đã xóa "${product.name}" khỏi so sánh`);
                                         } else {
-                                            toast.success(`Đã thêm "${product.name}" vào so sánh`);
+                                            const primaryImg = product.images?.find(i => i.is_primary) || product.images?.[0];
+                                            const success = addToCompare({
+                                                id: pid,
+                                                name: product.name,
+                                                image: varImgUrl(selectedVariant) || imgUrl(primaryImg) || '',
+                                                price: displayPrice,
+                                                oldPrice: discountPct > 0 ? originalPrice : undefined,
+                                                category: product.category?.name,
+                                                rating: undefined,
+                                            });
+                                            if (!success) {
+                                                toast.warning('Chỉ có thể so sánh tối đa 4 sản phẩm!');
+                                            } else {
+                                                toast.success(`Đã thêm "${product.name}" vào so sánh`);
+                                            }
                                         }
-                                    }
-                                };
-                                return (
-                                    <button
-                                        className={`btn w-100 mt-3 d-flex align-items-center justify-content-center transition-all`}
-                                        style={{ 
-                                            borderRadius: 12, 
-                                            fontWeight: 600, 
-                                            fontSize: 14,
-                                            height: 44,
-                                            border: inCompare ? '2px solid #ffc107' : '2px solid #edeff2',
-                                            backgroundColor: inCompare ? '#fffef2' : '#f8f9fa',
-                                            color: inCompare ? '#856404' : '#6c757d',
-                                        }}
-                                        onClick={handleCompareToggle}
-                                        disabled={isFull}
-                                        title={isFull ? 'Đã đủ 4 sản phẩm so sánh' : inCompare ? 'Xóa khỏi so sánh' : 'Thêm vào so sánh'}
-                                    >
-                                        <i className={`fas fa-${inCompare ? 'check' : 'balance-scale'} me-2`} style={{ color: inCompare ? '#ffc107' : 'inherit' }} />
-                                        {inCompare ? 'Đang so sánh — Xóa khỏi danh sách' : isFull ? 'Đủ 4 sản phẩm so sánh' : 'Thêm vào so sánh'}
-                                    </button>
-                                );
-                            })()}
+                                    };
+                                    return (
+                                        <button
+                                            className={`btn flex-grow-1 d-flex align-items-center justify-content-center transition-all`}
+                                            style={{ 
+                                                borderRadius: 12, 
+                                                fontWeight: 600, 
+                                                fontSize: 14,
+                                                height: 44,
+                                                border: inCompare ? '2px solid #ffc107' : '2px solid #edeff2',
+                                                backgroundColor: inCompare ? '#fffef2' : '#f8f9fa',
+                                                color: inCompare ? '#856404' : '#6c757d',
+                                            }}
+                                            onClick={handleCompareToggle}
+                                            disabled={isFull}
+                                            title={isFull ? 'Đã đủ 4 sản phẩm so sánh' : inCompare ? 'Xóa khỏi so sánh' : 'Thêm vào so sánh'}
+                                        >
+                                            <i className={`fas fa-${inCompare ? 'check' : 'balance-scale'} me-2`} style={{ color: inCompare ? '#ffc107' : 'inherit' }} />
+                                            {inCompare ? 'Đang so sánh' : isFull ? 'Đủ 4 sản phẩm' : 'So sánh'}
+                                        </button>
+                                    );
+                                })()}
+                                
+                                {(() => {
+                                    const pid = String(product.id);
+                                    const inWishlist = isInWishlist(pid);
+                                    return (
+                                        <button
+                                            className="btn flex-grow-1 d-flex align-items-center justify-content-center transition-all"
+                                            style={{
+                                                borderRadius: 12,
+                                                fontWeight: 600,
+                                                fontSize: 14,
+                                                height: 44,
+                                                border: inWishlist ? '2px solid #dc3545' : '2px solid #edeff2',
+                                                backgroundColor: inWishlist ? '#fff5f5' : '#f8f9fa',
+                                                color: inWishlist ? '#dc3545' : '#6c757d',
+                                            }}
+                                            onClick={() => {
+                                                if (inWishlist) removeFromWishlist(pid);
+                                                else addToWishlist(pid);
+                                            }}
+                                            title={inWishlist ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+                                        >
+                                            <i className={`${inWishlist ? 'fas' : 'far'} fa-heart me-2`} />
+                                            {inWishlist ? 'Đã Yêu thích' : 'Yêu thích'}
+                                        </button>
+                                    );
+                                })()}
+                            </div>
                         </div>
                     </div>
                 </div>
