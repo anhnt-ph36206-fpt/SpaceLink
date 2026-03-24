@@ -10,9 +10,8 @@ class AttributeGroupSeeder extends Seeder
     public function run(): void
     {
         $groups = [
-            ['name' => 'color',    'display_name' => 'Màu sắc',   'display_order' => 1],
-            ['name' => 'size',     'display_name' => 'Kích thước', 'display_order' => 2],
-            ['name' => 'material', 'display_name' => 'Chất liệu',  'display_order' => 3],
+            ['name' => 'color',   'display_name' => 'Màu sắc',   'display_order' => 1],
+            ['name' => 'version', 'display_name' => 'Phiên bản', 'display_order' => 2],
         ];
 
         foreach ($groups as $group) {

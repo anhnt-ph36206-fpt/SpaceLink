@@ -10,28 +10,29 @@ class AttributeSeeder extends Seeder
 {
     public function run(): void
     {
-        $colorGroup    = AttributeGroup::where('name', 'color')->first();
-        $sizeGroup     = AttributeGroup::where('name', 'size')->first();
-        $materialGroup = AttributeGroup::where('name', 'material')->first();
+        $colorGroup   = AttributeGroup::where('name', 'color')->first();
+        $versionGroup = AttributeGroup::where('name', 'version')->first();
 
-        if (!$colorGroup || !$sizeGroup) {
+        if (!$colorGroup || !$versionGroup) {
             $this->command->warn('Cần chạy AttributeGroupSeeder trước.');
             return;
         }
 
-        // --- Màu sắc ---
+        // --- Màu sắc (dành cho đồ công nghệ) ---
         $colors = [
-            ['value' => 'Đen',        'color_code' => '#000000'],
-            ['value' => 'Trắng',      'color_code' => '#FFFFFF'],
-            ['value' => 'Đỏ',         'color_code' => '#FF0000'],
-            ['value' => 'Xanh dương', 'color_code' => '#1E90FF'],
-            ['value' => 'Xanh lá',    'color_code' => '#28a745'],
-            ['value' => 'Vàng',       'color_code' => '#FFC107'],
-            ['value' => 'Hồng',       'color_code' => '#FF69B4'],
-            ['value' => 'Xám',        'color_code' => '#6C757D'],
-            ['value' => 'Nâu',        'color_code' => '#8B4513'],
-            ['value' => 'Cam',        'color_code' => '#FF6B35'],
+            ['value' => 'Titan Đen',    'color_code' => '#2b2d30'],
+            ['value' => 'Titan Trắng',  'color_code' => '#f2f1ed'],
+            ['value' => 'Titan Tự nhiên', 'color_code' => '#b5b3b0'],
+            ['value' => 'Đen Classic',  'color_code' => '#000000'],
+            ['value' => 'Trắng Classic','color_code' => '#ffffff'],
+            ['value' => 'Xanh Sky Blue','color_code' => '#93b6cf'],
+            ['value' => 'Tím Cobalt',   'color_code' => '#7b7294'],
+            ['value' => 'Space Grey',   'color_code' => '#5e5e60'],
+            ['value' => 'Silver',       'color_code' => '#e0e0e0'],
+            ['value' => 'Starlight',    'color_code' => '#f8f4e6'],
+            ['value' => 'Midnight',     'color_code' => '#272d3b'],
         ];
+        
         foreach ($colors as $i => $c) {
             Attribute::firstOrCreate(
                 ['attribute_group_id' => $colorGroup->id, 'value' => $c['value']],
@@ -39,24 +40,25 @@ class AttributeSeeder extends Seeder
             );
         }
 
-        // --- Kích thước ---
-        $sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
-        foreach ($sizes as $i => $s) {
+        // --- Phiên bản (RAM + ROM) ---
+        $versions = [
+            '8GB | 128GB',
+            '8GB | 256GB',
+            '12GB | 256GB',
+            '12GB | 512GB',
+            '16GB | 512GB',
+            '16GB | 1TB',
+            '24GB | 1TB',
+            '36GB | 1TB',
+            '10CPU - 10GPU | 16GB - 512GB',
+            '10CPU - 10GPU | 24GB - 1TB',
+        ];
+        
+        foreach ($versions as $i => $v) {
             Attribute::firstOrCreate(
-                ['attribute_group_id' => $sizeGroup->id, 'value' => $s],
+                ['attribute_group_id' => $versionGroup->id, 'value' => $v],
                 ['display_order' => $i + 1]
             );
-        }
-
-        // --- Chất liệu (nếu group tồn tại) ---
-        if ($materialGroup) {
-            $materials = ['Cotton', 'Polyester', 'Linen', 'Denim', 'Wool', 'Silk'];
-            foreach ($materials as $i => $m) {
-                Attribute::firstOrCreate(
-                    ['attribute_group_id' => $materialGroup->id, 'value' => $m],
-                    ['display_order' => $i + 1]
-                );
-            }
         }
     }
 }
