@@ -79,8 +79,11 @@ Route::get('/news/{slug}', [ClientNewsController::class, 'show']);
 Route::post('/contacts', [ClientContactController::class, 'store']);
 
 // --- Search (Public) ---
-Route::get('/search', SearchController::class);
-Route::get('/search/autocomplete', [SearchController::class, 'autocomplete']);
+// throttle:60,1 = tối đa 60 request/phút/IP, chống spam/bot
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/search', SearchController::class);
+    Route::get('/search/autocomplete', [SearchController::class, 'autocomplete']);
+});
 
 // ========================================================================
 // 2. CLIENT ROUTES — /api/client/*
