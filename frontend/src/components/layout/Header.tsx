@@ -1,18 +1,20 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { axiosInstance } from '../../api/axios';
 
 const formatVND = (v: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
 interface ProductSuggestion {
-    id: string;
+    id: number;
     name: string;
-    image: string;
+    slug: string;
     price: number;
-    sale_price: number;
+    sale_price: number | null;
+    thumbnail_url: string | null;
 }
 
 const Header: React.FC = () => {
@@ -25,66 +27,55 @@ const Header: React.FC = () => {
     const [keyword, setKeyword] = useState("");
     const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [allProducts, setAllProducts] = useState<ProductSuggestion[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
     const navigate = useNavigate();
     const wrapperRef = useRef<HTMLDivElement>(null);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [prodRes, imgRes] = await Promise.all([
-                    fetch("http://localhost:3000/products"),
-                    fetch("http://localhost:3000/product_images")
-                ]);
-                const prods = await prodRes.json();
-                const imgs = await imgRes.json();
-
-                const productData = prods.map((p: any) => {
-                    const thumb = imgs.find((i: any) => i.product_id === p.id && i.is_primary);
-                    return {
-                        id: String(p.id),
-                        name: p.name,
-                        price: p.price,
-                        sale_price: p.sale_price,
-                        image: thumb ? thumb.image_path : ""
-                    };
-                });
-
-                setAllProducts(productData);
-            } catch (error) {
-                console.error("Lỗi:", error);
-            }
-        };
-
-        fetchData();
+    // --- Debounce call API autocomplete ---
+    const fetchSuggestions = useCallback(async (q: string) => {
+        if (q.trim().length < 1) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const res = await axiosInstance.get<{ data: ProductSuggestion[] }>('/search/autocomplete', {
+                params: { q: q.trim() },
+            });
+            const data = res.data.data ?? [];
+            setSuggestions(data);
+            setShowSuggestions(data.length > 0);
+        } catch {
+            setSuggestions([]);
+            setShowSuggestions(false);
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
     useEffect(() => {
-        if (keyword.trim().length > 1) {
-            const lowerKeyword = keyword.toLowerCase();
-            const filtered = allProducts
-                .filter(p => p.name.toLowerCase().includes(lowerKeyword))
-                .slice(0, 5);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            fetchSuggestions(keyword);
+        }, 300);
+        return () => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+        };
+    }, [keyword, fetchSuggestions]);
 
-            setSuggestions(filtered);
-            setShowSuggestions(true);
-        } else {
-            setSuggestions([]);
-            setShowSuggestions(false);
-        }
-    }, [keyword, allProducts]);
-
+    // --- Đóng dropdown khi click ra ngoài ---
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
                 setShowSuggestions(false);
             }
         }
-
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [wrapperRef]);
+    }, []);
 
     const handleSearch = () => {
         if (!keyword.trim()) return;
@@ -96,10 +87,10 @@ const Header: React.FC = () => {
         if (e.key === 'Enter') handleSearch();
     };
 
-    const handleSuggestionClick = (prodId: string) => {
+    const handleSuggestionClick = (id: number) => {
         setShowSuggestions(false);
         setKeyword("");
-        navigate(`/product/${prodId}`);
+        navigate(`/product/${id}`);
     };
 
     return (
@@ -208,7 +199,18 @@ const Header: React.FC = () => {
                                 </button>
                             </div>
 
-                            {showSuggestions && suggestions.length > 0 && (
+                            {/* Loading indicator */}
+                            {isLoading && keyword.trim().length >= 1 && (
+                                <div
+                                    className="position-absolute start-0 mt-1 bg-white shadow rounded-3 border text-center py-2 px-3"
+                                    style={{ zIndex: 101, top: '100%', marginLeft: '24px', width: 'calc(100% - 24px)', fontSize: '0.875rem', color: '#888' }}
+                                >
+                                    <i className="fas fa-spinner fa-spin me-2"></i>Đang tìm kiếm...
+                                </div>
+                            )}
+
+                            {/* Suggestions dropdown */}
+                            {!isLoading && showSuggestions && suggestions.length > 0 && (
                                 <div
                                     className="position-absolute start-0 mt-1 w-100 bg-white shadow-lg rounded-3 border overflow-hidden text-start"
                                     style={{ zIndex: 101, top: '100%', marginLeft: '24px', width: 'calc(100% - 24px)' }}
@@ -223,7 +225,7 @@ const Header: React.FC = () => {
                                                 onClick={() => handleSuggestionClick(prod.id)}
                                             >
                                                 <img
-                                                    src={prod.image || "https://via.placeholder.com/50"}
+                                                    src={prod.thumbnail_url || "https://via.placeholder.com/50"}
                                                     alt={prod.name}
                                                     className="rounded me-3"
                                                     style={{ width: '40px', height: '40px', objectFit: 'contain' }}
@@ -238,8 +240,8 @@ const Header: React.FC = () => {
                                                     </div>
 
                                                     <div className="small text-danger">
-                                                        {formatVND(prod.sale_price || prod.price)}
-                                                        {prod.price > prod.sale_price && (
+                                                        {formatVND(prod.sale_price ?? prod.price)}
+                                                        {prod.sale_price && prod.price > prod.sale_price && (
                                                             <del className="text-muted ms-2">
                                                                 {formatVND(prod.price)}
                                                             </del>
@@ -254,7 +256,7 @@ const Header: React.FC = () => {
                                             style={{ cursor: 'pointer' }}
                                             onClick={handleSearch}
                                         >
-                                            Xem tất cả kết quả cho "{keyword}"
+                                            <i className="fas fa-search me-1"></i>Xem tất cả kết quả cho "{keyword}"
                                         </div>
 
                                     </div>
