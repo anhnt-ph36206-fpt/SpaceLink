@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\Client\OrderController as ClientOrderController;
 use App\Http\Controllers\Api\Client\ProductController;
 use App\Http\Controllers\Api\Client\ProfileController;
 use App\Http\Controllers\Api\Client\ReviewController as ClientReviewController;
+use App\Http\Controllers\Api\Client\SearchController;
 use App\Http\Controllers\Api\Client\ShippingController;
 use App\Http\Controllers\Api\Client\ComplaintController as ClientComplaintController;
 use App\Http\Controllers\Api\Client\WishlistController as ClientWishlistController;
@@ -76,6 +77,10 @@ Route::get('/news/{slug}', [ClientNewsController::class, 'show']);
 
 // --- Contacts (Public) ---
 Route::post('/contacts', [ClientContactController::class, 'store']);
+
+// --- Search (Public) ---
+Route::get('/search', SearchController::class);
+Route::get('/search/autocomplete', [SearchController::class, 'autocomplete']);
 
 // ========================================================================
 // 2. CLIENT ROUTES — /api/client/*

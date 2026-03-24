@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Scout\Searchable;
 
 class News extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, Searchable;
 
     protected $fillable = [
         'author_id',
@@ -53,4 +54,17 @@ class News extends Model
     }
 
     protected $appends = ['thumbnail_url'];
+
+    /**
+     * Scout: fields được tìm kiếm
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id'        => $this->id,
+            'title'     => $this->title,
+            'summary'   => $this->summary,
+            'is_active' => $this->is_active,
+        ];
+    }
 }
