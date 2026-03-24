@@ -54,6 +54,7 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: "Public - Contacts", description: "Public - Contacts")]
 #[OA\Tag(name: "Public - News", description: "Public - News")]
 #[OA\Tag(name: "Public - Reviews", description: "Public - Reviews")]
+#[OA\Tag(name: "Public - Search", description: "Public - Search (Scout database driver)")]
 interface SwaggerDocumentationController
 {
     // --- Api/Admin/CategoryControllerDocs.php ---
@@ -2274,5 +2275,187 @@ interface SwaggerDocumentationController
         ]
     )]
     public function api_client_shippingController_index();
+
+    // --- Api/Client/SearchControllerDocs ---
+    #[OA\Get(
+        path: '/api/search',
+        summary: 'Tìm kiếm sản phẩm và tin tức',
+        description: 'Tìm kiếm toàn văn bằng Laravel Scout (database driver). Hỗ trợ lọc theo loại, danh mục, thương hiệu, khoảng giá và sắp xếp.',
+        tags: ['Public - Search'],
+        parameters: [
+            new OA\Parameter(
+                name: 'q',
+                in: 'query',
+                description: 'Từ khóa tìm kiếm (bắt buộc)',
+                required: true,
+                schema: new OA\Schema(type: 'string', minLength: 1, maxLength: 255, example: 'iphone')
+            ),
+            new OA\Parameter(
+                name: 'type',
+                in: 'query',
+                description: 'Loại kết quả cần tìm: `all` (mặc định), `products`, `news`',
+                required: false,
+                schema: new OA\Schema(type: 'string', enum: ['all', 'products', 'news'], default: 'all')
+            ),
+            new OA\Parameter(
+                name: 'category_id',
+                in: 'query',
+                description: 'Lọc sản phẩm theo ID danh mục',
+                required: false,
+                schema: new OA\Schema(type: 'integer', example: 1)
+            ),
+            new OA\Parameter(
+                name: 'brand_id',
+                in: 'query',
+                description: 'Lọc sản phẩm theo ID thương hiệu',
+                required: false,
+                schema: new OA\Schema(type: 'integer', example: 2)
+            ),
+            new OA\Parameter(
+                name: 'min_price',
+                in: 'query',
+                description: 'Giá tối thiểu (VNĐ)',
+                required: false,
+                schema: new OA\Schema(type: 'number', example: 1000000)
+            ),
+            new OA\Parameter(
+                name: 'max_price',
+                in: 'query',
+                description: 'Giá tối đa (VNĐ)',
+                required: false,
+                schema: new OA\Schema(type: 'number', example: 30000000)
+            ),
+            new OA\Parameter(
+                name: 'sort_by',
+                in: 'query',
+                description: 'Sắp xếp kết quả: `latest` (mặc định), `price_asc`, `price_desc`, `relevance`',
+                required: false,
+                schema: new OA\Schema(type: 'string', enum: ['latest', 'price_asc', 'price_desc', 'relevance'])
+            ),
+            new OA\Parameter(
+                name: 'per_page',
+                in: 'query',
+                description: 'Số kết quả mỗi trang (mặc định 12, tối đa 50)',
+                required: false,
+                schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 50, default: 12)
+            ),
+            new OA\Parameter(
+                name: 'page',
+                in: 'query',
+                description: 'Số trang hiện tại',
+                required: false,
+                schema: new OA\Schema(type: 'integer', example: 1)
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Kết quả tìm kiếm',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'string', example: 'success'),
+                        new OA\Property(property: 'query',  type: 'string', example: 'iphone'),
+                        new OA\Property(property: 'type',   type: 'string', example: 'all'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(
+                                    property: 'products',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'data',         type: 'array', items: new OA\Items(
+                                            properties: [
+                                                new OA\Property(property: 'id',            type: 'integer', example: 1),
+                                                new OA\Property(property: 'name',          type: 'string',  example: 'iPhone 15 Pro'),
+                                                new OA\Property(property: 'slug',          type: 'string',  example: 'iphone-15-pro'),
+                                                new OA\Property(property: 'sku',           type: 'string',  example: 'IP15PRO'),
+                                                new OA\Property(property: 'price',         type: 'number',  example: 29990000),
+                                                new OA\Property(property: 'sale_price',    type: 'number',  nullable: true, example: 27990000),
+                                                new OA\Property(property: 'thumbnail_url', type: 'string',  nullable: true, example: 'http://localhost:8000/storage/products/iphone.jpg'),
+                                                new OA\Property(property: 'category',      type: 'object',  nullable: true),
+                                                new OA\Property(property: 'brand',         type: 'object',  nullable: true),
+                                            ]
+                                        )),
+                                        new OA\Property(property: 'total',        type: 'integer', example: 5),
+                                        new OA\Property(property: 'per_page',     type: 'integer', example: 12),
+                                        new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                                        new OA\Property(property: 'last_page',    type: 'integer', example: 1),
+                                    ]
+                                ),
+                                new OA\Property(
+                                    property: 'news',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'data',         type: 'array', items: new OA\Items(type: 'object')),
+                                        new OA\Property(property: 'total',        type: 'integer', example: 2),
+                                        new OA\Property(property: 'per_page',     type: 'integer', example: 12),
+                                        new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                                        new OA\Property(property: 'last_page',    type: 'integer', example: 1),
+                                    ]
+                                ),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Thiếu hoặc sai param `q`',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status',  type: 'string', example: 'error'),
+                        new OA\Property(property: 'message', type: 'string', example: 'Dữ liệu không hợp lệ.'),
+                        new OA\Property(property: 'errors',  type: 'object'),
+                    ]
+                )
+            ),
+        ]
+    )]
+    public function api_public_searchController_search();
+
+    #[OA\Get(
+        path: '/api/search/autocomplete',
+        summary: 'Gợi ý tìm kiếm (Autocomplete)',
+        description: 'Trả về tối đa 8 sản phẩm gợi ý theo từ khóa. Kết quả được cache 5 phút. Yêu cầu tối thiểu 2 ký tự.',
+        tags: ['Public - Search'],
+        parameters: [
+            new OA\Parameter(
+                name: 'q',
+                in: 'query',
+                description: 'Từ khóa gợi ý (tối thiểu 2 ký tự)',
+                required: true,
+                schema: new OA\Schema(type: 'string', minLength: 2, example: 'ip')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Danh sách gợi ý (mảng rỗng [] nếu q < 2 ký tự)',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'string', example: 'success'),
+                        new OA\Property(property: 'query',  type: 'string', example: 'ip'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'id',            type: 'integer', example: 1),
+                                    new OA\Property(property: 'name',          type: 'string',  example: 'iPhone 15 Pro'),
+                                    new OA\Property(property: 'slug',          type: 'string',  example: 'iphone-15-pro'),
+                                    new OA\Property(property: 'price',         type: 'number',  example: 29990000),
+                                    new OA\Property(property: 'sale_price',    type: 'number',  nullable: true, example: 27990000),
+                                    new OA\Property(property: 'thumbnail_url', type: 'string',  nullable: true),
+                                ]
+                            )
+                        ),
+                    ]
+                )
+            ),
+        ]
+
+    )]
+    public function api_public_searchController_autocomplete();
 
 }
