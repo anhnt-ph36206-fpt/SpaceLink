@@ -2280,7 +2280,7 @@ interface SwaggerDocumentationController
     #[OA\Get(
         path: '/api/search',
         summary: 'Tìm kiếm sản phẩm và tin tức',
-        description: 'Tìm kiếm toàn văn bằng Laravel Scout (database driver). Hỗ trợ lọc theo loại, danh mục, thương hiệu, khoảng giá và sắp xếp.',
+        description: 'Tìm kiếm toàn văn bằng Laravel Scout (database driver). Yêu cầu tối thiểu **2 ký tự**. Giới hạn **60 request/phút/IP** (HTTP 429 nếu vượt).',
         tags: ['Public - Search'],
         parameters: [
             new OA\Parameter(
@@ -2288,7 +2288,7 @@ interface SwaggerDocumentationController
                 in: 'query',
                 description: 'Từ khóa tìm kiếm (bắt buộc)',
                 required: true,
-                schema: new OA\Schema(type: 'string', minLength: 1, maxLength: 255, example: 'iphone')
+                schema: new OA\Schema(type: 'string', minLength: 2, maxLength: 255, example: 'iphone')
             ),
             new OA\Parameter(
                 name: 'type',
@@ -2401,7 +2401,7 @@ interface SwaggerDocumentationController
             ),
             new OA\Response(
                 response: 422,
-                description: 'Thiếu hoặc sai param `q`',
+                description: 'Thiếu hoặc sai param `q` (ví dụ: ngắn hơn 2 ký tự)',
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'status',  type: 'string', example: 'error'),
@@ -2410,6 +2410,10 @@ interface SwaggerDocumentationController
                     ]
                 )
             ),
+            new OA\Response(
+                response: 429,
+                description: 'Quá nhiều request — Rate limit 60 req/phút/IP'
+            ),
         ]
     )]
     public function api_public_searchController_search();
@@ -2417,7 +2421,7 @@ interface SwaggerDocumentationController
     #[OA\Get(
         path: '/api/search/autocomplete',
         summary: 'Gợi ý tìm kiếm (Autocomplete)',
-        description: 'Trả về tối đa 8 sản phẩm gợi ý theo từ khóa. Kết quả được cache 5 phút. Yêu cầu tối thiểu 2 ký tự.',
+        description: 'Trả về tối đa 8 sản phẩm gợi ý theo từ khóa. Kết quả được cache 5 phút. Yêu cầu tối thiểu **2 ký tự**. Giới hạn **60 request/phút/IP**.',
         tags: ['Public - Search'],
         parameters: [
             new OA\Parameter(
@@ -2452,6 +2456,10 @@ interface SwaggerDocumentationController
                         ),
                     ]
                 )
+            ),
+            new OA\Response(
+                response: 429,
+                description: 'Quá nhiều request — Rate limit 60 req/phút/IP'
             ),
         ]
 
