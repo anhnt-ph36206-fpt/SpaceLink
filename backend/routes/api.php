@@ -65,6 +65,7 @@ Route::get('/categories', [ClientCategoryController::class, 'index']);
 Route::get('/categories/{slug}', [ClientCategoryController::class, 'show']);
 
 // --- Products ---
+Route::get('/products/compare', [ProductController::class, 'compare']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/compare', [ProductController::class, 'compare']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
@@ -189,10 +190,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     // --- Admin Attribute Groups ---
     Route::apiResource('attribute-groups', AdminAttributeGroupController::class);
 
+    // --- Admin Specification Groups ---
+    Route::apiResource('specification-groups', \App\Http\Controllers\Api\Admin\SpecificationGroupController::class);
+
     // --- Admin Products ---
     Route::post('products/bulk-action', [\App\Http\Controllers\Api\Admin\ProductController::class, 'bulkAction']);
     Route::patch('products/{product}/toggle-active', [\App\Http\Controllers\Api\Admin\ProductController::class, 'toggleActive']);
     Route::post('products/{product}/restore', [\App\Http\Controllers\Api\Admin\ProductController::class, 'restore']);
+    Route::get('products/{product}/specifications', [\App\Http\Controllers\Api\Admin\ProductController::class, 'getSpecifications']);
+    Route::put('products/{product}/specifications', [\App\Http\Controllers\Api\Admin\ProductController::class, 'syncSpecifications']);
     Route::apiResource('products', \App\Http\Controllers\Api\Admin\ProductController::class);
 
     // --- Admin Product Variants (nested) ---

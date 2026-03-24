@@ -440,5 +440,44 @@ class ProductController extends Controller
                 return response()->json(['status' => false, 'message' => 'Hành động không hợp lệ.'], 422);
         }
     }
+
+    // ============================================
+    // QUẢN LÝ TÍNH NĂNG THÔNG SỐ KỸ THUẬT EAV
+    // ============================================
+
+    public function getSpecifications(Product $product)
+    {
+        return response()->json([
+            'status' => true,
+            'data' => $product->specifications()->with('group')->get()
+        ]);
+    }
+
+    public function syncSpecifications(Request $request, Product $product)
+    {
+        $request->validate([
+            'specifications' => 'array',
+            'specifications.*.id' => 'required|exists:specifications,id',
+            'specifications.*.value' => 'nullable|string'
+        ]);
+
+        $syncData = [];
+        if ($request->has('specifications')) {
+            foreach ($request->specifications as $spec) {
+                // Xoá khoảng trắng hoậc null value
+                if (!empty($spec['value'])) {
+                    $syncData[$spec['id']] = ['value' => $spec['value']];
+                }
+            }
+        }
+
+        $product->specifications()->sync($syncData);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Cập nhật thông số kỹ thuật thành công',
+            'data' => $product->specifications()->with('group')->get()
+        ]);
+    }
 }
 
