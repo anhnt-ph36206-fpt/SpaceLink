@@ -239,7 +239,8 @@ const CheckoutPage: React.FC = () => {
         if (!isBuyNow) refreshCart();
 
         if (orderData?.payment_url) {
-            // Lưu order_id để PaymentReturnPage có thể hủy đơn nếu user bấm Hủy trên VNPAY
+            // Lưu order_id để PaymentReturnPage biết đơn nào đang chờ thanh toán VNPAY
+            // checkout() API trả về data.order_id (khác với createVnpayPayment trả về data.id)
             if (orderData.order_id) {
                 sessionStorage.setItem('vnpay_pending_order_id', String(orderData.order_id));
             }

@@ -10,7 +10,7 @@ const HomePage: React.FC = () => {
     return (
         <>
             {/* Hero Carousel */}
-            <HeroSlider />
+            {/* <HeroSlider /> */}
 
             {/* Banner quảng cáo (dynamic từ API) */}
             <ProductBanner />

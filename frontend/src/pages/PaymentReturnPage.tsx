@@ -52,7 +52,6 @@ const PaymentReturnPage: React.FC = () => {
     };
 
     const didUpdatePayment = useRef(false);
-    const didCancelOrder = useRef(false);
 
     const formatPayDate = (raw: string) => {
         if (raw.length !== 14) return raw;
@@ -82,25 +81,9 @@ const PaymentReturnPage: React.FC = () => {
         })();
     }, [isSuccess, txnRef, searchParams]);
 
-    // Thanh toán THẤT BẠI / HỦY → tự động hủy đơn hàng và hoàn kho
-    useEffect(() => {
-        if (isSuccess) return;
-        if (didCancelOrder.current) return;
-        didCancelOrder.current = true;
-
-        const pendingOrderId = sessionStorage.getItem('vnpay_pending_order_id');
-        if (!pendingOrderId) return;
-
-        (async () => {
-            try {
-                await axiosInstance.post(`/client/orders/${pendingOrderId}/cancel-vnpay`);
-            } catch {
-                // Lỗi im lặng — đơn có thể đã được xử lý trước đó
-            } finally {
-                sessionStorage.removeItem('vnpay_pending_order_id');
-            }
-        })();
-    }, [isSuccess]);
+    // Thanh toán thất bại / hủy → KHÔNG gọi cancel-vnpay nữa
+    // Đơn hàng sẽ được giữ trong 15 phút, scheduler tự hủy nếu hết hạn
+    // Khách có thể vào trang chi tiết đơn để thanh toán lại, chuyển COD hoặc hủy thủ công
 
     // Đếm ngược tự chuyển trang chủ khi thanh toán thành công
     useEffect(() => {
