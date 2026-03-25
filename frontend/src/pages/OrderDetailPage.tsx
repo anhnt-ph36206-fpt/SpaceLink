@@ -66,6 +66,7 @@ interface ClientOrder {
   completed_at?: string;
   created_at: string;
   vnpay_expired_at?: string | null;
+  vnpay_expired_at?: string | null;
   items?: OrderItem[];
   status_history?: StatusHistory[];
   product_return?: {
@@ -246,6 +247,13 @@ const OrderDetailPage: React.FC = () => {
   // VNPAY countdown timer (giây còn lại)
   const [vnpaySecondsLeft, setVnpaySecondsLeft] = useState<number | null>(null);
 
+  // Switch to COD (từ VNPAY pending)
+  const [switchCodLoading, setSwitchCodLoading] = useState(false);
+  const [switchCodOpen, setSwitchCodOpen] = useState(false);
+
+  // VNPAY countdown timer (giây còn lại)
+  const [vnpaySecondsLeft, setVnpaySecondsLeft] = useState<number | null>(null);
+
   // ── Review States ─────────────────────────────────────────
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewItem, setReviewItem] = useState<OrderItem | null>(null);
@@ -310,6 +318,18 @@ const OrderDetailPage: React.FC = () => {
     return () => clearInterval(t);
   }, [order?.vnpay_expired_at]);
 
+  // ── VNPAY Countdown Timer ───────────────────────────────────
+  useEffect(() => {
+    if (!order?.vnpay_expired_at) { setVnpaySecondsLeft(null); return; }
+    const calc = () => {
+      const diff = Math.floor((new Date(order.vnpay_expired_at!).getTime() - Date.now()) / 1000);
+      setVnpaySecondsLeft(Math.max(0, diff));
+    };
+    calc();
+    const t = setInterval(calc, 1000);
+    return () => clearInterval(t);
+  }, [order?.vnpay_expired_at]);
+
   // ── Cancel ─────────────────────────────────────────────────
   const handleCancel = async () => {
     if (!order) return;
@@ -359,6 +379,7 @@ const OrderDetailPage: React.FC = () => {
       const res = await axiosInstance.get(`/client/orders/${order.id}/retry-vnpay`);
       if (res.data?.payment_url) {
         sessionStorage.setItem('vnpay_pending_order_id', String(order.id));
+        sessionStorage.setItem('vnpay_pending_order_id', String(order.id));
         showToast('Đang chuyển hướng đến cổng thanh toán...', 'info');
         setTimeout(() => { window.location.href = res.data.payment_url; }, 800);
       }
@@ -379,8 +400,6 @@ const OrderDetailPage: React.FC = () => {
       showToast('Đã chuyển sang thanh toán COD thành công!', 'success');
       setSwitchCodOpen(false);
       sessionStorage.removeItem('vnpay_pending_order_id');
-      // Làm mới giỏ hàng — backend đã xóa cart items khi đổi sang COD
-      await refreshCart();
       fetchOrder();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -558,6 +577,14 @@ const OrderDetailPage: React.FC = () => {
     return `${m}:${s}`;
   };
 
+  // Banner chờ thanh toán VNPAY: hiển thị khi có vnpay_expired_at và chưa thanh toán
+  const isVnpayPending = canRetryVnpay && !!order.vnpay_expired_at;
+  const fmtCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
   return (
     <>
       {CSS_INJECT}
@@ -609,6 +636,67 @@ const OrderDetailPage: React.FC = () => {
               </span>
             </div>
           </div>
+
+          {/* ── VNPAY Pending Payment Banner ── */}
+          {isVnpayPending && (
+            <div className="od-vnpay-pending-card">
+              <div className="od-vnpay-pending-header">
+                <i className="fas fa-clock me-2" />
+                Đơn hàng đang chờ thanh toán VNPAY
+              </div>
+              <div className="od-vnpay-pending-body">
+                <div className="od-vnpay-pending-desc">
+                  Đơn hàng sẽ tự động hủy khi hết thời gian. Vui lòng thanh toán hoặc chọn phương thức khác.
+                </div>
+                {vnpaySecondsLeft !== null && (
+                  <div className="od-vnpay-countdown">
+                    <i className="fas fa-hourglass-half me-1" />
+                    Còn lại: <strong className={vnpaySecondsLeft < 60 ? 'od-text-danger' : ''}>
+                      {fmtCountdown(vnpaySecondsLeft)}
+                    </strong>
+                  </div>
+                )}
+                <div className="od-vnpay-pending-actions">
+                  <button className="od-btn-vnpay-retry" disabled={retryVnpayLoading} onClick={handleRetryVnpay}>
+                    <i className="fas fa-rotate-right me-2" />
+                    {retryVnpayLoading ? 'Đang xử lý...' : 'Thanh toán lại VNPAY'}
+                  </button>
+                  <button className="od-btn-switch-cod" disabled={switchCodLoading} onClick={() => setSwitchCodOpen(true)}>
+                    <i className="fas fa-truck me-2" />
+                    {switchCodLoading ? 'Đang xử lý...' : 'Chuyển sang COD'}
+                  </button>
+                  <button className="od-btn-cancel-vnpay" onClick={() => setCancelOpen(true)}>
+                    <i className="fas fa-xmark me-2" />
+                    Hủy đơn hàng
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Dialog xác nhận chuyển COD ── */}
+          {switchCodOpen && (
+            <div className="od-modal-backdrop" onClick={() => setSwitchCodOpen(false)}>
+              <div className="od-modal" onClick={e => e.stopPropagation()}>
+                <div className="od-modal-title">
+                  <i className="fas fa-truck me-2" style={{ color: '#ea580c' }} />
+                  Xác nhận chuyển sang COD
+                </div>
+                <div className="od-modal-body">
+                  <p>Bạn muốn chuyển đơn <strong>#{order.order_code}</strong> sang <strong>COD (trả khi nhận hàng)</strong>?</p>
+                  <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+                    Giỏ hàng sẽ được dọn sạch. Đơn hàng tiếp tục xử lý bình thường.
+                  </p>
+                </div>
+                <div className="od-modal-footer">
+                  <button className="od-btn-cancel-modal" onClick={() => setSwitchCodOpen(false)}>Hủy bỏ</button>
+                  <button className="od-btn-confirm-modal" disabled={switchCodLoading} onClick={handleSwitchToCod}>
+                    {switchCodLoading ? 'Đang xử lý...' : 'Xác nhận chuyển COD'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── VNPAY Pending Payment Banner ── */}
           {isVnpayPending && (
@@ -1655,6 +1743,23 @@ const CSS = `
   .od-error-box { text-align: center; padding: 80px 0; }
   .od-error-icon { font-size: 56px; color: #dc3545; margin-bottom: 16px; display: block; }
   .od-error-msg { font-size: 16px; font-weight: 600; color: #2d3748; margin-bottom: 20px; }
+
+  /* ── VNPAY Pending Banner ── */
+  .od-vnpay-pending-card { border-radius: 14px; border: 2px solid #fde68a; overflow: hidden; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(251,191,36,.18); }
+  .od-vnpay-pending-header { background: linear-gradient(90deg, #f59e0b, #fbbf24); color: #fff; font-weight: 700; font-size: 1rem; padding: 14px 20px; display: flex; align-items: center; }
+  .od-vnpay-pending-body { background: #fffbeb; padding: 18px 20px; }
+  .od-vnpay-pending-desc { color: #78350f; font-size: 0.92rem; margin-bottom: 10px; }
+  .od-vnpay-countdown { font-size: 1.1rem; font-weight: 600; color: #b45309; background: #fef3c7; border-radius: 8px; padding: 8px 16px; display: inline-block; margin-bottom: 16px; }
+  .od-text-danger { color: #dc2626 !important; }
+  .od-vnpay-pending-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .od-btn-vnpay-retry { background: linear-gradient(135deg, #0369a1, #0284c7); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: box-shadow .2s; display: flex; align-items: center; }
+  .od-btn-vnpay-retry:not(:disabled):hover { box-shadow: 0 6px 18px rgba(3,105,161,.35); }
+  .od-btn-vnpay-retry:disabled { opacity: .65; cursor: not-allowed; }
+  .od-btn-switch-cod { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: box-shadow .2s; display: flex; align-items: center; }
+  .od-btn-switch-cod:not(:disabled):hover { box-shadow: 0 6px 18px rgba(21,128,61,.35); }
+  .od-btn-switch-cod:disabled { opacity: .65; cursor: not-allowed; }
+  .od-btn-cancel-vnpay { background: transparent; color: #b91c1c; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background .2s; display: flex; align-items: center; }
+  .od-btn-cancel-vnpay:hover { background: #fef2f2; }
 
   /* ── VNPAY Pending Banner ── */
   .od-vnpay-pending-card { border-radius: 14px; border: 2px solid #fde68a; overflow: hidden; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(251,191,36,.18); }
