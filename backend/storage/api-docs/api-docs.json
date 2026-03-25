@@ -4946,6 +4946,753 @@
                     }
                 ]
             }
+        },
+        "/api/search": {
+            "get": {
+                "tags": [
+                    "Public - Search"
+                ],
+                "summary": "Tìm kiếm sản phẩm và tin tức",
+                "description": "Tìm kiếm toàn văn bằng Laravel Scout (database driver). Yêu cầu tối thiểu **2 ký tự**. Giới hạn **60 request/phút/IP** (HTTP 429 nếu vượt).",
+                "operationId": "d972bb390fb8cbf5b5874e18c8938124",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Từ khóa tìm kiếm (bắt buộc)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "iphone",
+                            "maxLength": 255,
+                            "minLength": 2
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "Loại kết quả cần tìm: `all` (mặc định), `products`, `news`",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "all",
+                            "enum": [
+                                "all",
+                                "products",
+                                "news"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "description": "Lọc sản phẩm theo ID danh mục",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "brand_id",
+                        "in": "query",
+                        "description": "Lọc sản phẩm theo ID thương hiệu",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    },
+                    {
+                        "name": "min_price",
+                        "in": "query",
+                        "description": "Giá tối thiểu (VNĐ)",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "example": 1000000
+                        }
+                    },
+                    {
+                        "name": "max_price",
+                        "in": "query",
+                        "description": "Giá tối đa (VNĐ)",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "example": 30000000
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "description": "Sắp xếp kết quả: `latest` (mặc định), `price_asc`, `price_desc`, `relevance`",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "latest",
+                                "price_asc",
+                                "price_desc",
+                                "relevance"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Số kết quả mỗi trang (mặc định 12, tối đa 50)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 12,
+                            "maximum": 50,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Số trang hiện tại",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Kết quả tìm kiếm",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "query": {
+                                            "type": "string",
+                                            "example": "iphone"
+                                        },
+                                        "type": {
+                                            "type": "string",
+                                            "example": "all"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "products": {
+                                                    "properties": {
+                                                        "data": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "properties": {
+                                                                    "id": {
+                                                                        "type": "integer",
+                                                                        "example": 1
+                                                                    },
+                                                                    "name": {
+                                                                        "type": "string",
+                                                                        "example": "iPhone 15 Pro"
+                                                                    },
+                                                                    "slug": {
+                                                                        "type": "string",
+                                                                        "example": "iphone-15-pro"
+                                                                    },
+                                                                    "sku": {
+                                                                        "type": "string",
+                                                                        "example": "IP15PRO"
+                                                                    },
+                                                                    "price": {
+                                                                        "type": "number",
+                                                                        "example": 29990000
+                                                                    },
+                                                                    "sale_price": {
+                                                                        "type": "number",
+                                                                        "example": 27990000,
+                                                                        "nullable": true
+                                                                    },
+                                                                    "thumbnail_url": {
+                                                                        "type": "string",
+                                                                        "example": "http://localhost:8000/storage/products/iphone.jpg",
+                                                                        "nullable": true
+                                                                    },
+                                                                    "category": {
+                                                                        "type": "object",
+                                                                        "nullable": true
+                                                                    },
+                                                                    "brand": {
+                                                                        "type": "object",
+                                                                        "nullable": true
+                                                                    }
+                                                                },
+                                                                "type": "object"
+                                                            }
+                                                        },
+                                                        "total": {
+                                                            "type": "integer",
+                                                            "example": 5
+                                                        },
+                                                        "per_page": {
+                                                            "type": "integer",
+                                                            "example": 12
+                                                        },
+                                                        "current_page": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "last_page": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "news": {
+                                                    "properties": {
+                                                        "data": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "object"
+                                                            }
+                                                        },
+                                                        "total": {
+                                                            "type": "integer",
+                                                            "example": 2
+                                                        },
+                                                        "per_page": {
+                                                            "type": "integer",
+                                                            "example": 12
+                                                        },
+                                                        "current_page": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "last_page": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Thiếu hoặc sai param `q` (ví dụ: ngắn hơn 2 ký tự)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Dữ liệu không hợp lệ."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Quá nhiều request — Rate limit 60 req/phút/IP"
+                    }
+                }
+            }
+        },
+        "/api/search/autocomplete": {
+            "get": {
+                "tags": [
+                    "Public - Search"
+                ],
+                "summary": "Gợi ý tìm kiếm (Autocomplete)",
+                "description": "Trả về tối đa 8 sản phẩm gợi ý theo từ khóa. Kết quả được cache 5 phút. Yêu cầu tối thiểu **2 ký tự**. Giới hạn **60 request/phút/IP**.",
+                "operationId": "64b03c1ad334aa5f6a1ae32e84bb0986",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Từ khóa gợi ý (tối thiểu 2 ký tự)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "ip",
+                            "minLength": 2
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Danh sách gợi ý (mảng rỗng [] nếu q < 2 ký tự)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "query": {
+                                            "type": "string",
+                                            "example": "ip"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "iPhone 15 Pro"
+                                                    },
+                                                    "slug": {
+                                                        "type": "string",
+                                                        "example": "iphone-15-pro"
+                                                    },
+                                                    "price": {
+                                                        "type": "number",
+                                                        "example": 29990000
+                                                    },
+                                                    "sale_price": {
+                                                        "type": "number",
+                                                        "example": 27990000,
+                                                        "nullable": true
+                                                    },
+                                                    "thumbnail_url": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Quá nhiều request — Rate limit 60 req/phút/IP"
+                    }
+                }
+            }
+        },
+        "/api/products/{productId}/comments": {
+            "get": {
+                "tags": [
+                    "Client - Comments"
+                ],
+                "summary": "Lấy danh sách bình luận (Public)",
+                "description": "Lấy các bình luận đã được duyệt của một sản phẩm.",
+                "operationId": "2a26a24e647ad35a5e7bbec740c48d35",
+                "parameters": [
+                    {
+                        "name": "productId",
+                        "in": "path",
+                        "description": "ID sản phẩm",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Trang hiện tại",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Số bản ghi/trang",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "404": {
+                        "description": "Sản phẩm không tồn tại"
+                    }
+                }
+            }
+        },
+        "/api/client/comments": {
+            "post": {
+                "tags": [
+                    "Client - Comments"
+                ],
+                "summary": "Thêm bình luận mới (Auth)",
+                "description": "Tạo bình luận mới (chờ duyệt).",
+                "operationId": "7ebb92a7b24028a174e09a66f963abb1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "product_id",
+                                    "content"
+                                ],
+                                "properties": {
+                                    "product_id": {
+                                        "type": "integer"
+                                    },
+                                    "content": {
+                                        "type": "string"
+                                    },
+                                    "parent_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công chờ duyệt"
+                    },
+                    "401": {
+                        "description": "Chưa đăng nhập"
+                    },
+                    "422": {
+                        "description": "Lỗi validation"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/comments/{id}": {
+            "get": {
+                "tags": [
+                    "Client - Comments"
+                ],
+                "summary": "Chi tiết bình luận (Public)",
+                "operationId": "793c2ebb4d713dd7d8066d576b01d14d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                }
+            }
+        },
+        "/api/client/comments/{id}": {
+            "put": {
+                "tags": [
+                    "Client - Comments"
+                ],
+                "summary": "Cập nhật bình luận (Auth)",
+                "operationId": "2d255499dbc57691959468b33f303c12",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "content"
+                                ],
+                                "properties": {
+                                    "content": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    },
+                    "403": {
+                        "description": "Không có quyền"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Client - Comments"
+                ],
+                "summary": "Xóa bình luận cá nhân (Auth)",
+                "operationId": "4e5bb41197ceb83da23cda6da6329ad0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Đã xóa"
+                    },
+                    "403": {
+                        "description": "Không có quyền"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/comments": {
+            "get": {
+                "tags": [
+                    "Admin - Comments"
+                ],
+                "summary": "[Admin] Danh sách bình luận",
+                "operationId": "7b21d804642e8065679eca813a3e516a",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "approved",
+                                "rejected"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "product_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "keyword",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "403": {
+                        "description": "Không phải Admin"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/comments/{id}/approve": {
+            "patch": {
+                "tags": [
+                    "Admin - Comments"
+                ],
+                "summary": "[Admin] Duyệt bình luận",
+                "operationId": "b9a419e4b21005c5926a9f795b68c3e4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/comments/{id}/reject": {
+            "patch": {
+                "tags": [
+                    "Admin - Comments"
+                ],
+                "summary": "[Admin] Từ chối bình luận",
+                "operationId": "8687a71a7c6ec133b2f843a81bafa503",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/comments/{id}/toggle-hide": {
+            "patch": {
+                "tags": [
+                    "Admin - Comments"
+                ],
+                "summary": "[Admin] Ẩn/Hiện bình luận",
+                "operationId": "5ab9b766056b0dbf4b3cd46df29a063b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/comments/{id}": {
+            "delete": {
+                "tags": [
+                    "Admin - Comments"
+                ],
+                "summary": "[Admin] Xóa bình luận",
+                "operationId": "93fb625d04f2092a0a4678e020fba02e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Đã xóa"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -5082,6 +5829,18 @@
         {
             "name": "Public - Reviews",
             "description": "Public - Reviews"
+        },
+        {
+            "name": "Public - Search",
+            "description": "Public - Search (Scout database driver)"
+        },
+        {
+            "name": "Client - Comments",
+            "description": "Client - Comments"
+        },
+        {
+            "name": "Admin - Comments",
+            "description": "Admin - Comments"
         },
         {
             "name": "Admin - Attribute Groups",

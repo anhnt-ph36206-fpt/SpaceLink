@@ -55,6 +55,8 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: "Public - News", description: "Public - News")]
 #[OA\Tag(name: "Public - Reviews", description: "Public - Reviews")]
 #[OA\Tag(name: "Public - Search", description: "Public - Search (Scout database driver)")]
+#[OA\Tag(name: "Client - Comments", description: "Client - Comments")]
+#[OA\Tag(name: "Admin - Comments", description: "Admin - Comments")]
 interface SwaggerDocumentationController
 {
     // --- Api/Admin/CategoryControllerDocs.php ---
@@ -2466,4 +2468,180 @@ interface SwaggerDocumentationController
     )]
     public function api_public_searchController_autocomplete();
 
+    // --- Api/Client/CommentControllerDocs.php ---
+    #[OA\Get(
+        path: '/api/products/{productId}/comments',
+        summary: 'Lấy danh sách bình luận (Public)',
+        description: 'Lấy các bình luận đã được duyệt của một sản phẩm.',
+        tags: ['Client - Comments'],
+        parameters: [
+            new OA\Parameter(name: 'productId', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm'),
+            new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer'), description: 'Trang hiện tại'),
+            new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer'), description: 'Số bản ghi/trang'),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 404, description: 'Sản phẩm không tồn tại'),
+        ]
+    )]
+    public function api_client_commentController_index();
+
+    #[OA\Post(
+        path: '/api/client/comments',
+        summary: 'Thêm bình luận mới (Auth)',
+        description: 'Tạo bình luận mới (chờ duyệt).',
+        tags: ['Client - Comments'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['product_id', 'content'],
+                properties: [
+                    new OA\Property(property: 'product_id', type: 'integer'),
+                    new OA\Property(property: 'content', type: 'string'),
+                    new OA\Property(property: 'parent_id', type: 'integer', nullable: true),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Tạo thành công chờ duyệt'),
+            new OA\Response(response: 401, description: 'Chưa đăng nhập'),
+            new OA\Response(response: 422, description: 'Lỗi validation'),
+        ]
+    )]
+    public function api_client_commentController_store();
+
+    #[OA\Get(
+        path: '/api/comments/{id}',
+        summary: 'Chi tiết bình luận (Public)',
+        tags: ['Client - Comments'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_client_commentController_show();
+
+    #[OA\Put(
+        path: '/api/client/comments/{id}',
+        summary: 'Cập nhật bình luận (Auth)',
+        tags: ['Client - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['content'],
+                properties: [
+                    new OA\Property(property: 'content', type: 'string'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Cập nhật thành công'),
+            new OA\Response(response: 403, description: 'Không có quyền'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_client_commentController_update();
+
+    #[OA\Delete(
+        path: '/api/client/comments/{id}',
+        summary: 'Xóa bình luận cá nhân (Auth)',
+        tags: ['Client - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã xóa'),
+            new OA\Response(response: 403, description: 'Không có quyền'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_client_commentController_destroy();
+
+    // --- Api/Admin/CommentControllerDocs.php ---
+    #[OA\Get(
+        path: '/api/admin/comments',
+        summary: '[Admin] Danh sách bình luận',
+        tags: ['Admin - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['pending','approved','rejected'])),
+            new OA\Parameter(name: 'product_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'keyword', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 403, description: 'Không phải Admin'),
+        ]
+    )]
+    public function api_admin_commentController_index();
+
+    #[OA\Patch(
+        path: '/api/admin/comments/{id}/approve',
+        summary: '[Admin] Duyệt bình luận',
+        tags: ['Admin - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_admin_commentController_approve();
+
+    #[OA\Patch(
+        path: '/api/admin/comments/{id}/reject',
+        summary: '[Admin] Từ chối bình luận',
+        tags: ['Admin - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_admin_commentController_reject();
+
+    #[OA\Patch(
+        path: '/api/admin/comments/{id}/toggle-hide',
+        summary: '[Admin] Ẩn/Hiện bình luận',
+        tags: ['Admin - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_admin_commentController_toggleHide();
+
+    #[OA\Delete(
+        path: '/api/admin/comments/{id}',
+        summary: '[Admin] Xóa bình luận',
+        tags: ['Admin - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã xóa'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_admin_commentController_destroy();
 }

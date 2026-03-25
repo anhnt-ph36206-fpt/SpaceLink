@@ -44,12 +44,33 @@ class Comment extends Model
     // Self-reference: replies
     public function replies()
     {
-        return $this->hasMany(Comment::class, 'parent_id');
+        return $this->hasMany(Comment::class, 'parent_id')
+                    ->where('is_hidden', false)
+                    ->where('status', 'approved')
+                    ->with('user:id,name,avatar')
+                    ->latest();
     }
 
     // Comment has many reports
     public function reports()
     {
         return $this->hasMany(CommentReport::class);
+    }
+
+    // ─── Scopes ───────────────────────────────────────────────────────────────
+
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved')->where('is_hidden', false);
+    }
+
+    public function scopeTopLevel($query)
+    {
+        return $query->whereNull('parent_id');
+    }
+
+    public function scopeForProduct($query, int $productId)
+    {
+        return $query->where('product_id', $productId);
     }
 }

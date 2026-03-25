@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Admin\AttributeGroupController;
 use App\Http\Controllers\Api\Admin\BannerController as AdminBannerController;
 use App\Http\Controllers\Api\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Api\Admin\ContactController as AdminContactController;
+use App\Http\Controllers\Api\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Admin\NewsController as AdminNewsController;
 use App\Http\Controllers\Api\Admin\ReviewController as AdminReviewController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\Api\Client\BrandController;
 use App\Http\Controllers\Api\Client\CartController;
 use App\Http\Controllers\Api\Client\CategoryController as ClientCategoryController;
 use App\Http\Controllers\Api\Client\CheckoutController;
+use App\Http\Controllers\Api\Client\CommentController as ClientCommentController;
 use App\Http\Controllers\Api\Client\ContactController as ClientContactController;
 use App\Http\Controllers\Api\Client\NewsController as ClientNewsController;
 use App\Http\Controllers\Api\Client\OrderController as ClientOrderController;
@@ -75,6 +77,10 @@ Route::get('/products/{id}/reviews', [ClientReviewController::class, 'productRev
 Route::get('/news', [ClientNewsController::class, 'index']);
 Route::get('/news/{slug}', [ClientNewsController::class, 'show']);
 
+// --- Comments (Public) ---
+Route::get('/products/{id}/comments', [ClientCommentController::class, 'index']);
+Route::get('/comments/{comment}', [ClientCommentController::class, 'show']);
+
 // --- Contacts (Public) ---
 Route::post('/contacts', [ClientContactController::class, 'store']);
 
@@ -124,6 +130,11 @@ Route::prefix('client')->name('client.')->group(function () {
 
         // Review sản phẩm
         Route::post('/reviews', [ClientReviewController::class, 'store']);
+
+        // Comment sản phẩm
+        Route::post('/comments', [ClientCommentController::class, 'store']);
+        Route::put('/comments/{comment}', [ClientCommentController::class, 'update']);
+        Route::delete('/comments/{comment}', [ClientCommentController::class, 'destroy']);
 
         // Wishlist (Yêu thích)
         Route::get('/wishlist', [ClientWishlistController::class, 'index']);
@@ -209,6 +220,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     Route::patch('reviews/{id}/reply', [AdminReviewController::class, 'reply']);
     Route::patch('reviews/{id}/toggle-visibility', [AdminReviewController::class, 'toggleVisibility']);
     Route::delete('reviews/{id}', [AdminReviewController::class, 'destroy']);
+
+    // --- Admin Comments ---
+    Route::get('comments', [AdminCommentController::class, 'index']);
+    Route::patch('comments/{comment}/approve', [AdminCommentController::class, 'approve']);
+    Route::patch('comments/{comment}/reject', [AdminCommentController::class, 'reject']);
+    Route::patch('comments/{comment}/toggle-hide', [AdminCommentController::class, 'toggleHide']);
+    Route::delete('comments/{comment}', [AdminCommentController::class, 'destroy']);
 
     // --- Admin News ---
     Route::apiResource('news', AdminNewsController::class);
