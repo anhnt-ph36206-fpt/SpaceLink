@@ -7,125 +7,63 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Attribute;
 use App\Models\AttributeGroup;
+use Illuminate\Support\Str;
 
 class ProductVariantSeeder extends Seeder
 {
     /**
-     * Tạo biến thể thông minh cho sản phẩm (Màu sắc + Phiên bản RAM/ROM).
-     * Phân loại tự động theo Hãng (Apple, Samsung...) và Danh mục (Điện thoại, Laptop...).
+     * Tạo biến thể cho sản phẩm (Màu + Phiên bản)
      */
     public function run(): void
     {
-        $products = Product::with(['brand', 'category'])->get();
+        $products = Product::all();
         $colorGroup = AttributeGroup::where('name', 'color')->first();
+        // Ghi chú: Đổi 'size' thành 'version' cho phù hợp với data Điện thoại/Laptop
         $versionGroup  = AttributeGroup::where('name', 'version')->first();
 
         if (!$colorGroup || !$versionGroup) {
-            $this->command->warn('Cần chạy AttributeGroupSeeder và AttributeSeeder trước.');
+            $this->command->warn('Cần chạy AttributeGroupSeeder trước.');
             return;
         }
 
-        // 1. Kéo toàn bộ từ điển Thuộc tính ra và map theo tên
-        $colors = Attribute::where('attribute_group_id', $colorGroup->id)->get()->keyBy('value');
-        $versions = Attribute::where('attribute_group_id', $versionGroup->id)->get()->keyBy('value');
+        // Lấy danh sách ID thuộc tính màu và phiên bản
+        $colorIds = Attribute::where('attribute_group_id', $colorGroup->id)->pluck('id')->toArray();
+        $versionIds  = Attribute::where('attribute_group_id', $versionGroup->id)->pluck('id')->toArray();
 
-        // 2. Phân nhóm thông minh theo MÀU SẮC
-        $appleColors = array_filter([
-            $colors['Titan Đen']->id ?? null, $colors['Titan Trắng']->id ?? null, 
-            $colors['Titan Tự nhiên']->id ?? null, $colors['Space Grey']->id ?? null, 
-            $colors['Silver']->id ?? null, $colors['Starlight']->id ?? null, $colors['Midnight']->id ?? null
-        ]);
-        $samsungColors = array_filter([
-            $colors['Đen Classic']->id ?? null, $colors['Trắng Classic']->id ?? null, 
-            $colors['Xanh Sky Blue']->id ?? null, $colors['Tím Cobalt']->id ?? null
-        ]);
-        $defaultColors = array_filter([
-            $colors['Đen Classic']->id ?? null, $colors['Trắng Classic']->id ?? null
-        ]);
-
-        // 3. Phân nhóm thông minh theo PHIÊN BẢN (RAM/ROM)
-        $phoneVersions = array_filter([
-            $versions['8GB | 128GB']->id ?? null, $versions['8GB | 256GB']->id ?? null, 
-            $versions['12GB | 256GB']->id ?? null, $versions['12GB | 512GB']->id ?? null
-        ]);
-        $tabletVersions = array_filter([
-            $versions['8GB | 128GB']->id ?? null, $versions['8GB | 256GB']->id ?? null
-        ]);
-        $laptopVersions = array_filter([
-            $versions['16GB | 512GB']->id ?? null, $versions['16GB | 1TB']->id ?? null, 
-            $versions['24GB | 1TB']->id ?? null, $versions['36GB | 1TB']->id ?? null, 
-            $versions['10CPU - 10GPU | 16GB - 512GB']->id ?? null, 
-            $versions['10CPU - 10GPU | 24GB - 1TB']->id ?? null
-        ]);
-
-        // Nếu DB trắng trơn thuộc tính
-        if (empty($defaultColors)) return;
-
-        // Bắt đầu rải biến thể cho từng sản phẩm
+        // Với mỗi sản phẩm, tạo ngẫu nhiên 2-4 biến thể
         foreach ($products as $product) {
-            if ($product->variants()->count() > 0) continue;
-
-            $brandName = $product->brand?->name ?? '';
-            $catName = $product->category?->name ?? '';
-
-            // -- XÁC ĐỊNH MẢNG MÀU ÁP DỤNG --
-            $poolColors = $defaultColors;
-            if ($brandName === 'Apple') {
-                $poolColors = empty($appleColors) ? $defaultColors : $appleColors;
-            } elseif ($brandName === 'Samsung') {
-                $poolColors = empty($samsungColors) ? $defaultColors : $samsungColors;
+            // Chỉ tạo biến thể cho các sản phẩm chưa có biến thể
+            if ($product->variants()->count() > 0) {
+                continue;
             }
 
-            // -- XÁC ĐỊNH MẢNG PHIÊN BẢN ÁP DỤNG --
-            $poolVersions = [];
-            if (str_contains($catName, 'Laptop') || str_contains($catName, 'MacBook')) {
-                $poolVersions = $laptopVersions;
-            } elseif (str_contains($catName, 'iPad') || str_contains($catName, 'Tab')) {
-                $poolVersions = $tabletVersions;
-            } elseif (in_array($catName, ['iPhone', 'Samsung', 'Xiaomi', 'Điện thoại'])) {
-                $poolVersions = $phoneVersions;
-            }
-            // Phụ kiện, Tai nghe, Đồng hồ... sẽ không có Phiên bản (mảng rỗng)
-            
-            // Giới hạn số biến thể tạo ra để không bị duplicate vô hạn vòng lặp
-            $maxCombos = count($poolColors) * (empty($poolVersions) ? 1 : count($poolVersions));
-            $numVariants = min(rand(2, 4), $maxCombos);
-
+            $numVariants = rand(2, 4);
             $usedCombos = [];
-            $createdCount = 0;
-            $failSafe = 0; // Tránh treo vòng lặp infinite
 
-            while ($createdCount < $numVariants && $failSafe < 50) {
-                $failSafe++;
+            for ($i = 0; $i < $numVariants; $i++) {
+                // Random Attributes
+                $randomColorId = $colorIds[array_rand($colorIds)];
+                $randomVersionId = $versionIds[array_rand($versionIds)];
                 
-                $colorId = $poolColors[array_rand($poolColors)];
-                $versionId = empty($poolVersions) ? null : $poolVersions[array_rand($poolVersions)];
-
-                // Tránh trùng lặp Cấu hình + Màu sắc trên cùng 1 sản phẩm
-                $comboKey = $colorId . '-' . ($versionId ?? 'none');
+                // (Thêm an toàn) Tránh trùng lặp Màu + Phiên bản trên cùng 1 sản phẩm
+                $comboKey = $randomColorId . '-' . $randomVersionId;
                 if (in_array($comboKey, $usedCombos)) continue;
-
                 $usedCombos[] = $comboKey;
 
                 // Tạo Variant
                 $variant = ProductVariant::create([
                     'product_id' => $product->id,
-                    'sku'        => $product->sku . '-V' . ($createdCount + 1),
-                    'price'      => $product->price + rand(0, 5) * 500000, 
-                    'sale_price' => $product->sale_price ? $product->sale_price + rand(0, 5) * 500000 : null,
+                    'sku'        => $product->sku . '-V' . ($i + 1),
+                    'price'      => $product->price + (rand(0, 5) * 500000), // Giá biến thể có thể chênh lệch
+                    'sale_price' => $product->sale_price ? $product->sale_price + (rand(0, 5) * 500000) : null,
                     'quantity'   => rand(5, 50),
-                    'image'      => null,
+                    'image'      => null, // Có thể update ảnh sau
                     'is_active'  => true,
                 ]);
 
-                // Gán thuộc tính (Màu sắc bắt buộc, Phiên bản chỉ khi có)
-                $attachIds = [$colorId];
-                if ($versionId) {
-                    $attachIds[] = $versionId;
-                }
-                $variant->attributes()->attach($attachIds);
-
-                $createdCount++;
+                // Gán thuộc tính (pivot table)
+                // attach() nhận vào array ids
+                $variant->attributes()->attach([$randomColorId, $randomVersionId]);
             }
         }
     }
