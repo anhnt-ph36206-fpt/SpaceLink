@@ -2525,6 +2525,23 @@ interface SwaggerDocumentationController
     )]
     public function api_client_commentController_show();
 
+    #[OA\Get(
+        path: '/api/comments/{id}/replies',
+        summary: 'Danh sách replies phân trang (Public)',
+        description: 'Lấy danh sách replies được duyệt của 1 bình luận gốc. Trả về mặc định 10 replies/trang.',
+        tags: ['Client - Comments'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID bình luận gốc'),
+            new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 404, description: 'Không tìm thấy bình luận gốc'),
+        ]
+    )]
+    public function api_client_commentController_replies();
+
     #[OA\Put(
         path: '/api/client/comments/{id}',
         summary: 'Cập nhật bình luận (Auth)',

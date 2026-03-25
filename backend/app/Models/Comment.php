@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Comment extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'user_id',
         'product_id',
@@ -41,14 +43,15 @@ class Comment extends Model
         return $this->belongsTo(Comment::class, 'parent_id');
     }
 
-    // Self-reference: replies
+    // Self-reference: replies (giới hạn 5 replies gần nhất, tải đầy đủ qua API riêng)
     public function replies()
     {
         return $this->hasMany(Comment::class, 'parent_id')
                     ->where('is_hidden', false)
                     ->where('status', 'approved')
-                    ->with('user:id,name,avatar')
-                    ->latest();
+                    ->with('user:id,fullname,avatar')
+                    ->latest()
+                    ->limit(5);
     }
 
     // Comment has many reports
