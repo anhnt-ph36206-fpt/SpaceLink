@@ -5934,49 +5934,6 @@
                 }
             }
         },
-        "/api/comments/{id}/replies": {
-            "get": {
-                "tags": [
-                    "Client - Comments"
-                ],
-                "summary": "Danh sách replies phân trang (Public)",
-                "description": "Lấy danh sách replies được duyệt của 1 bình luận gốc. Trả về mặc định 10 replies/trang.",
-                "operationId": "1db6f4c39ad05e7ab123b15907727ede",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID bình luận gốc",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "page",
-                        "in": "query",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "per_page",
-                        "in": "query",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Thành công"
-                    },
-                    "404": {
-                        "description": "Không tìm thấy bình luận gốc"
-                    }
-                }
-            }
-        },
         "/api/client/comments/{id}": {
             "put": {
                 "tags": [
@@ -6403,6 +6360,10 @@
         {
             "name": "Client - Comments",
             "description": "Client - Comments"
+        },
+        {
+            "name": "Admin - Comments",
+            "description": "Admin - Comments"
         },
         {
             "name": "Admin - Attribute Groups",

@@ -40,24 +40,40 @@ class Comment extends Model
     // Self-reference: parent comment
     public function parent()
     {
-        return $this->belongsTo(Comment::class, 'parent_id');
+        return $this->belongsTo(Comment::class , 'parent_id');
     }
 
     // Self-reference: replies (giới hạn 5 replies gần nhất, tải đầy đủ qua API riêng)
     public function replies()
     {
-        return $this->hasMany(Comment::class, 'parent_id')
-                    ->where('is_hidden', false)
-                    ->where('status', 'approved')
-                    ->with('user:id,fullname,avatar')
-                    ->latest()
-                    ->limit(5);
+        return $this->hasMany(Comment::class , 'parent_id')
+            ->where('is_hidden', false)
+            ->where('status', 'approved')
+            ->with('user:id,name,avatar')
+            ->latest();
     }
 
     // Comment has many reports
     public function reports()
     {
         return $this->hasMany(CommentReport::class);
+    }
+
+    // ─── Scopes ───────────────────────────────────────────────────────────────
+
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved')->where('is_hidden', false);
+    }
+
+    public function scopeTopLevel($query)
+    {
+        return $query->whereNull('parent_id');
+    }
+
+    public function scopeForProduct($query, int $productId)
+    {
+        return $query->where('product_id', $productId);
     }
 
     // ─── Scopes ───────────────────────────────────────────────────────────────
