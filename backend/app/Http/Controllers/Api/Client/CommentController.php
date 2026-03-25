@@ -13,7 +13,6 @@ use Illuminate\Http\Request;
 
 class CommentController extends Controller
 {
-    
     public function index(Request $request, int $productId): JsonResponse
     {
         $perPage = min($request->integer('per_page', 10), 50);
@@ -29,15 +28,14 @@ class CommentController extends Controller
         return response()->json([
             'data' => CommentResource::collection($comments),
             'meta' => [
-                'current_page'   => $comments->currentPage(),
-                'last_page'      => $comments->lastPage(),
-                'per_page'       => $comments->perPage(),
-                'total'          => $comments->total(),
+                'current_page' => $comments->currentPage(),
+                'last_page'    => $comments->lastPage(),
+                'per_page'     => $comments->perPage(),
+                'total'        => $comments->total(),
             ],
         ]);
     }
 
-    
     public function store(StoreCommentRequest $request): JsonResponse
     {
         $data = $request->validated();
@@ -58,7 +56,6 @@ class CommentController extends Controller
         ], 201);
     }
 
-    
     public function show(Comment $comment): JsonResponse
     {
         $comment->load(['user:id,fullname,avatar', 'replies']);
@@ -68,7 +65,32 @@ class CommentController extends Controller
         ]);
     }
 
-    
+    /**
+     * GET /api/comments/{comment}/replies?page=1&per_page=10
+     * Trả về replies phân trang của 1 comment gốc.
+     */
+    public function replies(Request $request, Comment $comment): JsonResponse
+    {
+        $perPage = min($request->integer('per_page', 10), 50);
+
+        $replies = Comment::with('user:id,fullname,avatar')
+            ->where('parent_id', $comment->id)
+            ->where('is_hidden', false)
+            ->where('status', 'approved')
+            ->latest()
+            ->paginate($perPage);
+
+        return response()->json([
+            'data' => CommentResource::collection($replies),
+            'meta' => [
+                'current_page' => $replies->currentPage(),
+                'last_page'    => $replies->lastPage(),
+                'per_page'     => $replies->perPage(),
+                'total'        => $replies->total(),
+            ],
+        ]);
+    }
+
     public function update(UpdateCommentRequest $request, Comment $comment): JsonResponse
     {
         $user = auth()->user();
@@ -79,7 +101,7 @@ class CommentController extends Controller
 
         $comment->update([
             'content' => $request->validated('content'),
-            'status'  => 'pending', // Sau khi sửa cần duyệt lại
+            'status'  => 'pending',
         ]);
 
         $comment->load('user:id,fullname,avatar');
@@ -90,7 +112,6 @@ class CommentController extends Controller
         ]);
     }
 
-    
     public function destroy(Comment $comment): JsonResponse
     {
         $user = auth()->user();
@@ -99,6 +120,7 @@ class CommentController extends Controller
             return response()->json(['message' => 'Bạn không có quyền xoá bình luận này.'], 403);
         }
 
+        // Soft delete — bản ghi vẫn còn trong DB với deleted_at được set
         $comment->delete();
 
         return response()->json(['message' => 'Đã xoá bình luận thành công.']);

@@ -86,6 +86,7 @@ Route::get('/news/{slug}', [ClientNewsController::class , 'show']);
 // --- Comments (Public) ---
 Route::get('/products/{id}/comments', [ClientCommentController::class , 'index']);
 Route::get('/comments/{comment}', [ClientCommentController::class , 'show']);
+Route::get('/comments/{comment}/replies', [ClientCommentController::class , 'replies']);
 
 // --- Contacts (Public) ---
 Route::post('/contacts', [ClientContactController::class , 'store']);
@@ -140,8 +141,8 @@ Route::prefix('client')->name('client.')->group(function () {
             // Review sản phẩm
             Route::post('/reviews', [ClientReviewController::class , 'store']);
 
-            // Comment sản phẩm
-            Route::post('/comments', [ClientCommentController::class , 'store']);
+            // Comment sản phẩm (giới hạn 5 bình luận / phút — chống spam)
+            Route::post('/comments', [ClientCommentController::class , 'store'])->middleware('throttle:5,1');
             Route::put('/comments/{comment}', [ClientCommentController::class , 'update']);
             Route::delete('/comments/{comment}', [ClientCommentController::class , 'destroy']);
 
