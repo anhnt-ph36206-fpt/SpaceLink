@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart, type CartItem } from '../context/CartContext';
-import { Modal, Button, Spin, Tag, Tooltip, Divider, Typography, Checkbox, Popconfirm } from 'antd';
-import { ShoppingOutlined, CloseOutlined, InfoCircleOutlined, SwapOutlined, MinusOutlined, PlusOutlined, CheckCircleOutlined, ExclamationCircleOutlined, DeleteOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { Modal, Button, Spin, Tag, Tooltip, Divider, Typography, Checkbox, Popconfirm, Alert } from 'antd';
+import { ShoppingOutlined, CloseOutlined, InfoCircleOutlined, SwapOutlined, MinusOutlined, PlusOutlined, CheckCircleOutlined, ExclamationCircleOutlined, DeleteOutlined, ShoppingCartOutlined, WarningOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
 
@@ -18,6 +18,9 @@ const imgUrl = (path?: string) => {
 const CartPage: React.FC = () => {
     const { items, removeFromCart, updateQty, loading, updatingItems } = useCart();
     const navigate = useNavigate();
+
+    // Kiểm tra xem có đơn hàng VNPAY đang chờ thanh toán không
+    const pendingOrderId = sessionStorage.getItem('vnpay_pending_order_id');
 
     // -- Checkbox State --
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -125,6 +128,11 @@ const CartPage: React.FC = () => {
     };
 
     const handleCheckout = () => {
+        if (pendingOrderId) {
+            // Đang có đơn VNPAY chờ thanh toán → chuyển về đơn đó
+            navigate(`/orders/${pendingOrderId}`);
+            return;
+        }
         if (selectedItems.length === 0) return;
         navigate('/checkout', {
             state: {
@@ -163,6 +171,35 @@ const CartPage: React.FC = () => {
                 <ShoppingOutlined className="text-primary" />
                 Giỏ hàng của tôi ({items.length})
             </h1>
+
+            {/* Banner cảnh báo đơn VNPAY đang chờ */}
+            {pendingOrderId && (
+                <Alert
+                    type="warning"
+                    showIcon
+                    icon={<WarningOutlined />}
+                    className="mb-4"
+                    style={{ borderRadius: 10 }}
+                    message={
+                        <span style={{ fontWeight: 600 }}>
+                            Bạn đang có đơn hàng chờ thanh toán VNPAY
+                        </span>
+                    }
+                    description={
+                        <span>
+                            Đơn hàng đang ở trạng thái <strong>chờ thanh toán</strong>. Vui lòng thanh toán hoặc đổi phương thức trước khi đặt đơn mới.
+                            <br />
+                            <Button
+                                type="link"
+                                style={{ padding: 0, height: 'auto', color: '#F28B00', fontWeight: 600 }}
+                                onClick={() => navigate(`/orders/${pendingOrderId}`)}
+                            >
+                                → Xem đơn hàng đang chờ
+                            </Button>
+                        </span>
+                    }
+                />
+            )}
 
             <div className="row g-4">
                 {/* Product List */}
@@ -335,15 +372,24 @@ const CartPage: React.FC = () => {
                                 <span className="text-danger fw-bold h4 mb-0">{formatVND(selectedTotalPrice)}</span>
                             </div>
 
-                            <Tooltip title={selectedIds.size === 0 ? 'Vui lòng chọn ít nhất 1 sản phẩm' : ''}>
+                            <Tooltip title={
+                                pendingOrderId
+                                    ? 'Vui lòng xử lý đơn hàng VNPAY đang chờ trước'
+                                    : selectedIds.size === 0 ? 'Vui lòng chọn ít nhất 1 sản phẩm' : ''
+                            }>
                                 <button
-                                    className="btn btn-primary w-100 py-3 rounded-pill fw-bold"
+                                    className="btn w-100 py-3 rounded-pill fw-bold"
                                     onClick={handleCheckout}
                                     disabled={selectedIds.size === 0}
-                                    style={{ fontSize: 16 }}
+                                    style={{
+                                        fontSize: 16,
+                                        background: pendingOrderId ? '#F28B00' : undefined,
+                                        borderColor: pendingOrderId ? '#F28B00' : undefined,
+                                        color: pendingOrderId ? '#fff' : undefined,
+                                    }}
                                 >
                                     <ShoppingCartOutlined className="me-2" />
-                                    THANH TOÁN ({selectedIds.size})
+                                    {pendingOrderId ? 'XEM ĐƠN HÀNG CHỜ THANH TOÁN' : `THANH TOÁN (${selectedIds.size})`}
                                 </button>
                             </Tooltip>
 

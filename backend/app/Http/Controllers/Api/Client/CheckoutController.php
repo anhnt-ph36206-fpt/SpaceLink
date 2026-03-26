@@ -400,33 +400,34 @@ class CheckoutController extends Controller
 
                 foreach ($cartItems as $item) {
                     $effectivePrice = $this->resolvePrice($item, $lockedVariants);
-                    $variant = $item->variant_id ? $lockedVariants->get($item->variant_id) : null;
+                    $variant = $item->variant_id ? $lockedVariants->find($item->variant_id) : null;
 
                     if ($variant) {
-                        if ($variant->quantity < $item->quantity) {
-                            throw new \Exception("Sản phẩm {$item->product->name} (Biến thể ID: {$variant->id}) chỉ còn {$variant->quantity} trong kho.");
+                        // Stock đã được reserved khi user add to cart (CartController đã decrement)
+                        // → KHÔNG decrement thêm ở đây để tránh double-decrement
+                        // Chỉ validate: tồn kho DB + reserved cũ >= qty cần mua
+                        $reservedQty = $item->quantity; // phần đang hold trong cart
+                        $effectiveStock = $variant->quantity + $reservedQty;
+                        if ($effectiveStock < $item->quantity) {
+                            throw new \Exception("Sản phẩm {$item->product->name} chỉ còn {$effectiveStock} trong kho.");
                         }
-                        // Trừ tồn kho biến thể
-                        $variant->decrement('quantity', $item->quantity);
-                        // Trừ tồn kho tổng của product
-                        Product::where('id', $item->product_id)
-                            ->decrement('quantity', $item->quantity);
+                        // Không decrement — stock đã reserved từ CartController
                     } else {
                         throw new \Exception("Vui lòng chọn phân loại sản phẩm cho {$item->product->name}.");
                     }
 
                     OrderItem::create([
-                        'order_id' => $order->id,
-                        'product_id' => $item->product_id,
-                        'variant_id' => $item->variant_id,
+                        'order_id'     => $order->id,
+                        'product_id'   => $item->product_id,
+                        'variant_id'   => $item->variant_id,
                         'product_name' => $item->product->name,
-                        'variant_name' => 'Variant Name '.$variant->id,
                         'variant_info' => null,
-                        'sku' => $variant->sku,
-                        'quantity' => $item->quantity,
-                        'price' => $effectivePrice,
+                        'sku'          => $variant->sku,
+                        'quantity'     => $item->quantity,
+                        'price'        => $effectivePrice,
                     ]);
                 }
+
 
                 if ($voucher) {
                     VoucherUsage::create(['voucher_id' => $voucher->id, 'user_id' => $user->id, 'order_id' => $order->id]);

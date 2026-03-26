@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { axiosInstance } from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 // ── Types ────────────────────────────────────────────────────
 interface VariantAttr { name: string; value: string }
@@ -213,6 +214,7 @@ const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { refreshCart } = useCart();
 
   const [order, setOrder] = useState<ClientOrder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -377,6 +379,8 @@ const OrderDetailPage: React.FC = () => {
       showToast('Đã chuyển sang thanh toán COD thành công!', 'success');
       setSwitchCodOpen(false);
       sessionStorage.removeItem('vnpay_pending_order_id');
+      // Làm mới giỏ hàng — backend đã xóa cart items khi đổi sang COD
+      await refreshCart();
       fetchOrder();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
