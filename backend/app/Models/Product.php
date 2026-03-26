@@ -115,6 +115,12 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    // Product has many specifications (for comparison)
+    public function specifications()
+    {
+        return $this->hasMany(ProductSpecification::class)->orderBy('display_order');
+    }
+
     /**
      * Scout: fields được tìm kiếm (database driver dùng LIKE trên các cột này)
      */

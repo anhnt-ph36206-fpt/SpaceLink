@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\Api\Admin\AttributeController;
 // Auth (dùng chung, không phải Client/Admin)
-use App\Http\Controllers\Api\Admin\AttributeGroupController;
+use App\Http\Controllers\Api\Admin\AttributeGroupController as AdminAttributeGroupController;
+use App\Http\Controllers\Api\Admin\SpecGroupController;
+use App\Http\Controllers\Api\Admin\ProductSpecificationController;
 // Client Controllers
 use App\Http\Controllers\Api\Admin\BannerController as AdminBannerController;
 use App\Http\Controllers\Api\Admin\CategoryController as AdminCategoryController;
@@ -64,6 +66,7 @@ Route::get('/categories/{slug}', [ClientCategoryController::class, 'show']);
 
 // --- Products ---
 Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/compare', [ProductController::class, 'compare']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 
 // --- Cart (Legacy – giữ để không breaking Swagger cũ) ---
@@ -197,6 +200,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     Route::post('products/{product}/variants', [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'store']);
     Route::put('products/{product}/variants/{variant}', [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'update']);
     Route::delete('products/{product}/variants/{variant}', [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'destroy']);
+
+    // --- Admin Product Specifications (nested, for compare feature) ---
+    Route::get('products/{product}/specifications', [ProductSpecificationController::class, 'index']);
+    Route::post('products/{product}/specifications', [ProductSpecificationController::class, 'store']);
+    Route::put('products/{product}/specifications/bulk', [ProductSpecificationController::class, 'bulk']);
+    Route::put('products/{product}/specifications/{specification}', [ProductSpecificationController::class, 'update']);
+    Route::delete('products/{product}/specifications/{specification}', [ProductSpecificationController::class, 'destroy']);
+
+    // --- Admin Spec Groups ---
+    Route::apiResource('spec-groups', SpecGroupController::class);
 
     // --- Admin Product Images (nested) ---
     Route::post('products/{product}/images', [\App\Http\Controllers\Api\Admin\ProductImageController::class, 'store']);
