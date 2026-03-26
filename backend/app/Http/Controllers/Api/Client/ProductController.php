@@ -87,7 +87,9 @@ class ProductController extends Controller
         $products = $query->paginate(12);
 
         return new ProductCollection($products);
-    }    public function show($id)
+    }
+
+    public function show($id)
     {
         // Eager Loading sâu để lấy: Variants -> Attributes -> AttributeGroup
         $product = Product::with([
@@ -110,5 +112,76 @@ class ProductController extends Controller
         $product->increment('view_count');
 
         return new ProductResource($product);
+    }
+
+    /**
+     * So sánh thông số chi tiết sản phẩm
+     * GET /api/products/compare?slugs=slug-a,slug-b
+     */
+    public function compare(Request $request)
+    {
+        $slugs = $request->query('slugs');
+        if (!$slugs) {
+            return response()->json(['message' => 'Vui lòng cung cấp danh sách slug sản phẩm.'], 400);
+        }
+
+        $slugList = array_filter(array_map('trim', explode(',', $slugs)));
+        if (count($slugList) < 2) {
+            return response()->json(['message' => 'Cần ít nhất 2 sản phẩm để so sánh.'], 400);
+        }
+
+        $products = Product::with(['images', 'specifications.specGroup'])
+            ->whereIn('slug', $slugList)
+            ->get();
+
+        if ($products->isEmpty()) {
+            return response()->json(['message' => 'Không tìm thấy sản phẩm nào với slugs đã cung cấp.'], 404);
+        }
+
+        // Build product summary
+        $productList = $products->map(fn($p) => [
+            'id'    => $p->id,
+            'name'  => $p->name,
+            'slug'  => $p->slug,
+            'image' => $p->images->first()?->image_path,
+            'price' => (float) ($p->sale_price ?? $p->price),
+        ]);
+
+        // Collect all spec_group/name combinations across all products
+        // Structure: [ groupDisplayName => [ specName => [ productId => value ] ] ]
+        $specMatrix = [];
+        foreach ($products as $product) {
+            foreach ($product->specifications as $spec) {
+                $group = $spec->specGroup?->display_name ?? 'Khác';
+                $name  = $spec->name;
+                $specMatrix[$group][$name][$product->id] = $spec->value;
+            }
+        }
+
+        // Format for frontend comparison table
+        $specifications = [];
+        foreach ($specMatrix as $group => $attrs) {
+            $attrList = [];
+            foreach ($attrs as $specName => $valuesByProduct) {
+                // Fill null for products that don't have this spec
+                $values = [];
+                foreach ($products as $p) {
+                    $values[$p->id] = $valuesByProduct[$p->id] ?? null;
+                }
+                $attrList[] = [
+                    'name'   => $specName,
+                    'values' => $values,
+                ];
+            }
+            $specifications[] = [
+                'group'      => $group,
+                'attributes' => $attrList,
+            ];
+        }
+
+        return response()->json([
+            'products'       => $productList,
+            'specifications' => $specifications,
+        ]);
     }
 }
