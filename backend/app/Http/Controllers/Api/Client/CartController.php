@@ -113,7 +113,10 @@ class CartController extends Controller
                 'effective_price' => $effectivePrice,
                 'quantity'        => $item->quantity,
                 'line_total'      => $effectivePrice * $item->quantity,
-                'stock_available' => $item->variant?->quantity ?? 0,
+                // stock_available: với user item, tồn kho thực = DB quantity + phần đang hold trong giỏ này
+                // (vì khi add to cart đã trừ DB quantity rồi, nên cộng lại để frontend biết max có thể đặt)
+                // Guest item không trừ kho khi add, nên trả nguyên DB quantity
+                'stock_available' => ($item->variant?->quantity ?? 0) + ($item->user_id ? $item->quantity : 0),
                 'available_variants' => $availableVariants,
                 'reserved_until'  => $item->reserved_until,
             ];

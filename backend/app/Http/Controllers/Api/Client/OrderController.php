@@ -83,7 +83,7 @@ class OrderController extends Controller
         // Chỉ cho phép hủy khi đang ở trạng thái pending
         if ($order->status !== 'pending') {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => "Không thể hủy đơn hàng đang ở trạng thái \"{$order->status}\". Chỉ có thể hủy đơn hàng đang chờ xử lý (pending).",
             ], 422);
         }
@@ -91,56 +91,47 @@ class OrderController extends Controller
         $reason = $request->input('reason', 'Khách hàng tự hủy.');
 
         DB::transaction(function () use ($order, $user, $reason) {
-            $order->update([
-                'status' => 'cancelled',
-                'cancelled_reason' => $reason,
-                'cancelled_by' => $user->id,
-                'cancelled_at' => now(),
-            ]);
-
-            // Nếu đơn đã thanh toán (VNPAY/Banking), cần lưu thông tin hoàn tiền
-            if ($order->payment_status === 'paid' && in_array($order->payment_method, ['vnpay', 'banking'])) {
-                ProductReturn::updateOrCreate(
-                    ['order_id' => $order->id],
-                    [
-                        'user_id' => $user->id,
-                        'reason' => 'Hủy đơn hàng đã thanh toán: ' . $reason,
-                        'status' => 'pending',
-                        'refund_bank' => request('refund_bank'),
-                        'refund_account_name' => request('refund_account_name'),
-                        'refund_account_number' => request('refund_account_number'),
-                        'items' => $order->items->pluck('id')->all(),
-                    ]
-                );
-            }
-
-            // Ghi lịch sử
-            OrderStatusHistory::create([
-                'order_id' => $order->id,
-                'from_status' => 'pending',
-                'to_status' => 'cancelled',
-                'note' => $reason,
-                'changed_by' => $user->id,
-            ]);
-
-            // Hoàn lại tồn kho: cả variant lẫn product
+            // Hoàn lại tồn kho: variant + product
+            $variantIds = [];
             foreach ($order->items()->with('variant')->get() as $item) {
-                // Khôi phục tồn kho biến thể (nếu có)
                 if ($item->variant_id && $item->variant) {
                     $item->variant->increment('quantity', $item->quantity);
+                    $variantIds[] = $item->variant_id;
                 }
-                // Khôi phục tồn kho tổng của product (luôn thực hiện)
                 Product::where('id', $item->product_id)
                     ->increment('quantity', $item->quantity);
+            }
+
+            $order->update([
+                'status'           => 'cancelled',
+                'cancelled_reason' => $reason,
+                'cancelled_by'     => $user->id,
+                'cancelled_at'     => now(),
+            ]);
+
+            OrderStatusHistory::create([
+                'order_id'    => $order->id,
+                'from_status' => 'pending',
+                'to_status'   => 'cancelled',
+                'note'        => $reason,
+                'changed_by'  => $user->id,
+            ]);
+
+            // Xóa cart items liên quan để tránh double-restore nếu user xóa cart thủ công sau này
+            if (count($variantIds) > 0) {
+                \App\Models\Cart::where('user_id', $user->id)
+                    ->whereIn('variant_id', $variantIds)
+                    ->delete();
             }
         });
 
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Đã hủy đơn hàng thành công.',
-            'data' => new OrderResource($order->fresh()),
+            'data'    => new OrderResource($order->fresh()),
         ]);
     }
+
 
     // =========================================================================
     // POST /api/client/orders/{id}/confirm-received — Khách xác nhận đã nhận hàng
@@ -299,13 +290,22 @@ class OrderController extends Controller
             ]);
 
             // Hoàn lại tồn kho variant + product
+            $variantIds = [];
             foreach ($order->items as $item) {
                 if ($item->variant_id) {
                     \App\Models\ProductVariant::where('id', $item->variant_id)
                         ->increment('quantity', $item->quantity);
+                    $variantIds[] = $item->variant_id;
                 }
                 Product::where('id', $item->product_id)
                     ->increment('quantity', $item->quantity);
+            }
+
+            // Xóa cart items để tránh double-restore khi user xóa cart thủ công sau này
+            if (count($variantIds) > 0) {
+                \App\Models\Cart::where('user_id', $user->id)
+                    ->whereIn('variant_id', $variantIds)
+                    ->delete();
             }
         });
 
@@ -426,6 +426,55 @@ class OrderController extends Controller
             'status' => 'success',
             'message' => 'Đã gửi yêu cầu hoàn trả thành công. Vui lòng chờ admin duyệt.',
             'data' => new OrderResource($order),
+        ]);
+    }
+
+    // =========================================================================
+    // POST /api/client/orders/{id}/switch-to-cod — Chuyển đơn VNPAY pending sang COD
+    // =========================================================================
+    public function switchToCod(Request $request, string $id): JsonResponse
+    {
+        $user  = $request->user();
+        $order = Order::findOrFail($id);
+
+        // Kiểm tra quyền sở hữu
+        if ($order->user_id !== $user->id) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Bạn không có quyền truy cập đơn hàng này.',
+            ], 403);
+        }
+
+        // Chỉ cho phép với đơn VNPAY + chưa thanh toán + đang pending
+        if ($order->payment_method !== 'vnpay' || $order->payment_status !== 'unpaid' || $order->status !== 'pending') {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Chỉ có thể chuyển COD khi đơn dùng VNPAY, chưa thanh toán và đang chờ xử lý.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($order, $user) {
+            $order->update([
+                'payment_method'  => 'cod',
+                'vnpay_expired_at' => null,
+            ]);
+
+            OrderStatusHistory::create([
+                'order_id'    => $order->id,
+                'from_status' => $order->status,
+                'to_status'   => $order->status,
+                'note'        => 'Khách hàng đổi phương thức thanh toán từ VNPAY sang COD.',
+                'changed_by'  => $user->id,
+            ]);
+
+            // Xóa giỏ hàng — đơn đã xác nhận COD, không cần giữ cart nữa
+            \App\Models\Cart::where('user_id', $user->id)->delete();
+        });
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Đã chuyển sang thanh toán COD thành công.',
+            'data'    => new OrderResource($order->fresh()),
         ]);
     }
 }

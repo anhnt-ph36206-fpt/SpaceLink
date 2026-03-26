@@ -6,10 +6,13 @@ import { ProductBanner } from "../components/home/ProductBanner";
 import { NewsSection } from "../components/home/NewsSection";
 
 const HomePage: React.FC = () => {
-  return (
-    <>
-      {/* Banner quảng cáo (dynamic từ API) */}
-      <ProductBanner />
+    return (
+        <>
+            {/* Hero Carousel */}
+            {/* <HeroSlider /> */}
+
+            {/* Banner quảng cáo (dynamic từ API) */}
+            <ProductBanner />
 
       {/* Services Section */}
       <ServicesSection />

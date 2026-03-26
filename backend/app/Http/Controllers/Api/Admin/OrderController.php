@@ -150,14 +150,25 @@ class OrderController extends Controller
                 $updateData['cancelled_by'] = $admin->id;
 
                 // Khôi phục tồn kho: variant + product
+                $variantIdsInOrder = [];
                 foreach ($order->items()->with('variant')->get() as $item) {
                     if ($item->variant_id && $item->variant) {
                         $item->variant->increment('quantity', $item->quantity);
+                        $variantIdsInOrder[] = $item->variant_id;
                     }
                     Product::where('id', $item->product_id)
                         ->increment('quantity', $item->quantity);
                 }
+
+                // Xóa cart items liên quan để tránh double-restore
+                // (CartController cũng restore stock khi user xóa cart item thủ công)
+                if ($order->user_id && count($variantIdsInOrder) > 0) {
+                    \App\Models\Cart::where('user_id', $order->user_id)
+                        ->whereIn('variant_id', $variantIdsInOrder)
+                        ->delete();
+                }
             }
+
 
             // Thông tin vận chuyển (khi chuyển sang shipping)
             if ($request->filled('tracking_code')) {
