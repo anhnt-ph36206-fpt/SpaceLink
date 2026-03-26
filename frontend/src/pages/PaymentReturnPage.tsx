@@ -91,10 +91,6 @@ const PaymentReturnPage: React.FC = () => {
         })();
     }, [isSuccess, txnRef, searchParams]);
 
-    // Thanh toán thất bại / hủy → KHÔNG gọi cancel-vnpay nữa
-    // Đơn hàng sẽ được giữ trong 15 phút, scheduler tự hủy nếu hết hạn
-    // Khách có thể vào trang chi tiết đơn để thanh toán lại, chuyển COD hoặc hủy thủ công
-
     // Đếm ngược tự chuyển trang chủ khi thanh toán thành công
     useEffect(() => {
         if (!isSuccess) return;

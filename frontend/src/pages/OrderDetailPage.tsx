@@ -400,6 +400,8 @@ const OrderDetailPage: React.FC = () => {
       showToast('Đã chuyển sang thanh toán COD thành công!', 'success');
       setSwitchCodOpen(false);
       sessionStorage.removeItem('vnpay_pending_order_id');
+      // Làm mới giỏ hàng — backend đã xóa cart items khi đổi sang COD
+      await refreshCart();
       fetchOrder();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
