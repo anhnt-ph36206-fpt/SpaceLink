@@ -66,7 +66,6 @@ interface ClientOrder {
   completed_at?: string;
   created_at: string;
   vnpay_expired_at?: string | null;
-  vnpay_expired_at?: string | null;
   items?: OrderItem[];
   status_history?: StatusHistory[];
   product_return?: {
@@ -239,13 +238,6 @@ const OrderDetailPage: React.FC = () => {
 
   // Retry VNPAY
   const [retryVnpayLoading, setRetryVnpayLoading] = useState(false);
-
-  // Switch to COD (từ VNPAY pending)
-  const [switchCodLoading, setSwitchCodLoading] = useState(false);
-  const [switchCodOpen, setSwitchCodOpen] = useState(false);
-
-  // VNPAY countdown timer (giây còn lại)
-  const [vnpaySecondsLeft, setVnpaySecondsLeft] = useState<number | null>(null);
 
   // Switch to COD (từ VNPAY pending)
   const [switchCodLoading, setSwitchCodLoading] = useState(false);
@@ -570,14 +562,6 @@ const OrderDetailPage: React.FC = () => {
   const canRetryVnpay = order.payment_method === 'vnpay' &&
     order.payment_status === 'unpaid' &&
     order.status === 'pending';
-
-  // Banner chờ thanh toán VNPAY: hiển thị khi có vnpay_expired_at và chưa thanh toán
-  const isVnpayPending = canRetryVnpay && !!order.vnpay_expired_at;
-  const fmtCountdown = (secs: number) => {
-    const m = Math.floor(secs / 60).toString().padStart(2, '0');
-    const s = (secs % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-  };
 
   // Banner chờ thanh toán VNPAY: hiển thị khi có vnpay_expired_at và chưa thanh toán
   const isVnpayPending = canRetryVnpay && !!order.vnpay_expired_at;
