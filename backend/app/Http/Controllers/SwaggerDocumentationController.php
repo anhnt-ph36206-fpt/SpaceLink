@@ -1598,17 +1598,10 @@ interface SwaggerDocumentationController
             tags: ['Client - Products'],
             parameters: [
                 new OA\Parameter(
-                    name: 'ids',
-                    in: 'query',
-                    description: 'Danh sách ID sản phẩm, cách nhau bởi dấu phẩy (VD: 1,2,3). Ưu tiên dùng ID nếu có.',
-                    required: false,
-                    schema: new OA\Schema(type: 'string', example: '1,2')
-                ),
-                new OA\Parameter(
                     name: 'slugs',
                     in: 'query',
-                    description: 'Danh sách slug sản phẩm, cách nhau bởi dấu phẩy (VD: iphone-15,samsung-s24). Dùng nếu không có tham số ids.',
-                    required: false,
+                    description: 'Danh sách slug sản phẩm, cách nhau bởi dấu phẩy (VD: iphone-15,samsung-s24)',
+                    required: true,
                     schema: new OA\Schema(type: 'string', example: 'iphone-15,samsung-s24')
                 )
             ],
@@ -2089,7 +2082,7 @@ interface SwaggerDocumentationController
             content: new OA\JsonContent(
                 required: ['fullname', 'email', 'subject', 'message'],
                 properties: [
-                    new OA\Property(property: 'fullname', type: 'string'),
+                    new OA\Property(property: 'name', type: 'string'),
                     new OA\Property(property: 'email', type: 'string', format: 'email'),
                     new OA\Property(property: 'phone', type: 'string'),
                     new OA\Property(property: 'subject', type: 'string'),

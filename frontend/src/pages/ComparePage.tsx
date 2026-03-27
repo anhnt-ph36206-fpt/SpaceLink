@@ -19,55 +19,43 @@ const ComparePage: React.FC = () => {
     const { compareList, removeFromCompare, clearCompare } = useCompare();
     const { addToCart } = useCart();
     const navigate = useNavigate();
-    const [details, setDetails] = useState<DetailedProduct[]>([]);
-    const [specData, setSpecData] = useState<Record<string, Record<string, Record<string, string>>>>({});
+    const [details, setDetails] = useState<Record<string, DetailedProduct>>({});
     const [loading, setLoading] = useState(false);
 
     // Fetch detailed info for all products in compareList
     useEffect(() => {
-        if (compareList.length === 0) {
-            setDetails([]);
-            setSpecData({});
-            return;
-        }
+        if (compareList.length === 0) return;
 
         const fetchDetails = async () => {
             setLoading(true);
-            try {
-                const ids = compareList.map(p => p.id).join(',');
-                const res = await axiosInstance.get(`/products/compare?ids=${ids}`);
-                
-                const { products, specifications } = res.data;
-                
-                // Map the api returned raw products to the DetailedProduct interface
-                const detailedProducts = products.map((p: any) => {
-                    // Find matching product from context to get extra stuff like rating if needed
-                    const ctxProd = compareList.find(cp => cp.id === String(p.id));
-                    return {
-                        id: String(p.id),
-                        name: p.name,
-                        image: p.image || ctxProd?.image,
-                        price: p.price,
-                        oldPrice: p.sale_price ? Number(p.price) : undefined, // backend sale logic is swapped 
-                        priceActual: p.sale_price ? Number(p.sale_price) : Number(p.price),
-                        category: p.category,
-                        brand: p.brand,
-                        stock: p.stock,
-                        sku: p.sku,
-                        variantId: p.variantId,
-                        rating: ctxProd?.rating || 5 // fallback
-                    } as DetailedProduct;
-                });
+            const results: Record<string, DetailedProduct> = {};
 
-                // Sometimes api returns sale_price as the discounted, and price as root. Note: The backend returns 'price' and 'sale_price' as formatted string or number. My mapped priceActual represents what users actually pay.
+            await Promise.all(
+                compareList.map(async (product) => {
+                    try {
+                        const res = await axiosInstance.get(`/products/${product.id}`);
+                        const p = res.data.data;
+                        results[product.id] = {
+                            id: String(p.id),
+                            name: p.name,
+                            image: product.image, // use the already-resolved image
+                            price: p.sale_price ? Number(p.sale_price) : Number(p.price),
+                            oldPrice: p.sale_price ? Number(p.price) : undefined,
+                            category: p.category?.name ?? '—',
+                            brand: p.brand?.name ?? '—',
+                            stock: p.quantity ?? 0,
+                            sku: p.sku ?? '—',
+                            rating: product.rating,
+                            variantId: p.variants?.[0]?.id,
+                        };
+                    } catch {
+                        results[product.id] = { ...product };
+                    }
+                })
+            );
 
-                setDetails(detailedProducts);
-                setSpecData(specifications);
-            } catch (error) {
-                console.error("Failed to fetch compare data", error);
-            } finally {
-                setLoading(false);
-            }
+            setDetails(results);
+            setLoading(false);
         };
 
         fetchDetails();
@@ -83,26 +71,22 @@ const ComparePage: React.FC = () => {
     };
 
     // ── Rows to compare ─────────────────────────────────────────────────
-    const rows: { label: string; key: keyof DetailedProduct | string; render?: (val: any, p: DetailedProduct) => React.ReactNode }[] = [
-        { label: 'Giá', key: 'priceActual', render: (_, p) => {
-            const currentPrice = (p as any).priceActual || p.price;
-            return (
+    const rows: { label: string; key: keyof DetailedProduct; render?: (val: any, p: DetailedProduct) => React.ReactNode }[] = [
+        { label: 'Giá', key: 'price', render: (_, p) => (
             <div>
-                <span className="fw-bold text-danger" style={{ fontSize: 18 }}>{formatVND(currentPrice)}</span>
-                {p.oldPrice && p.oldPrice > currentPrice && (
+                <span className="fw-bold text-danger" style={{ fontSize: 18 }}>{formatVND(p.price)}</span>
+                {p.oldPrice && p.oldPrice > p.price && (
                     <><br /><del className="text-muted small">{formatVND(p.oldPrice)}</del></>
                 )}
             </div>
-        )}},
+        )},
         { label: 'Danh mục', key: 'category' },
         { label: 'Thương hiệu', key: 'brand' },
-        { label: 'Tồn kho', key: 'stock', render: (val) => {
-            const num = Number(val) || 0;
-            return (
-            <span className={num > 0 ? 'text-success' : 'text-danger'}>
-                {num > 0 ? `Còn ${num} sản phẩm` : 'Hết hàng'}
+        { label: 'Tồn kho', key: 'stock', render: (val) => (
+            <span className={val > 0 ? 'text-success' : 'text-danger'}>
+                {val > 0 ? `Còn ${val} sản phẩm` : 'Hết hàng'}
             </span>
-        )}},
+        )},
         { label: 'SKU', key: 'sku' },
         { label: 'Đánh giá', key: 'rating', render: (val) => (
             <div className="d-flex gap-1 justify-content-center">
@@ -179,7 +163,7 @@ const ComparePage: React.FC = () => {
                                                     Thông tin
                                                 </th>
                                                 {compareList.map(product => {
-                                                    const detail = details.find(d => d.id === product.id) || product as DetailedProduct;
+                                                    const detail = details[product.id] || product;
                                                     return (
                                                         <th key={product.id} style={{ textAlign: 'center', padding: '20px 16px', verticalAlign: 'top', minWidth: 200 }}>
                                                             {/* Product card in header */}
@@ -229,15 +213,14 @@ const ComparePage: React.FC = () => {
                                         </thead>
 
                                         <tbody>
-                                            {/* Basic rows like price, category */}
                                             {rows.map(row => (
                                                 <tr key={row.key} style={{ borderTop: '1px solid #f0f0f0' }}>
                                                     <td style={{ padding: '14px 20px', fontWeight: 600, fontSize: 13, color: '#495057', background: '#fafafa', verticalAlign: 'middle' }}>
                                                         {row.label}
                                                     </td>
                                                     {compareList.map(product => {
-                                                        const detail = details.find(d => d.id === product.id) || product as DetailedProduct;
-                                                        const val = (detail as any)[row.key];
+                                                        const detail = details[product.id] || product;
+                                                        const val = detail[row.key];
                                                         return (
                                                             <td key={product.id} style={{ textAlign: 'center', padding: '14px 16px', verticalAlign: 'middle' }}>
                                                                 {row.render ? row.render(val, detail) : (
@@ -249,39 +232,11 @@ const ComparePage: React.FC = () => {
                                                 </tr>
                                             ))}
 
-                                            {/* Dynamic Specification Rows from EAV API */}
-                                            {Object.entries(specData).map(([groupName, specs]) => (
-                                                <React.Fragment key={groupName}>
-                                                    {/* Group Header Row */}
-                                                    <tr style={{ background: '#f8f9fa' }}>
-                                                        <td colSpan={compareList.length + 1} style={{ padding: '12px 20px', fontWeight: 700, fontSize: 14, color: '#212529', textTransform: 'uppercase' }}>
-                                                            {groupName}
-                                                        </td>
-                                                    </tr>
-                                                    {/* Specification Rows */}
-                                                    {Object.entries(specs).map(([specName, values]) => (
-                                                        <tr key={specName} style={{ borderTop: '1px solid #f0f0f0' }}>
-                                                            <td style={{ padding: '14px 20px', fontWeight: 600, fontSize: 13, color: '#495057', background: '#fafafa', verticalAlign: 'middle' }}>
-                                                                {specName}
-                                                            </td>
-                                                            {compareList.map(product => {
-                                                                const val = (values as any)[product.id];
-                                                                return (
-                                                                    <td key={product.id} style={{ textAlign: 'center', padding: '14px 16px', verticalAlign: 'middle' }}>
-                                                                        <span style={{ color: '#495057', fontSize: 14 }}>{val || '—'}</span>
-                                                                    </td>
-                                                                );
-                                                            })}
-                                                        </tr>
-                                                    ))}
-                                                </React.Fragment>
-                                            ))}
-
                                             {/* CTA row */}
                                             <tr style={{ borderTop: '2px solid #e9ecef', background: '#fafafa' }}>
                                                 <td style={{ padding: '16px 20px', fontWeight: 600, fontSize: 13, color: '#495057' }}>Hành động</td>
                                                 {compareList.map(product => {
-                                                    const detail = details.find(d => d.id === product.id) || product as DetailedProduct;
+                                                    const detail = details[product.id] || product;
                                                     return (
                                                         <td key={product.id} style={{ textAlign: 'center', padding: '16px 16px' }}>
                                                             <div className="d-flex flex-column gap-2 align-items-center">

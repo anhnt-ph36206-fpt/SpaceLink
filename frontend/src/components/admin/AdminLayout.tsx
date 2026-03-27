@@ -19,7 +19,6 @@ import {
     FileTextOutlined,
     CommentOutlined,
     GiftOutlined,
-    ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -52,11 +51,6 @@ const menuItems = [
         key: '/admin/attribute-groups',
         icon: <TagsOutlined />,
         label: 'Nhóm biến thể',
-    },
-    {
-        key: '/admin/specification-groups',
-        icon: <ThunderboltOutlined />,
-        label: 'Cấu hình thông số',
     },
     {
         key: '/admin/banners',
@@ -96,7 +90,6 @@ const breadcrumbMap: Record<string, string> = {
     '/admin/brands': 'Thương hiệu',
     '/admin/products': 'Sản phẩm',
     '/admin/attribute-groups': 'Nhóm biến thể',
-    '/admin/specification-groups': 'Cấu hình thông số',
     '/admin/banners': 'Banners',
     '/admin/news': 'Tin tức',
     '/admin/orders': 'Đơn hàng',

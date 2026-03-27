@@ -121,33 +121,21 @@ class ProductController extends Controller
     public function compare(Request $request)
     {
         $slugs = $request->query('slugs');
-        $ids   = $request->query('ids');
-
-        if (!$slugs && !$ids) {
-            return response()->json(['message' => 'Vui lòng cung cấp danh sách ID hoặc slug sản phẩm.'], 400);
+        if (!$slugs) {
+            return response()->json(['message' => 'Vui lòng cung cấp danh sách slug sản phẩm.'], 400);
         }
 
-        $productListReq = [];
-        $column = 'slug';
-
-        if ($ids) {
-            $productListReq = array_filter(array_map('trim', explode(',', $ids)));
-            $column = 'id';
-        } else {
-            $productListReq = array_filter(array_map('trim', explode(',', $slugs)));
-            $column = 'slug';
-        }
-
-        if (count($productListReq) < 2) {
+        $slugList = array_filter(array_map('trim', explode(',', $slugs)));
+        if (count($slugList) < 2) {
             return response()->json(['message' => 'Cần ít nhất 2 sản phẩm để so sánh.'], 400);
         }
 
         $products = Product::with(['images', 'specifications.specGroup'])
-            ->whereIn($column, $productListReq)
+            ->whereIn('slug', $slugList)
             ->get();
 
         if ($products->isEmpty()) {
-            return response()->json(['message' => 'Không tìm thấy sản phẩm nào với dữ liệu đã cung cấp.'], 404);
+            return response()->json(['message' => 'Không tìm thấy sản phẩm nào với slugs đã cung cấp.'], 404);
         }
 
         // Build product summary

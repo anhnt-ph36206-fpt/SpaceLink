@@ -16,7 +16,6 @@ import { axiosInstance } from '../../../api/axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { productPrefix, categoryPrefix, brandPrefix, attributeGroupPrefix } from '../../../api/apiAdminPrefix';
-import ProductSpecificationsTab from './ProductSpecificationsTab';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -1132,11 +1131,6 @@ const ProductEdit: React.FC = () => {
                 </div>
             ),
         },
-        {
-            key: 'specifications',
-            label: <span><ThunderboltOutlined />Thông số kỹ thuật</span>,
-            children: <ProductSpecificationsTab productId={id as string} />
-        }
     ];
 
     if (pageLoading) {

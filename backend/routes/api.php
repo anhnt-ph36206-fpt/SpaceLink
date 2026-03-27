@@ -1,30 +1,25 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AttributeController;
-// Auth (dùng chung, không phải Client/Admin)
 use App\Http\Controllers\Api\Admin\AttributeGroupController as AdminAttributeGroupController;
 use App\Http\Controllers\Api\Admin\SpecGroupController;
 use App\Http\Controllers\Api\Admin\ProductSpecificationController;
-// Client Controllers
 use App\Http\Controllers\Api\Admin\BannerController as AdminBannerController;
 use App\Http\Controllers\Api\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Api\Admin\ContactController as AdminContactController;
-use App\Http\Controllers\Api\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Api\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Admin\NewsController as AdminNewsController;
 use App\Http\Controllers\Api\Admin\ReviewController as AdminReviewController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\AuthController;
-// Admin Controllers
+// Client Controllers
 use App\Http\Controllers\Api\Client\AddressController;
 use App\Http\Controllers\Api\Client\BannerController as ClientBannerController;
-// New Controllers
 use App\Http\Controllers\Api\Client\BrandController;
 use App\Http\Controllers\Api\Client\CartController;
 use App\Http\Controllers\Api\Client\CategoryController as ClientCategoryController;
 use App\Http\Controllers\Api\Client\CheckoutController;
-use App\Http\Controllers\Api\Client\CommentController as ClientCommentController;
 use App\Http\Controllers\Api\Client\CommentController as ClientCommentController;
 use App\Http\Controllers\Api\Client\ContactController as ClientContactController;
 use App\Http\Controllers\Api\Client\NewsController as ClientNewsController;
@@ -50,235 +45,192 @@ use Illuminate\Support\Facades\Route;
 
 // --- Auth (không cần login) ---
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class , 'register']);
-    Route::post('/login', [AuthController::class , 'login']);
-    Route::post('/forgot-password', [AuthController::class , 'forgotPassword']); // Gửi email reset
-    Route::post('/reset-password', [AuthController::class , 'resetPassword']); // Đặt lại mật khẩu
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 });
 
 // --- Brands ---
-Route::get('/brands', [BrandController::class , 'index']);
+Route::get('/brands', [BrandController::class, 'index']);
 
 // --- Banners (public) ---
-Route::get('/banners', [ClientBannerController::class , 'index']);
+Route::get('/banners', [ClientBannerController::class, 'index']);
 
 // --- Categories (public) ---
-Route::get('/categories', [ClientCategoryController::class , 'index']);
-Route::get('/categories/{slug}', [ClientCategoryController::class , 'show']);
+Route::get('/categories', [ClientCategoryController::class, 'index']);
+Route::get('/categories/{slug}', [ClientCategoryController::class, 'show']);
 
 // --- Products ---
-Route::get('/products/compare', [ProductController::class , 'compare']);
-Route::get('/products', [ProductController::class , 'index']);
-Route::get('/products/compare', [ProductController::class , 'compare']);
-Route::get('/products/{id}', [ProductController::class , 'show']);
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/compare', [ProductController::class, 'compare']);
+Route::get('/products/{id}', [ProductController::class, 'show']);
 
-// --- Cart (Legacy – giữ để không breaking Swagger cũ) ---
-Route::get('/cart', [ClientCartController::class , 'index']);
-Route::post('/cart/add', [ClientCartController::class , 'addToCart']);
-Route::put('/cart/update/{id}', [ClientCartController::class , 'updateQuantity']);
-Route::delete('/cart/remove/{id}', [ClientCartController::class , 'remove']);
+// --- Cart (Legacy) ---
+Route::get('/cart', [ClientCartController::class, 'index']);
+Route::post('/cart/add', [ClientCartController::class, 'addToCart']);
+Route::put('/cart/update/{id}', [ClientCartController::class, 'updateQuantity']);
+Route::delete('/cart/remove/{id}', [ClientCartController::class, 'remove']);
 
 // --- Reviews & News (Public) ---
-Route::get('/products/{id}/reviews', [ClientReviewController::class , 'productReviews']);
-Route::get('/news', [ClientNewsController::class , 'index']);
-Route::get('/news/{slug}', [ClientNewsController::class , 'show']);
+Route::get('/products/{id}/reviews', [ClientReviewController::class, 'productReviews']);
+Route::get('/news', [ClientNewsController::class, 'index']);
+Route::get('/news/{slug}', [ClientNewsController::class, 'show']);
 
 // --- Comments (Public) ---
-Route::get('/products/{id}/comments', [ClientCommentController::class , 'index']);
-Route::get('/comments/{comment}', [ClientCommentController::class , 'show']);
-Route::get('/comments/{comment}/replies', [ClientCommentController::class , 'replies']);
+Route::get('/products/{id}/comments', [ClientCommentController::class, 'index']);
+Route::get('/comments/{comment}', [ClientCommentController::class, 'show']);
+Route::get('/comments/{comment}/replies', [ClientCommentController::class, 'replies']);
 
 // --- Contacts (Public) ---
-Route::post('/contacts', [ClientContactController::class , 'store']);
+Route::post('/contacts', [ClientContactController::class, 'store']);
 
 // --- Search (Public) ---
-// throttle:60,1 = tối đa 60 request/phút/IP, chống spam/bot
 Route::middleware('throttle:60,1')->group(function () {
     Route::get('/search', SearchController::class);
-    Route::get('/search/autocomplete', [SearchController::class , 'autocomplete']);
+    Route::get('/search/autocomplete', [SearchController::class, 'autocomplete']);
 });
 
 // ========================================================================
 // 2. CLIENT ROUTES — /api/client/*
-//    Cart: hỗ trợ Guest (X-Session-ID) lẫn User đã login
-//    Checkout & Orders: bắt buộc phải đăng nhập (auth:sanctum)
 // ========================================================================
 Route::prefix('client')->name('client.')->group(function () {
 
-    // --- Client Categories (public) ---
-    Route::get('/categories', [ClientCategoryController::class , 'index'])->name('categories.index'); // GET /api/client/categories
-    Route::get('/categories/{slug}', [ClientCategoryController::class , 'show'])->name('categories.show'); // GET /api/client/categories/{slug}
+    Route::get('/categories', [ClientCategoryController::class, 'index'])->name('categories.index');
+    Route::get('/categories/{slug}', [ClientCategoryController::class, 'show'])->name('categories.show');
 
-    // --- Client Cart (optional auth – hỗ trợ Guest + User) ---
+    // --- Client Cart (optional auth) ---
     Route::prefix('cart')->group(function () {
-            Route::get('/', [CartController::class , 'index']); // GET  /api/client/cart
-            Route::post('/add', [CartController::class , 'addToCart']); // POST /api/client/cart/add
-            Route::put('/update/{cart_item_id}', [CartController::class , 'updateQuantity']); // PUT  /api/client/cart/update/{id}
-            Route::delete('/remove/{cart_item_id}', [CartController::class , 'remove']); // DELETE /api/client/cart/remove/{id}
-            Route::delete('/clear', [CartController::class , 'clear']); // DELETE /api/client/cart/clear
-        }
-        );
-
-        // --- Checkout & Payment ---
-        Route::middleware('auth:sanctum')->group(function () {
-            Route::post('checkout/vnpay', [CheckoutController::class , 'createVnpayPayment']);
-            Route::post('/checkout', [CheckoutController::class , 'checkout']);
-            Route::post('/checkout/check-voucher', [CheckoutController::class , 'checkVoucher']);
-            // Đơn hàng của client
-            Route::get('/orders', [ClientOrderController::class , 'index']);
-            Route::get('/orders/{id}', [ClientOrderController::class , 'show']);
-            Route::post('/orders/{id}/cancel', [ClientOrderController::class , 'cancel']);
-            Route::post('/orders/{id}/cancel-vnpay', [ClientOrderController::class , 'cancelUnpaidVnpay']);
-            Route::post('/orders/{id}/confirm-received', [ClientOrderController::class , 'confirmReceived']);
-            Route::post('/orders/{id}/return-request', [ClientOrderController::class , 'requestReturn']); // Yêu cầu hoàn trả/không nhận hàng
-            Route::get('/orders/{id}/retry-vnpay', [ClientOrderController::class , 'retryVnpayPayment']);
-            Route::post('/orders/{id}/switch-to-cod', [ClientOrderController::class , 'switchToCod']);
-
-            // Khiếu nại đơn hàng
-            Route::get('/orders/{id}/complaint', [ClientComplaintController::class , 'show']);
-            Route::post('/orders/{id}/complaint', [ClientComplaintController::class , 'store']);
-
-            // Review sản phẩm
-            Route::post('/reviews', [ClientReviewController::class , 'store']);
-
-            // Comment sản phẩm (giới hạn 5 bình luận / phút — chống spam)
-            Route::post('/comments', [ClientCommentController::class , 'store'])->middleware('throttle:5,1');
-            Route::put('/comments/{comment}', [ClientCommentController::class , 'update']);
-            Route::delete('/comments/{comment}', [ClientCommentController::class , 'destroy']);
-
-            // Wishlist (Yêu thích)
-            Route::get('/wishlist', [ClientWishlistController::class , 'index']);
-            Route::post('/wishlist', [ClientWishlistController::class , 'store']);
-            Route::delete('/wishlist/{id}', [ClientWishlistController::class , 'destroy']);
-
-        }
-        );
+        Route::get('/', [CartController::class, 'index']);
+        Route::post('/add', [CartController::class, 'addToCart']);
+        Route::put('/update/{cart_item_id}', [CartController::class, 'updateQuantity']);
+        Route::delete('/remove/{cart_item_id}', [CartController::class, 'remove']);
+        Route::delete('/clear', [CartController::class, 'clear']);
     });
 
+    // --- Checkout & Payment ---
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('checkout/vnpay', [CheckoutController::class, 'createVnpayPayment']);
+        Route::post('/checkout', [CheckoutController::class, 'checkout']);
+        Route::post('/checkout/check-voucher', [CheckoutController::class, 'checkVoucher']);
+
+        // Đơn hàng của client
+        Route::get('/orders', [ClientOrderController::class, 'index']);
+        Route::get('/orders/{id}', [ClientOrderController::class, 'show']);
+        Route::post('/orders/{id}/cancel', [ClientOrderController::class, 'cancel']);
+        Route::post('/orders/{id}/cancel-vnpay', [ClientOrderController::class, 'cancelUnpaidVnpay']);
+        Route::post('/orders/{id}/confirm-received', [ClientOrderController::class, 'confirmReceived']);
+        Route::post('/orders/{id}/return-request', [ClientOrderController::class, 'requestReturn']);
+        Route::get('/orders/{id}/retry-vnpay', [ClientOrderController::class, 'retryVnpayPayment']);
+        Route::post('/orders/{id}/switch-to-cod', [ClientOrderController::class, 'switchToCod']);
+
+        // Khiếu nại đơn hàng
+        Route::get('/orders/{id}/complaint', [ClientComplaintController::class, 'show']);
+        Route::post('/orders/{id}/complaint', [ClientComplaintController::class, 'store']);
+
+        // Review sản phẩm
+        Route::post('/reviews', [ClientReviewController::class, 'store']);
+
+        // Comment sản phẩm
+        Route::post('/comments', [ClientCommentController::class, 'store'])->middleware('throttle:5,1');
+        Route::put('/comments/{comment}', [ClientCommentController::class, 'update']);
+        Route::delete('/comments/{comment}', [ClientCommentController::class, 'destroy']);
+
+        // Wishlist
+        Route::get('/wishlist', [ClientWishlistController::class, 'index']);
+        Route::post('/wishlist', [ClientWishlistController::class, 'store']);
+        Route::delete('/wishlist/{id}', [ClientWishlistController::class, 'destroy']);
+    });
+});
+
 // ========================================================================
-// 3. PROTECTED ROUTES (Bắt buộc phải có Token)
+// 3. PROTECTED ROUTES (Bắt buộc login)
 // ========================================================================
 Route::middleware('auth:sanctum')->group(function () {
 
-    // --- Auth & Profile ---
     Route::prefix('auth')->group(function () {
-            Route::post('/logout', [AuthController::class , 'logout']);
-            Route::get('/me', [AuthController::class , 'me']);
-            Route::post('/change-password', [AuthController::class , 'changePassword']); // Đổi mật khẩu khi đã login
-        }
-        );
-
-        // --- Quản lý Hồ sơ (Profile) ---
-        Route::get('/profile', [ProfileController::class , 'show']);
-        Route::put('/profile', [ProfileController::class , 'update']);
-
-        // --- Quản lý Địa chỉ (Address) ---
-        Route::apiResource('addresses', AddressController::class);
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/change-password', [AuthController::class, 'changePassword']);
     });
 
-// --- VNPAY Webhooks (Public, không cần Auth) ---
-Route::get('payment/vnpay-return', [\App\Http\Controllers\Api\Client\CheckoutController::class , 'vnpayReturn']);
-Route::get('payment/vnpay-ipn', [\App\Http\Controllers\Api\Client\CheckoutController::class , 'vnpayIpn']);
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::put('/profile', [ProfileController::class, 'update']);
+
+    Route::apiResource('addresses', AddressController::class);
+});
+
+// --- VNPAY Webhooks ---
+Route::get('payment/vnpay-return', [\App\Http\Controllers\Api\Client\CheckoutController::class, 'vnpayReturn']);
+Route::get('payment/vnpay-ipn', [\App\Http\Controllers\Api\Client\CheckoutController::class, 'vnpayIpn']);
 
 // ========================================================================
 // 4. ADMIN ROUTES — /api/admin/*
-//    Bắt buộc: đăng nhập (auth:sanctum) + role_id = 1 (admin)
 // ========================================================================
 Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->group(function () {
 
-    // --- Admin Categories ---
     Route::apiResource('categories', AdminCategoryController::class);
-
-    // --- Admin Brands ---
     Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class);
-
-    // --- Admin Attribute Groups ---
     Route::apiResource('attribute-groups', AdminAttributeGroupController::class);
-
-    // --- Admin Specification Groups ---
     Route::apiResource('specification-groups', \App\Http\Controllers\Api\Admin\SpecificationGroupController::class);
 
-    // --- Admin Products ---
-    Route::post('products/bulk-action', [\App\Http\Controllers\Api\Admin\ProductController::class , 'bulkAction']);
-    Route::patch('products/{product}/toggle-active', [\App\Http\Controllers\Api\Admin\ProductController::class , 'toggleActive']);
-    Route::post('products/{product}/restore', [\App\Http\Controllers\Api\Admin\ProductController::class , 'restore']);
-    Route::get('products/{product}/specifications', [\App\Http\Controllers\Api\Admin\ProductController::class , 'getSpecifications']);
-    Route::put('products/{product}/specifications', [\App\Http\Controllers\Api\Admin\ProductController::class , 'syncSpecifications']);
+    Route::post('products/bulk-action', [\App\Http\Controllers\Api\Admin\ProductController::class, 'bulkAction']);
+    Route::patch('products/{product}/toggle-active', [\App\Http\Controllers\Api\Admin\ProductController::class, 'toggleActive']);
+    Route::post('products/{product}/restore', [\App\Http\Controllers\Api\Admin\ProductController::class, 'restore']);
+    Route::get('products/{product}/specifications', [\App\Http\Controllers\Api\Admin\ProductController::class, 'getSpecifications']);
+    Route::put('products/{product}/specifications', [\App\Http\Controllers\Api\Admin\ProductController::class, 'syncSpecifications']);
     Route::apiResource('products', \App\Http\Controllers\Api\Admin\ProductController::class);
 
-    // --- Admin Product Variants (nested) ---
-    Route::get('products/{product}/variants', [\App\Http\Controllers\Api\Admin\ProductVariantController::class , 'index']);
-    Route::post('products/{product}/variants', [\App\Http\Controllers\Api\Admin\ProductVariantController::class , 'store']);
-    Route::put('products/{product}/variants/{variant}', [\App\Http\Controllers\Api\Admin\ProductVariantController::class , 'update']);
-    Route::delete('products/{product}/variants/{variant}', [\App\Http\Controllers\Api\Admin\ProductVariantController::class , 'destroy']);
+    Route::get('products/{product}/variants', [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'index']);
+    Route::post('products/{product}/variants', [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'store']);
+    Route::put('products/{product}/variants/{variant}', [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'update']);
+    Route::delete('products/{product}/variants/{variant}', [\App\Http\Controllers\Api\Admin\ProductVariantController::class, 'destroy']);
 
-    // --- Admin Product Specifications (nested, for compare feature) ---
-    Route::get('products/{product}/specifications', [ProductSpecificationController::class , 'index']);
-    Route::post('products/{product}/specifications', [ProductSpecificationController::class , 'store']);
-    Route::put('products/{product}/specifications/bulk', [ProductSpecificationController::class , 'bulk']);
-    Route::put('products/{product}/specifications/{specification}', [ProductSpecificationController::class , 'update']);
-    Route::delete('products/{product}/specifications/{specification}', [ProductSpecificationController::class , 'destroy']);
+    Route::get('products/{product}/specifications', [ProductSpecificationController::class, 'index']);
+    Route::post('products/{product}/specifications', [ProductSpecificationController::class, 'store']);
+    Route::put('products/{product}/specifications/bulk', [ProductSpecificationController::class, 'bulk']);
+    Route::put('products/{product}/specifications/{specification}', [ProductSpecificationController::class, 'update']);
+    Route::delete('products/{product}/specifications/{specification}', [ProductSpecificationController::class, 'destroy']);
 
-    // --- Admin Spec Groups ---
-    Route::apiResource('spec-groups', SpecGroupController::class);
 
-    // --- Admin Product Images (nested) ---
-    Route::post('products/{product}/images', [\App\Http\Controllers\Api\Admin\ProductImageController::class , 'store']);
-    Route::delete('products/{product}/images/{image}', [\App\Http\Controllers\Api\Admin\ProductImageController::class , 'destroy']);
+    Route::post('products/{product}/images', [\App\Http\Controllers\Api\Admin\ProductImageController::class, 'store']);
+    Route::delete('products/{product}/images/{image}', [\App\Http\Controllers\Api\Admin\ProductImageController::class, 'destroy']);
 
-    // --- Admin Orders ---
-    Route::get('orders', [\App\Http\Controllers\Api\Admin\OrderController::class , 'index']);
-    Route::get('orders/{order}', [\App\Http\Controllers\Api\Admin\OrderController::class , 'show']);
-    Route::patch('orders/{order}/status', [\App\Http\Controllers\Api\Admin\OrderController::class , 'updateStatus']);
-    Route::patch('orders/{order}/payment-status', [\App\Http\Controllers\Api\Admin\OrderController::class , 'updatePaymentStatus']);
-    Route::post('orders/{order}/return/approve', [\App\Http\Controllers\Api\Admin\OrderController::class , 'approveReturn']); // Admin duyệt hoàn trả
-    Route::post('orders/{order}/return/reject', [\App\Http\Controllers\Api\Admin\OrderController::class , 'rejectReturn']); // Admin từ chối hoàn trả
+    Route::get('orders', [\App\Http\Controllers\Api\Admin\OrderController::class, 'index']);
+    Route::get('orders/{order}', [\App\Http\Controllers\Api\Admin\OrderController::class, 'show']);
+    Route::patch('orders/{order}/status', [\App\Http\Controllers\Api\Admin\OrderController::class, 'updateStatus']);
+    Route::patch('orders/{order}/payment-status', [\App\Http\Controllers\Api\Admin\OrderController::class, 'updatePaymentStatus']);
+    Route::post('orders/{order}/return/approve', [\App\Http\Controllers\Api\Admin\OrderController::class, 'approveReturn']);
+    Route::post('orders/{order}/return/reject', [\App\Http\Controllers\Api\Admin\OrderController::class, 'rejectReturn']);
 
-    // --- Admin Vouchers ---
     Route::apiResource('vouchers', \App\Http\Controllers\Api\Admin\VoucherController::class);
 
-    // --- Admin Users ---
     Route::apiResource('users', AdminUserController::class)->except(['store']);
-    Route::post('users/{user}/restore', [AdminUserController::class , 'restore']);
+    Route::post('users/{user}/restore', [AdminUserController::class, 'restore']);
 
-    // --- Admin Reviews ---
-    Route::get('reviews', [AdminReviewController::class , 'index']);
-    // Dùng patch vì update từng phần
-    Route::patch('reviews/{id}/reply', [AdminReviewController::class , 'reply']);
-    Route::patch('reviews/{id}/toggle-visibility', [AdminReviewController::class , 'toggleVisibility']);
-    Route::delete('reviews/{id}', [AdminReviewController::class , 'destroy']);
+    Route::get('reviews', [AdminReviewController::class, 'index']);
+    Route::patch('reviews/{id}/reply', [AdminReviewController::class, 'reply']);
+    Route::patch('reviews/{id}/toggle-visibility', [AdminReviewController::class, 'toggleVisibility']);
+    Route::delete('reviews/{id}', [AdminReviewController::class, 'destroy']);
 
-    // --- Admin Comments ---
-    Route::get('comments', [AdminCommentController::class , 'index']);
-    Route::patch('comments/{comment}/approve', [AdminCommentController::class , 'approve']);
-    Route::patch('comments/{comment}/reject', [AdminCommentController::class , 'reject']);
-    Route::patch('comments/{comment}/toggle-hide', [AdminCommentController::class , 'toggleHide']);
-    Route::delete('comments/{comment}', [AdminCommentController::class , 'destroy']);
+    // --- Admin Comments (đã xóa đoạn trùng lặp) ---
+    Route::get('comments', [AdminCommentController::class, 'index']);
+    Route::patch('comments/{comment}/approve', [AdminCommentController::class, 'approve']);
+    Route::patch('comments/{comment}/reject', [AdminCommentController::class, 'reject']);
+    Route::patch('comments/{comment}/toggle-hide', [AdminCommentController::class, 'toggleHide']);
+    Route::delete('comments/{comment}', [AdminCommentController::class, 'destroy']);
 
-    // --- Admin Comments ---
-    Route::get('comments', [AdminCommentController::class , 'index']);
-    Route::patch('comments/{comment}/approve', [AdminCommentController::class , 'approve']);
-    Route::patch('comments/{comment}/reject', [AdminCommentController::class , 'reject']);
-    Route::patch('comments/{comment}/toggle-hide', [AdminCommentController::class , 'toggleHide']);
-    Route::delete('comments/{comment}', [AdminCommentController::class , 'destroy']);
-
-    // --- Admin News ---
     Route::apiResource('news', AdminNewsController::class);
 
-    // --- Admin Contacts ---
-    Route::get('contacts', [AdminContactController::class , 'index']);
-    Route::patch('contacts/{id}/reply', [AdminContactController::class , 'reply']);
-    Route::delete('contacts/{id}', [AdminContactController::class , 'destroy']);
+    Route::get('contacts', [AdminContactController::class, 'index']);
+    Route::patch('contacts/{id}/reply', [AdminContactController::class, 'reply']);
+    Route::delete('contacts/{id}', [AdminContactController::class, 'destroy']);
 
-    // --- Admin Attributes ---
-    Route::apiResource('attribute-groups', AttributeGroupController::class);
     Route::apiResource('attributes', AttributeController::class);
 
-    // --- Admin Banners ---
     Route::apiResource('banners', AdminBannerController::class);
-    Route::patch('banners/{banner}/toggle', [AdminBannerController::class , 'toggle']);
+    Route::patch('banners/{banner}/toggle', [AdminBannerController::class, 'toggle']);
 
-    // --- Admin Dashboard ---
-    Route::get('dashboard/stats', [DashboardController::class , 'stats']);
-    Route::get('dashboard/revenue', [DashboardController::class , 'revenue']);
+    Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('dashboard/revenue', [DashboardController::class, 'revenue']);
 });
