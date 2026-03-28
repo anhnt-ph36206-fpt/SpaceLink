@@ -91,7 +91,9 @@ class OrderController extends Controller
         $reason = $request->input('reason', 'Khách hàng tự hủy.');
 
         DB::transaction(function () use ($order, $user, $reason) {
-            // Hoàn lại tồn kho: variant + product
+            // Hoàn lại tồn kho từ order_items — luôn đúng cho mọi loại đơn
+            // COD: cart đã bị xóa tại checkout (không hoàn kho), cancel hoàn từ đây ✓
+            // VNPAY: CartController.remove() được chặn khi có pending order nên không double-restore ✓
             $variantIds = [];
             foreach ($order->items()->with('variant')->get() as $item) {
                 if ($item->variant_id && $item->variant) {
@@ -117,7 +119,7 @@ class OrderController extends Controller
                 'changed_by'  => $user->id,
             ]);
 
-            // Xóa cart items liên quan để tránh double-restore nếu user xóa cart thủ công sau này
+            // Xóa cart items (idempotent — an toàn dù đã xóa hay chưa)
             if (count($variantIds) > 0) {
                 \App\Models\Cart::where('user_id', $user->id)
                     ->whereIn('variant_id', $variantIds)
@@ -289,7 +291,9 @@ class OrderController extends Controller
                 'changed_by'  => $user->id,
             ]);
 
-            // Hoàn lại tồn kho variant + product
+            // Hoàn lại tồn kho từ order_items
+            // CartController.remove() đã được chặn khi có pending VNPAY order
+            // nên không xảy ra double-restore ở đây
             $variantIds = [];
             foreach ($order->items as $item) {
                 if ($item->variant_id) {
@@ -301,7 +305,7 @@ class OrderController extends Controller
                     ->increment('quantity', $item->quantity);
             }
 
-            // Xóa cart items để tránh double-restore khi user xóa cart thủ công sau này
+            // Xóa cart items (idempotent)
             if (count($variantIds) > 0) {
                 \App\Models\Cart::where('user_id', $user->id)
                     ->whereIn('variant_id', $variantIds)

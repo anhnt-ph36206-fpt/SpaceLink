@@ -149,6 +149,19 @@ class CartController extends Controller
 
         try {
             $result = DB::transaction(function () use ($request, $ctx) {
+                // Backend guard: chặn thêm vào giỏ nếu user đang có đơn VNPAY chưa thanh toán
+                if ($ctx['user_id']) {
+                    $hasPendingVnpay = \App\Models\Order::where('user_id', $ctx['user_id'])
+                        ->where('status', 'pending')
+                        ->where('payment_method', 'vnpay')
+                        ->where('payment_status', 'unpaid')
+                        ->exists();
+
+                    if ($hasPendingVnpay) {
+                        throw new \Exception('Bạn đang có đơn hàng VNPAY chưa thanh toán. Vui lòng thanh toán hoặc hủy đơn đó trước.', 422);
+                    }
+                }
+
                 // Lock variant để chống race condition
                 $variant = ProductVariant::where('id', $request->variant_id)
                     ->where('is_active', true)
@@ -252,6 +265,20 @@ class CartController extends Controller
 
                 if (!$this->ownsCartItem($request, $cartItem)) {
                     throw new \Exception('Không có quyền truy cập.', 403);
+                }
+
+                // Chặn thay đổi nếu variant đang thuộc đơn VNPAY chưa thanh toán
+                if (!is_null($cartItem->user_id) && $cartItem->variant_id) {
+                    $hasPendingVnpay = \App\Models\Order::where('user_id', $cartItem->user_id)
+                        ->where('status', 'pending')
+                        ->where('payment_method', 'vnpay')
+                        ->where('payment_status', 'unpaid')
+                        ->whereHas('items', fn ($q) => $q->where('variant_id', $cartItem->variant_id))
+                        ->exists();
+
+                    if ($hasPendingVnpay) {
+                        throw new \Exception('Không thể thay đổi giỏ hàng khi đang có đơn VNPAY chờ thanh toán.', 422);
+                    }
                 }
 
                 $ctx = $this->getContext($request);
@@ -366,12 +393,26 @@ class CartController extends Controller
                 }
 
                 // Hoàn lại tồn kho CHỈ khi item thuộc user (đã trừ kho lúc add)
-                if (!is_null($cartItem->user_id)) {
-                    $variant = ProductVariant::lockForUpdate()->find($cartItem->variant_id);
-                    if ($variant) {
-                        $variant->increment('quantity', $cartItem->quantity);
+                // VÀ variant này KHÔNG thuộc đơn VNPAY đang chờ thanh toán.
+                // Nếu có pending VNPAY order → SKIP hoàn kho ở đây;
+                // cancel() sẽ hoàn kho khi user hủy đơn.
+                if (!is_null($cartItem->user_id) && $cartItem->variant_id) {
+                    $hasPendingVnpay = \App\Models\Order::where('user_id', $cartItem->user_id)
+                        ->where('status', 'pending')
+                        ->where('payment_method', 'vnpay')
+                        ->where('payment_status', 'unpaid')
+                        ->whereHas('items', fn ($q) => $q->where('variant_id', $cartItem->variant_id))
+                        ->exists();
+
+                    if (!$hasPendingVnpay) {
+                        // Không có pending VNPAY → hoàn kho bình thường
+                        $variant = ProductVariant::lockForUpdate()->find($cartItem->variant_id);
+                        if ($variant) {
+                            $variant->increment('quantity', $cartItem->quantity);
+                        }
+                        Product::where('id', $cartItem->product_id)->increment('quantity', $cartItem->quantity);
                     }
-                    Product::where('id', $cartItem->product_id)->increment('quantity', $cartItem->quantity);
+                    // Có pending VNPAY → không hoàn kho; cancel() sẽ xử lý
                 }
                 // Guest item: không hoàn kho vì chưa trừ kho lúc thêm vào giỏ
 

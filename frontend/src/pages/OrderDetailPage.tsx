@@ -310,18 +310,6 @@ const OrderDetailPage: React.FC = () => {
     return () => clearInterval(t);
   }, [order?.vnpay_expired_at]);
 
-  // ── VNPAY Countdown Timer ───────────────────────────────────
-  useEffect(() => {
-    if (!order?.vnpay_expired_at) { setVnpaySecondsLeft(null); return; }
-    const calc = () => {
-      const diff = Math.floor((new Date(order.vnpay_expired_at!).getTime() - Date.now()) / 1000);
-      setVnpaySecondsLeft(Math.max(0, diff));
-    };
-    calc();
-    const t = setInterval(calc, 1000);
-    return () => clearInterval(t);
-  }, [order?.vnpay_expired_at]);
-
   // ── Cancel ─────────────────────────────────────────────────
   const handleCancel = async () => {
     if (!order) return;
@@ -337,6 +325,11 @@ const OrderDetailPage: React.FC = () => {
       setCancelOpen(false);
       setCancelReason('');
       setBankInfo({ bank: '', accountName: '', accountNumber: '' });
+      // Xóa pending order khỏi sessionStorage và refresh cart
+      if (sessionStorage.getItem('vnpay_pending_order_id') === String(order.id)) {
+        sessionStorage.removeItem('vnpay_pending_order_id');
+      }
+      await refreshCart();
       fetchOrder();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -684,66 +677,7 @@ const OrderDetailPage: React.FC = () => {
             </div>
           )}
 
-          {/* ── VNPAY Pending Payment Banner ── */}
-          {isVnpayPending && (
-            <div className="od-vnpay-pending-card">
-              <div className="od-vnpay-pending-header">
-                <i className="fas fa-clock me-2" />
-                Đơn hàng đang chờ thanh toán VNPAY
-              </div>
-              <div className="od-vnpay-pending-body">
-                <div className="od-vnpay-pending-desc">
-                  Đơn hàng sẽ tự động hủy khi hết thời gian. Vui lòng thanh toán hoặc chọn phương thức khác.
-                </div>
-                {vnpaySecondsLeft !== null && (
-                  <div className="od-vnpay-countdown">
-                    <i className="fas fa-hourglass-half me-1" />
-                    Còn lại: <strong className={vnpaySecondsLeft < 60 ? 'od-text-danger' : ''}>
-                      {fmtCountdown(vnpaySecondsLeft)}
-                    </strong>
-                  </div>
-                )}
-                <div className="od-vnpay-pending-actions">
-                  <button className="od-btn-vnpay-retry" disabled={retryVnpayLoading} onClick={handleRetryVnpay}>
-                    <i className="fas fa-rotate-right me-2" />
-                    {retryVnpayLoading ? 'Đang xử lý...' : 'Thanh toán lại VNPAY'}
-                  </button>
-                  <button className="od-btn-switch-cod" disabled={switchCodLoading} onClick={() => setSwitchCodOpen(true)}>
-                    <i className="fas fa-truck me-2" />
-                    {switchCodLoading ? 'Đang xử lý...' : 'Chuyển sang COD'}
-                  </button>
-                  <button className="od-btn-cancel-vnpay" onClick={() => setCancelOpen(true)}>
-                    <i className="fas fa-xmark me-2" />
-                    Hủy đơn hàng
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Dialog xác nhận chuyển COD ── */}
-          {switchCodOpen && (
-            <div className="od-modal-backdrop" onClick={() => setSwitchCodOpen(false)}>
-              <div className="od-modal" onClick={e => e.stopPropagation()}>
-                <div className="od-modal-title">
-                  <i className="fas fa-truck me-2" style={{ color: '#ea580c' }} />
-                  Xác nhận chuyển sang COD
-                </div>
-                <div className="od-modal-body">
-                  <p>Bạn muốn chuyển đơn <strong>#{order.order_code}</strong> sang <strong>COD (trả khi nhận hàng)</strong>?</p>
-                  <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
-                    Giỏ hàng sẽ được dọn sạch. Đơn hàng tiếp tục xử lý bình thường.
-                  </p>
-                </div>
-                <div className="od-modal-footer">
-                  <button className="od-btn-cancel-modal" onClick={() => setSwitchCodOpen(false)}>Hủy bỏ</button>
-                  <button className="od-btn-confirm-modal" disabled={switchCodLoading} onClick={handleSwitchToCod}>
-                    {switchCodLoading ? 'Đang xử lý...' : 'Xác nhận chuyển COD'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Duplicate VNPAY pending banner and COD dialog removed — kept only the first instance above */}
 
           {/* ── CTA: Xác nhận nhận hàng ── */}
           {canConfirmReceived && (
@@ -1069,6 +1003,29 @@ const OrderDetailPage: React.FC = () => {
                   </button>
                 )}
 
+                {/* Nút Chuyển sang COD cho VNPAY chưa thanh toán */}
+                {canRetryVnpay && (
+                  <button
+                    className="od-btn-full"
+                    style={{
+                      background: switchCodLoading
+                        ? '#fde68a'
+                        : 'linear-gradient(135deg, #b45309, #d97706)',
+                      border: 'none', color: '#fff',
+                      borderRadius: 10, padding: '10px 16px',
+                      fontWeight: 700, fontSize: 14,
+                      cursor: switchCodLoading ? 'not-allowed' : 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      marginBottom: 8, transition: 'all .2s',
+                    }}
+                    onClick={() => setSwitchCodOpen(true)}
+                    disabled={switchCodLoading}
+                  >
+                    <i className="fas fa-money-bill-wave" />
+                    Chuyển sang thanh toán khi nhận hàng (COD)
+                  </button>
+                )}
+
                 {canConfirmReceived && (
                   <button className="od-btn-confirm-received od-btn-full" onClick={() => setConfirmOpen(true)}>
                     <i className="fas fa-check-double me-2" />Đã nhận được hàng
@@ -1327,6 +1284,53 @@ const OrderDetailPage: React.FC = () => {
                 {confirmLoading
                   ? <><span className="od-spin me-2" />Đang xác nhận...</>
                   : <><i className="fas fa-check-double me-2" />Đã nhận được hàng</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Switch to COD Modal ── */}
+      {switchCodOpen && (
+        <div className="od-overlay" onClick={e => { if (e.target === e.currentTarget) setSwitchCodOpen(false); }}>
+          <div className="od-modal">
+            <div className="od-modal-hd">
+              <div>
+                <div className="od-modal-title">
+                  <i className="fas fa-money-bill-wave me-2" style={{ color: '#b45309' }} />Chuyển phương thức thanh toán
+                </div>
+                <div className="od-modal-sub">Đơn hàng <strong>#{order.order_code}</strong> sẽ chuyển sang thanh toán khi nhận hàng (COD).</div>
+              </div>
+              <button className="od-modal-x" onClick={() => setSwitchCodOpen(false)}><i className="fas fa-times" /></button>
+            </div>
+            <div className="od-modal-bd">
+              <div className="od-confirm-info-box" style={{ background: '#fffbeb', border: '1.5px solid #fde68a' }}>
+                <i className="fas fa-info-circle me-2" style={{ color: '#b45309' }} />
+                <div>
+                  <div style={{ marginBottom: 6 }}>Sau khi chuyển đổi:</div>
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.8 }}>
+                    <li>Phương thức thanh toán sẽ đổi thành <strong>COD (thanh toán khi nhận hàng)</strong></li>
+                    <li>Đơn hàng vẫn giữ nguyên sản phẩm và giá</li>
+                    <li>Bạn sẽ thanh toán cho shipper khi nhận hàng</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="od-modal-ft">
+              <button className="od-modal-btn-no" onClick={() => setSwitchCodOpen(false)} disabled={switchCodLoading}>Hủy</button>
+              <button
+                className="od-modal-btn-yes"
+                style={{
+                  background: switchCodLoading ? '#fde68a' : 'linear-gradient(135deg, #b45309, #d97706)',
+                  border: 'none', color: '#fff',
+                }}
+                onClick={handleSwitchToCod}
+                disabled={switchCodLoading}
+              >
+                {switchCodLoading
+                  ? <><span className="od-spin me-2" />Đang xử lý...</>
+                  : <><i className="fas fa-check me-2" />Xác nhận chuyển sang COD</>
                 }
               </button>
             </div>

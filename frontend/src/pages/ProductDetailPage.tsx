@@ -340,6 +340,13 @@ const ProductDetailPage: React.FC = () => {
     // ── Buy Now (Direct Checkout) ─────────────────────────────────────────
     const [isChecking, setIsChecking] = useState(false);
     const handleBuyNow = async () => {
+        // Chặn Mua Ngay khi đang có đơn VNPAY chờ thanh toán
+        const pendingId = sessionStorage.getItem('vnpay_pending_order_id');
+        if (pendingId) {
+            toast.warning('⚠️ Bạn đang có đơn hàng chờ thanh toán VNPAY. Vui lòng thanh toán hoặc hủy đơn đó trước khi mua hàng mới.');
+            return;
+        }
+
         if (!product || !selectedVariant) {
             toast.warning('Vui lòng chọn các thuộc tính sản phẩm!');
             return;
@@ -352,18 +359,14 @@ const ProductDetailPage: React.FC = () => {
 
         setIsChecking(true);
         try {
-            // "Call data check như web bán hàng thực tế"
-            // Re-fetch latest data to ensure no stock changes or product deletions
             const res = await axiosInstance.get(`/products/${id}`);
             const latestProduct = res.data.data;
 
-            // Check if product is still active
             if (!latestProduct.is_active) {
                 toast.error('Sản phẩm này hiện không còn kinh doanh.');
                 return;
             }
 
-            // Find current selected variant in the latest data
             const latestVariant = latestProduct.variants?.find((v: Variant) => v.id === selectedVariant.id);
             if (!latestVariant) {
                 toast.error('Phân loại sản phẩm này không còn tồn tại.');
@@ -372,13 +375,10 @@ const ProductDetailPage: React.FC = () => {
 
             if (latestVariant.quantity < qty) {
                 toast.error(`Số lượng tồn kho không đủ (còn ${latestVariant.quantity} sản phẩm)`);
-                // Update local state to reflect latest reality
                 setProduct(latestProduct);
                 return;
             }
 
-            // If all good, navigate directly to checkout with this item (Buy Now flow)
-            // Passing state so checkout page knows to use this item instead of cart
             navigate('/checkout', {
                 state: {
                     buyNowItem: {

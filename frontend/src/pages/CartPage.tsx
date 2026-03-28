@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart, type CartItem } from '../context/CartContext';
+import { axiosInstance } from '../api/axios';
 import { Modal, Button, Spin, Tag, Tooltip, Divider, Typography, Checkbox, Popconfirm, Alert } from 'antd';
 import { ShoppingOutlined, CloseOutlined, InfoCircleOutlined, SwapOutlined, MinusOutlined, PlusOutlined, CheckCircleOutlined, ExclamationCircleOutlined, DeleteOutlined, ShoppingCartOutlined, WarningOutlined } from '@ant-design/icons';
 
@@ -16,11 +17,43 @@ const imgUrl = (path?: string) => {
 };
 
 const CartPage: React.FC = () => {
-    const { items, removeFromCart, updateQty, loading, updatingItems } = useCart();
+    const { items, removeFromCart, updateQty, loading, updatingItems, refreshCart } = useCart();
     const navigate = useNavigate();
 
     // Kiểm tra xem có đơn hàng VNPAY đang chờ thanh toán không
-    const pendingOrderId = sessionStorage.getItem('vnpay_pending_order_id');
+    // Dùng state thay vì đọc trực tiếp sessionStorage để có thể cập nhật động
+    const [pendingOrderId, setPendingOrderId] = useState<string | null>(
+        () => sessionStorage.getItem('vnpay_pending_order_id')
+    );
+
+    // Auto-validate: kiểm tra server xem pendingOrderId còn thực sự pending/unpaid không
+    useEffect(() => {
+        if (!pendingOrderId) return;
+        let cancelled = false;
+        axiosInstance.get(`/client/orders/${pendingOrderId}`)
+            .then(res => {
+                if (cancelled) return;
+                const order = res.data?.data ?? res.data;
+                // Nếu đơn không còn pending unpaid VNPAY → tự xóa sessionStorage
+                const stillPending = order &&
+                    order.status === 'pending' &&
+                    order.payment_status === 'unpaid' &&
+                    order.payment_method === 'vnpay';
+                if (!stillPending) {
+                    sessionStorage.removeItem('vnpay_pending_order_id');
+                    setPendingOrderId(null);
+                    // Refresh cart vì backend đã có thể đã xóa items liên quan
+                    refreshCart();
+                }
+            })
+            .catch(() => {
+                if (cancelled) return;
+                // Đơn không tồn tại hoặc lỗi → xóa key giả
+                sessionStorage.removeItem('vnpay_pending_order_id');
+                setPendingOrderId(null);
+            });
+        return () => { cancelled = true; };
+    }, [pendingOrderId]);
 
     // -- Checkbox State --
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -212,6 +245,7 @@ const CartPage: React.FC = () => {
                                     checked={isAllSelected}
                                     indeterminate={isIndeterminate}
                                     onChange={toggleAll}
+                                    disabled={!!pendingOrderId}
                                 >
                                     <span className="fw-semibold text-dark" style={{ fontSize: 13 }}>
                                         Chọn tất cả ({items.length} sản phẩm)
@@ -219,19 +253,27 @@ const CartPage: React.FC = () => {
                                 </Checkbox>
                             </div>
                             {selectedIds.size > 0 && (
-                                <Popconfirm
-                                    title={`Xóa ${selectedIds.size} sản phẩm đã chọn?`}
-                                    description="Thao tác này không thể hoàn tác."
-                                    okText="Xóa"
-                                    cancelText="Hủy"
-                                    okButtonProps={{ danger: true }}
-                                    onConfirm={handleDeleteSelected}
-                                >
-                                    <button className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" style={{ borderRadius: 8, fontSize: 13 }}>
-                                        <DeleteOutlined />
-                                        Xóa đã chọn ({selectedIds.size})
-                                    </button>
-                                </Popconfirm>
+                                pendingOrderId ? (
+                                    <Tooltip title="Vui lòng xử lý đơn hàng VNPAY đang chờ trước khi xóa sản phẩm">
+                                        <span className="text-muted small d-flex align-items-center gap-1" style={{ cursor: 'not-allowed', opacity: 0.5 }}>
+                                            <DeleteOutlined /> Xóa đã chọn ({selectedIds.size})
+                                        </span>
+                                    </Tooltip>
+                                ) : (
+                                    <Popconfirm
+                                        title={`Xóa ${selectedIds.size} sản phẩm đã chọn?`}
+                                        description="Thao tác này không thể hoàn tác."
+                                        okText="Xóa"
+                                        cancelText="Hủy"
+                                        okButtonProps={{ danger: true }}
+                                        onConfirm={handleDeleteSelected}
+                                    >
+                                        <button className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" style={{ borderRadius: 8, fontSize: 13 }}>
+                                            <DeleteOutlined />
+                                            Xóa đã chọn ({selectedIds.size})
+                                        </button>
+                                    </Popconfirm>
+                                )
                             )}
                         </div>
 
@@ -246,6 +288,7 @@ const CartPage: React.FC = () => {
                                         <Checkbox
                                             checked={selectedIds.has(item.id)}
                                             onChange={() => toggleItem(item.id)}
+                                            disabled={!!pendingOrderId}
                                         />
                                     </div>
 
@@ -278,10 +321,11 @@ const CartPage: React.FC = () => {
 
                                         {/* Variant Selector Trigger */}
                                         <div className="mt-2">
-                                            <Tooltip title="Nhấn để đổi phân loại">
+                                            <Tooltip title={pendingOrderId ? 'Xử lý đơn VNPAY đang chờ trước khi đổi phân loại' : 'Nhấn để đổi phân loại'}>
                                                 <div
-                                                    className="d-inline-flex align-items-center gap-1 px-2 py-1 rounded bg-light border text-muted small cursor-pointer hover-border-primary"
-                                                    onClick={() => handleOpenEdit(item)}
+                                                    className="d-inline-flex align-items-center gap-1 px-2 py-1 rounded bg-light border text-muted small"
+                                                    style={{ cursor: pendingOrderId ? 'not-allowed' : 'pointer', opacity: pendingOrderId ? 0.5 : 1 }}
+                                                    onClick={() => !pendingOrderId && handleOpenEdit(item)}
                                                 >
                                                     <span className="text-truncate" style={{ maxWidth: 150 }}>
                                                         Phân loại: {item.attributes || 'Mặc định'}
@@ -303,11 +347,11 @@ const CartPage: React.FC = () => {
 
                                     {/* Qty */}
                                     <div className="d-flex flex-column align-items-end gap-2" style={{ width: 140 }}>
-                                        <div className={`input-group input-group-sm rounded-pill overflow-hidden border ${updatingItems.has(item.id) ? 'opacity-50' : ''}`}>
+                                        <div className={`input-group input-group-sm rounded-pill overflow-hidden border ${updatingItems.has(item.id) || pendingOrderId ? 'opacity-50' : ''}`}>
                                             <button
                                                 className="btn btn-light border-0 px-2"
                                                 onClick={() => updateQty(item.id, item.quantity - 1)}
-                                                disabled={item.quantity <= 1 || updatingItems.has(item.id)}
+                                                disabled={item.quantity <= 1 || updatingItems.has(item.id) || !!pendingOrderId}
                                             >
                                                 <MinusOutlined />
                                             </button>
@@ -321,7 +365,7 @@ const CartPage: React.FC = () => {
                                             <button
                                                 className="btn btn-light border-0 px-2"
                                                 onClick={() => updateQty(item.id, item.quantity + 1)}
-                                                disabled={item.quantity >= item.stock || updatingItems.has(item.id)}
+                                                disabled={item.quantity >= item.stock || updatingItems.has(item.id) || !!pendingOrderId}
                                             >
                                                 <PlusOutlined />
                                             </button>
@@ -333,12 +377,16 @@ const CartPage: React.FC = () => {
                                     </div>
 
                                     {/* Remove */}
-                                    <button
-                                        className="btn btn-link text-muted p-2"
-                                        onClick={() => removeFromCart(item.id)}
-                                    >
-                                        <CloseOutlined />
-                                    </button>
+                                    <Tooltip title={pendingOrderId ? 'Xử lý đơn VNPAY đang chờ trước' : ''}>
+                                        <button
+                                            className="btn btn-link text-muted p-2"
+                                            onClick={() => !pendingOrderId && removeFromCart(item.id)}
+                                            style={{ cursor: pendingOrderId ? 'not-allowed' : 'pointer', opacity: pendingOrderId ? 0.4 : 1 }}
+                                            disabled={!!pendingOrderId}
+                                        >
+                                            <CloseOutlined />
+                                        </button>
+                                    </Tooltip>
                                 </div>
                             ))}
                         </div>
