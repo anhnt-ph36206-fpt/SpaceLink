@@ -4641,7 +4641,7 @@
                                     "message"
                                 ],
                                 "properties": {
-                                    "fullname": {
+                                    "name": {
                                         "type": "string"
                                     },
                                     "email": {
@@ -6403,10 +6403,6 @@
         {
             "name": "Client - Comments",
             "description": "Client - Comments"
-        },
-        {
-            "name": "Admin - Comments",
-            "description": "Admin - Comments"
         },
         {
             "name": "Admin - Attribute Groups",

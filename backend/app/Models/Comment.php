@@ -4,11 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Comment extends Model
 {
-    use SoftDeletes;
     use SoftDeletes;
     protected $fillable = [
         'user_id',
@@ -61,23 +59,6 @@ class Comment extends Model
     public function reports()
     {
         return $this->hasMany(CommentReport::class);
-    }
-
-    // ─── Scopes ───────────────────────────────────────────────────────────────
-
-    public function scopeApproved($query)
-    {
-        return $query->where('status', 'approved')->where('is_hidden', false);
-    }
-
-    public function scopeTopLevel($query)
-    {
-        return $query->whereNull('parent_id');
-    }
-
-    public function scopeForProduct($query, int $productId)
-    {
-        return $query->where('product_id', $productId);
     }
 
     // ─── Scopes ───────────────────────────────────────────────────────────────
