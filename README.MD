@@ -51,7 +51,7 @@
 - Bước 4: Di chuyển vào thư mục frontend (ReactJS 19)
 
   ```bash
-  cd frontend
+  cd C:/laragon/www/SpaceLink/frontend
   ```
 
 - Bước 5: Cài đặt thư viện Front-End (ReactJS 19)
