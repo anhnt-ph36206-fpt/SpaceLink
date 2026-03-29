@@ -30,7 +30,7 @@
   git clone https://github.com/anhnt-ph36206-fpt/SpaceLink
   ```
 
-- Bước 2: Di chuyển vào dự án
+- Bước 2: Di chuyển vào thư mục backend (Laravel 12)
 
   ```bash
   cd C:/laragon/www/SpaceLink
