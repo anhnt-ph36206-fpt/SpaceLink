@@ -48,10 +48,15 @@
   ```
 
 
-- Bước 4: Cài đặt thư viện Front-End (ReactJS 19)
+- Bước 4: Di chuyển vào thư mục frontend (ReactJS 19)
 
   ```bash
-  cd C:/laragon/www/SpaceLink/frontend
+  cd frontend
+  ```
+
+- Bước 5: Cài đặt thư viện Front-End (ReactJS 19)
+
+  ```bash
   npm install
   ```
 
@@ -60,7 +65,7 @@
   npm i
   ```
     
-- Bước 5: Cấu hình Back-End Cơ Bản:
+- Bước 6: Cấu hình Back-End Cơ Bản:
 +   Thiết lập cấu hình .env và kết nối database
 
     ```bash
