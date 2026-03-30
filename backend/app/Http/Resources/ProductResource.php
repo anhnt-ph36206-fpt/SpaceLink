@@ -10,25 +10,25 @@ class ProductResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'          => $this->id,
-            'name'        => $this->name,
-            'slug'        => $this->slug,
-            'sku'         => $this->sku,
+            'id' => $this->id,
+            'name' => $this->name,
+            'slug' => $this->slug,
+            'sku' => $this->sku,
             'description' => $this->description,
-            'content'     => $this->content,
-            'price'       => (float) $this->price,
-            'sale_price'  => $this->sale_price !== null ? (float) $this->sale_price : null,
+            'content' => $this->content,
+            'price' => (float) $this->price,
+            'sale_price' => $this->sale_price !== null ? (float) $this->sale_price : null,
             // effective_price: giá hiệu lực để frontend không phải tự tính COALESCE
             'effective_price' => (float) ($this->sale_price ?? $this->price),
-            'quantity'    => $this->quantity,
-            'sold_count'  => (int) ($this->sold_count ?? 0),
-            'view_count'  => $this->view_count,
+            'quantity' => $this->quantity,
+            'sold_count' => (int) ($this->sold_count ?? 0),
+            'view_count' => $this->view_count,
             'is_featured' => (bool) $this->is_featured,
-            'is_active'   => (bool) $this->is_active,
-            'category'    => $this->whenLoaded('category'),
-            'brand'       => $this->whenLoaded('brand'),
-            'images'      => $this->whenLoaded('images'),
-            'variants'    => $this->whenLoaded('variants', function () {
+            'is_active' => (bool) $this->is_active,
+            'category' => $this->whenLoaded('category'),
+            'brand' => $this->whenLoaded('brand'),
+            'images' => $this->whenLoaded('images'),
+            'variants' => $this->whenLoaded('variants', function () {
                 return $this->variants->map(function ($variant) {
                     return [
                         'id' => $variant->id,
@@ -49,7 +49,21 @@ class ProductResource extends JsonResource
                     ];
                 });
             }),
-            'created_at'  => $this->created_at?->format('d-m-Y H:i:s'),
+            'specifications' => $this->whenLoaded('specifications', function () {
+                return $this->specifications->map(function ($spec) {
+                    return [
+                        'id' => $spec->id,
+                        'name' => $spec->name,
+                        'value' => $spec->value,
+                        'group' => $spec->specGroup ? [
+                            'id' => $spec->specGroup->id,
+                            'name' => $spec->specGroup->name,
+                            'display_name' => $spec->specGroup->display_name,
+                        ] : null,
+                    ];
+                });
+            }),
+            'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
         ];
     }
 }
