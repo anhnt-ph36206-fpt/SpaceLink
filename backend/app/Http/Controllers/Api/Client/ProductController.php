@@ -96,13 +96,14 @@ class ProductController extends Controller
             'category',
             'brand',
             'images',
+            'specifications.specGroup',
             'variants' => function ($q) {
                 $q->where('is_active', true); // Chỉ lấy variant đang bán
             },
             'variants.attributes.attributeGroup',
         ])
-        ->where('is_active', true)  // Không lấy sản phẩm đã ẩn
-        ->find($id);
+            ->where('is_active', true)  // Không lấy sản phẩm đã ẩn
+            ->find($id);
 
         if (!$product) {
             return response()->json(['message' => 'Không tìm thấy sản phẩm.'], 404);
@@ -140,9 +141,9 @@ class ProductController extends Controller
 
         // Build product summary
         $productList = $products->map(fn($p) => [
-            'id'    => $p->id,
-            'name'  => $p->name,
-            'slug'  => $p->slug,
+            'id' => $p->id,
+            'name' => $p->name,
+            'slug' => $p->slug,
             'image' => $p->images->first()?->image_path,
             'price' => (float) ($p->sale_price ?? $p->price),
         ]);
@@ -153,7 +154,7 @@ class ProductController extends Controller
         foreach ($products as $product) {
             foreach ($product->specifications as $spec) {
                 $group = $spec->specGroup?->display_name ?? 'Khác';
-                $name  = $spec->name;
+                $name = $spec->name;
                 $specMatrix[$group][$name][$product->id] = $spec->value;
             }
         }
@@ -169,18 +170,18 @@ class ProductController extends Controller
                     $values[$p->id] = $valuesByProduct[$p->id] ?? null;
                 }
                 $attrList[] = [
-                    'name'   => $specName,
+                    'name' => $specName,
                     'values' => $values,
                 ];
             }
             $specifications[] = [
-                'group'      => $group,
+                'group' => $group,
                 'attributes' => $attrList,
             ];
         }
 
         return response()->json([
-            'products'       => $productList,
+            'products' => $productList,
             'specifications' => $specifications,
         ]);
     }
