@@ -20,6 +20,7 @@ import {
     CommentOutlined,
     GiftOutlined,
     CheckOutlined,
+    ToolOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -53,6 +54,11 @@ const menuItems = [
         key: '/admin/attribute-groups',
         icon: <TagsOutlined />,
         label: 'Nhóm biến thể',
+    },
+    {
+        key: '/admin/specification-groups',
+        icon: <ToolOutlined />,
+        label: 'Nhóm thông số KT',
     },
     {
         key: '/admin/banners',
@@ -92,6 +98,7 @@ const breadcrumbMap: Record<string, string> = {
     '/admin/brands': 'Thương hiệu',
     '/admin/products': 'Sản phẩm',
     '/admin/attribute-groups': 'Nhóm biến thể',
+    '/admin/specification-groups': 'Nhóm thông số kỹ thuật',
     '/admin/banners': 'Banners',
     '/admin/news': 'Tin tức',
     '/admin/orders': 'Đơn hàng',
