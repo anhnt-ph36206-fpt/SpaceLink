@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import { axiosInstance } from '../api/axios';
 import { useAuth } from './AuthContext';
 import { toast } from 'react-toastify';
@@ -73,6 +73,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [loading, setLoading] = useState(false);
     const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
     const { isAuthenticated } = useAuth();
+    // Guard chống race condition: track các variant đang trong quá trình add
+    const addingRef = useRef<Set<number>>(new Set());
 
     // Khi items thay đổi → lưu vào localStorage
     useEffect(() => {
@@ -133,6 +135,18 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [isAuthenticated]);
 
     const addToCart = async (variantId: number, quantity: number = 1) => {
+        // Chặn thêm vào giỏ khi đang có đơn VNPAY chờ thanh toán
+        const pendingId = sessionStorage.getItem('vnpay_pending_order_id');
+        if (pendingId) {
+            toast.warning(
+                '⚠️ Bạn đang có đơn hàng chờ thanh toán VNPAY. Vui lòng thanh toán hoặc hủy đơn đó trước khi thêm sản phẩm mới.',
+                { autoClose: 4000 }
+            );
+            return;
+        }
+        // Chống race condition: nếu đang gọi API cho variantId này thì bỏ qua
+        if (addingRef.current.has(variantId)) return;
+        addingRef.current.add(variantId);
         setLoading(true);
         try {
             const res = await axiosInstance.post('/client/cart/add', {
@@ -145,8 +159,34 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         } catch (error: any) {
             console.error('Failed to add to cart:', error);
-            toast.error(error.response?.data?.message || 'Không thể thêm vào giỏ hàng');
+            const msg: string = error.response?.data?.message || '';
+            const status = error.response?.status;
+
+            // Backend báo có pending VNPAY order → sync lại sessionStorage từ API
+            if (status === 422 && msg.toLowerCase().includes('vnpay')) {
+                toast.warning('⚠️ ' + msg, { autoClose: 5000 });
+                // Tự động tìm pending VNPAY order và cập nhật sessionStorage
+                try {
+                    const res = await axiosInstance.get('/client/orders');
+                    const orders: any[] = res.data?.data?.data ?? res.data?.data ?? [];
+                    const pending = orders.find((o: any) =>
+                        o.status === 'pending' &&
+                        o.payment_method === 'vnpay' &&
+                        o.payment_status === 'unpaid'
+                    );
+                    if (pending) {
+                        sessionStorage.setItem('vnpay_pending_order_id', String(pending.id));
+                    } else {
+                        sessionStorage.removeItem('vnpay_pending_order_id');
+                    }
+                } catch {
+                    // ignore
+                }
+            } else {
+                toast.error(msg || 'Không thể thêm vào giỏ hàng');
+            }
         } finally {
+            addingRef.current.delete(variantId);
             setLoading(false);
         }
     };
@@ -163,15 +203,35 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 });
                 toast.info('Đã xóa sản phẩm khỏi giỏ hàng');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to remove from cart:', error);
-            toast.error('Không thể xóa sản phẩm');
+            const status = error.response?.status;
+            // 404: item đã bị xóa từ backend (ví dụ: cancel đơn hàng đã xóa item)
+            // → Vẫn xóa khỏi local state mà không hiện lỗi, rồi refresh để đồng bộ
+            if (status === 404) {
+                setItems(prev => {
+                    const next = prev.filter(i => i.id !== cartItemId);
+                    saveCartToCache(next);
+                    return next;
+                });
+                await refreshCart();
+            } else {
+                const msg = error.response?.data?.message || 'Không thể xóa sản phẩm';
+                toast.error(msg);
+            }
         } finally {
             setLoading(false);
         }
     };
 
     const updateQty = async (cartItemId: number, qty: number, variantId?: number) => {
+        // Chặn thay đổi khi đang có đơn VNPAY chờ thanh toán
+        const pendingId = sessionStorage.getItem('vnpay_pending_order_id');
+        if (pendingId) {
+            toast.warning('⚠️ Vui lòng xử lý đơn hàng VNPAY đang chờ trước khi thay đổi giỏ hàng.', { autoClose: 3000 });
+            return;
+        }
+
         if (qty <= 0) {
             await removeFromCart(cartItemId);
             return;

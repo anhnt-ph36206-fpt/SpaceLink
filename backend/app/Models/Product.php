@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Scout\Searchable;
 
 class Product extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, Searchable;
 
     protected $fillable = [
         'category_id',
@@ -112,5 +113,27 @@ class Product extends Model
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    // Product has many specifications (for comparison)
+    public function specifications()
+    {
+        return $this->hasMany(ProductSpecification::class)->orderBy('display_order');
+    }
+
+    /**
+     * Scout: fields được tìm kiếm (database driver dùng LIKE trên các cột này)
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id'          => $this->id,
+            'name'        => $this->name,
+            'sku'         => $this->sku,
+            'description' => $this->description,
+            'category_id' => $this->category_id,
+            'brand_id'    => $this->brand_id,
+            'is_active'   => $this->is_active,
+        ];
     }
 }

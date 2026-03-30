@@ -114,6 +114,23 @@ class OrderResource extends JsonResource
                     'created_at' => $pr->created_at?->format('d-m-Y H:i:s'),
                 ];
             }),
+            // Yêu cầu hủy đơn (VNPAY đã TT) — chỉ trả record mới nhất
+            'cancel_request' => $this->whenLoaded('cancelRequests', function () {
+                $cr = $this->cancelRequests->first();
+                if (! $cr) return null;
+                return [
+                    'id'                    => $cr->id,
+                    'reason'                => $cr->reason,
+                    'refund_bank'           => $cr->refund_bank,
+                    'refund_account_name'   => $cr->refund_account_name,
+                    'refund_account_number' => $cr->refund_account_number,
+                    'status'                => $cr->status,
+                    'transaction_code'      => $cr->transaction_code,
+                    'admin_note'            => $cr->admin_note,
+                    'processed_at'          => $cr->processed_at?->format('d-m-Y H:i:s'),
+                    'created_at'            => $cr->created_at?->format('d-m-Y H:i:s'),
+                ];
+            }),
         ];
     }
 }

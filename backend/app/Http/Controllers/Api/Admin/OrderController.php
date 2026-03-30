@@ -11,6 +11,8 @@ use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
+use App\Models\Voucher;
+use App\Models\VoucherUsage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -94,6 +96,7 @@ class OrderController extends Controller
             'items',
             'statusHistory' => fn ($q) => $q->orderBy('id', 'asc'),
             'productReturn.evidences',
+            'cancelRequests' => fn ($q) => $q->latest()->limit(1),
         ])->findOrFail($id);
 
         return new OrderResource($order);
@@ -150,14 +153,35 @@ class OrderController extends Controller
                 $updateData['cancelled_by'] = $admin->id;
 
                 // Khôi phục tồn kho: variant + product
+                $variantIdsInOrder = [];
                 foreach ($order->items()->with('variant')->get() as $item) {
                     if ($item->variant_id && $item->variant) {
                         $item->variant->increment('quantity', $item->quantity);
+                        $variantIdsInOrder[] = $item->variant_id;
                     }
                     Product::where('id', $item->product_id)
                         ->increment('quantity', $item->quantity);
                 }
+
+                // Xóa cart items liên quan để tránh double-restore
+                // (CartController cũng restore stock khi user xóa cart item thủ công)
+                if ($order->user_id && count($variantIdsInOrder) > 0) {
+                    \App\Models\Cart::where('user_id', $order->user_id)
+                        ->whereIn('variant_id', $variantIdsInOrder)
+                        ->delete();
+                }
+
+                // Hoàn trả voucher khi admin hủy đơn
+                if ($order->voucher_id) {
+                    Voucher::where('id', $order->voucher_id)
+                        ->where('used_count', '>', 0)
+                        ->decrement('used_count');
+                    VoucherUsage::where('voucher_id', $order->voucher_id)
+                        ->where('order_id', $order->id)
+                        ->delete();
+                }
             }
+
 
             // Thông tin vận chuyển (khi chuyển sang shipping)
             if ($request->filled('tracking_code')) {

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { axiosInstance } from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 // ── Types ────────────────────────────────────────────────────
 interface VariantAttr { name: string; value: string }
@@ -64,6 +65,7 @@ interface ClientOrder {
   delivered_at?: string;
   completed_at?: string;
   created_at: string;
+  vnpay_expired_at?: string | null;
   items?: OrderItem[];
   status_history?: StatusHistory[];
   product_return?: {
@@ -212,6 +214,7 @@ const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { refreshCart } = useCart();
 
   const [order, setOrder] = useState<ClientOrder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -236,6 +239,25 @@ const OrderDetailPage: React.FC = () => {
   // Retry VNPAY
   const [retryVnpayLoading, setRetryVnpayLoading] = useState(false);
 
+  // Switch to COD (từ VNPAY pending)
+  const [switchCodLoading, setSwitchCodLoading] = useState(false);
+  const [switchCodOpen, setSwitchCodOpen] = useState(false);
+
+  // VNPAY paid cancel request
+  const [cancelReqOpen, setCancelReqOpen] = useState(false);
+  const [cancelReqReason, setCancelReqReason] = useState('');
+  const [cancelReqBank, setCancelReqBank] = useState({ bank: '', accountName: '', accountNumber: '' });
+  const [cancelReqLoading, setCancelReqLoading] = useState(false);
+  const [cancelReqData, setCancelReqData] = useState<{
+    status: string;
+    reason: string;
+    admin_note?: string;
+    transaction_code?: string;
+  } | null>(null);
+
+  // VNPAY countdown timer (giây còn lại)
+  const [vnpaySecondsLeft, setVnpaySecondsLeft] = useState<number | null>(null);
+
   // ── Review States ─────────────────────────────────────────
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewItem, setReviewItem] = useState<OrderItem | null>(null);
@@ -243,6 +265,17 @@ const OrderDetailPage: React.FC = () => {
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewContent, setReviewContent] = useState('');
   const [reviewLoading, setReviewLoading] = useState(false);
+
+  // Complaint (Khiếu nại)
+  const [complaintOpen, setComplaintOpen] = useState(false);
+  const [complaintType, setComplaintType] = useState('other');
+  const [complaintSubject, setComplaintSubject] = useState('');
+  const [complaintContent, setComplaintContent] = useState('');
+  const [complaintLoading, setComplaintLoading] = useState(false);
+  const [existingComplaint, setExistingComplaint] = useState<{
+    type?: string; subject?: string; content?: string;
+    status?: string; admin_reply?: string | null; created_at?: string;
+  } | null>(null);
 
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -256,26 +289,49 @@ const OrderDetailPage: React.FC = () => {
     if (!id) return;
     setLoading(true);
     setError('');
-    try {
-      const res = await axiosInstance.get(`/client/orders/${id}`);
-      const d: ClientOrder = res.data?.data ?? res.data;
+    const [orderRes, cancelReqRes] = await Promise.allSettled([
+      axiosInstance.get(`/client/orders/${id}`),
+      axiosInstance.get(`/client/orders/${id}/cancel-request`),
+    ]);
+    if (orderRes.status === 'fulfilled') {
+      const d: ClientOrder = orderRes.value.data?.data ?? orderRes.value.data;
       setOrder(d);
-    } catch (err: unknown) {
-      const e = err as { response?: { status?: number; data?: { message?: string } } };
+    } else {
+      const e = (orderRes as PromiseRejectedResult).reason as { response?: { status?: number; data?: { message?: string } } };
       if (e?.response?.status === 403 || e?.response?.status === 404) {
         setError(e?.response?.data?.message ?? 'Không tìm thấy đơn hàng.');
       } else {
         setError('Không thể tải thông tin đơn hàng. Vui lòng thử lại.');
       }
-    } finally {
-      setLoading(false);
     }
+    if (cancelReqRes.status === 'fulfilled') {
+      const cr = cancelReqRes.value.data?.data;
+      setCancelReqData(cr ? {
+        status: cr.status,
+        reason: cr.reason,
+        admin_note: cr.admin_note,
+        transaction_code: cr.transaction_code,
+      } : null);
+    }
+    setLoading(false);
   }, [id]);
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
     fetchOrder();
   }, [user, navigate, fetchOrder]);
+
+  // ── VNPAY Countdown Timer ───────────────────────────────────
+  useEffect(() => {
+    if (!order?.vnpay_expired_at) { setVnpaySecondsLeft(null); return; }
+    const calc = () => {
+      const diff = Math.floor((new Date(order.vnpay_expired_at!).getTime() - Date.now()) / 1000);
+      setVnpaySecondsLeft(Math.max(0, diff));
+    };
+    calc();
+    const t = setInterval(calc, 1000);
+    return () => clearInterval(t);
+  }, [order?.vnpay_expired_at]);
 
   // ── Cancel ─────────────────────────────────────────────────
   const handleCancel = async () => {
@@ -292,6 +348,11 @@ const OrderDetailPage: React.FC = () => {
       setCancelOpen(false);
       setCancelReason('');
       setBankInfo({ bank: '', accountName: '', accountNumber: '' });
+      // Xóa pending order khỏi sessionStorage và refresh cart
+      if (sessionStorage.getItem('vnpay_pending_order_id') === String(order.id)) {
+        sessionStorage.removeItem('vnpay_pending_order_id');
+      }
+      await refreshCart();
       fetchOrder();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -325,6 +386,8 @@ const OrderDetailPage: React.FC = () => {
     try {
       const res = await axiosInstance.get(`/client/orders/${order.id}/retry-vnpay`);
       if (res.data?.payment_url) {
+        sessionStorage.setItem('vnpay_pending_order_id', String(order.id));
+        sessionStorage.setItem('vnpay_pending_order_id', String(order.id));
         showToast('Đang chuyển hướng đến cổng thanh toán...', 'info');
         setTimeout(() => { window.location.href = res.data.payment_url; }, 800);
       }
@@ -333,6 +396,52 @@ const OrderDetailPage: React.FC = () => {
       showToast(e?.response?.data?.message ?? 'Không thể tạo lại link thanh toán', 'error');
     } finally {
       setRetryVnpayLoading(false);
+    }
+  };
+
+  // ── Switch to COD (từ VNPAY pending) ──────────────────────
+  const handleSwitchToCod = async () => {
+    if (!order) return;
+    setSwitchCodLoading(true);
+    try {
+      await axiosInstance.post(`/client/orders/${order.id}/switch-to-cod`);
+      showToast('Đã chuyển sang thanh toán COD thành công!', 'success');
+      setSwitchCodOpen(false);
+      sessionStorage.removeItem('vnpay_pending_order_id');
+      // Làm mới giỏ hàng — backend đã xóa cart items khi đổi sang COD
+      await refreshCart();
+      fetchOrder();
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showToast(e?.response?.data?.message ?? 'Không thể chuyển sang COD', 'error');
+    } finally {
+      setSwitchCodLoading(false);
+    }
+  };
+
+  // ── Cancel Request (VNPAY đã TT) ─────────────────────────────────
+  const handleCancelRequest = async () => {
+    if (!order) return;
+    if (!cancelReqReason.trim()) { showToast('Vui lòng nhập lý do hủy đơn.', 'error'); return; }
+    setCancelReqLoading(true);
+    try {
+      await axiosInstance.post(`/client/orders/${order.id}/cancel-request`, {
+        reason: cancelReqReason,
+        refund_bank: cancelReqBank.bank,
+        refund_account_name: cancelReqBank.accountName,
+        refund_account_number: cancelReqBank.accountNumber,
+      });
+      showToast('✅ Yêu cầu hủy đã được gửi. Chúng tôi sẽ hoàn tiền trong 3–5 ngày làm việc.', 'success');
+      setCancelReqOpen(false);
+      setCancelReqReason('');
+      setCancelReqBank({ bank: '', accountName: '', accountNumber: '' });
+      setCancelReqData({ status: 'pending', reason: cancelReqReason });
+      fetchOrder();
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showToast(e?.response?.data?.message ?? 'Không thể gửi yêu cầu hủy.', 'error');
+    } finally {
+      setCancelReqLoading(false);
     }
   };
 
@@ -400,6 +509,34 @@ const OrderDetailPage: React.FC = () => {
     }
   };
 
+  // ── Submit Complaint ──────────────────────────────────────
+  const handleSubmitComplaint = async () => {
+    if (!order) return;
+    if (!complaintSubject.trim()) { showToast('Vui lòng nhập tiêu đề khiếu nại.', 'error'); return; }
+    if (!complaintContent.trim()) { showToast('Vui lòng nhập nội dung khiếu nại.', 'error'); return; }
+    setComplaintLoading(true);
+    try {
+      await axiosInstance.post(`/client/orders/${order.id}/complaint`, {
+        type: complaintType,
+        subject: complaintSubject,
+        content: complaintContent,
+      });
+      showToast('Đã gửi khiếu nại thành công. Chúng tôi sẽ phản hồi sớm nhất!', 'success');
+      setComplaintOpen(false);
+      setComplaintSubject('');
+      setComplaintContent('');
+      setComplaintType('other');
+      // Reload complaint
+      const res = await axiosInstance.get(`/client/orders/${order.id}/complaint`);
+      setExistingComplaint(res.data?.data ?? null);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showToast(e?.response?.data?.message ?? 'Không thể gửi khiếu nại.', 'error');
+    } finally {
+      setComplaintLoading(false);
+    }
+  };
+
   // ── Loading ─────────────────────────────────────────────────
   if (loading) return (
     <>
@@ -440,7 +577,16 @@ const OrderDetailPage: React.FC = () => {
   const isCancelled = order.status === 'cancelled' || order.status === 'returned';
   const currentStep = isCancelled ? -1 : (statusCfg.step ?? 0);
 
-  const canCancel = order.status === 'pending';
+  // Phân biệt 2 loại hủy:
+  // 1. Hủy trực tiếp: COD pending + chưa TT VNPAY
+  const canCancelDirect = order.status === 'pending' &&
+    !(order.payment_method === 'vnpay' && order.payment_status === 'paid');
+  // 2. Yêu cầu hủy: VNPAY đã thanh toán, đơn còn pending/confirmed
+  const canRequestCancel = order.payment_method === 'vnpay' &&
+    order.payment_status === 'paid' &&
+    ['pending', 'confirmed'].includes(order.status) &&
+    cancelReqData?.status !== 'pending';
+  const hasPendingCancelReq = cancelReqData?.status === 'pending';
   const canConfirmReceived = order.status === 'delivered';
 
   // ── Logic hoàn trả và deadline ───────────────────────────────────
@@ -467,6 +613,14 @@ const OrderDetailPage: React.FC = () => {
   const canRetryVnpay = order.payment_method === 'vnpay' &&
     order.payment_status === 'unpaid' &&
     order.status === 'pending';
+
+  // Banner chờ thanh toán VNPAY: hiển thị khi có vnpay_expired_at và chưa thanh toán
+  const isVnpayPending = canRetryVnpay && !!order.vnpay_expired_at;
+  const fmtCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   return (
     <>
@@ -519,6 +673,69 @@ const OrderDetailPage: React.FC = () => {
               </span>
             </div>
           </div>
+
+          {/* ── VNPAY Pending Payment Banner ── */}
+          {isVnpayPending && (
+            <div className="od-vnpay-pending-card">
+              <div className="od-vnpay-pending-header">
+                <i className="fas fa-clock me-2" />
+                Đơn hàng đang chờ thanh toán VNPAY
+              </div>
+              <div className="od-vnpay-pending-body">
+                <div className="od-vnpay-pending-desc">
+                  Đơn hàng sẽ tự động hủy khi hết thời gian. Vui lòng thanh toán hoặc chọn phương thức khác.
+                </div>
+                {vnpaySecondsLeft !== null && (
+                  <div className="od-vnpay-countdown">
+                    <i className="fas fa-hourglass-half me-1" />
+                    Còn lại: <strong className={vnpaySecondsLeft < 60 ? 'od-text-danger' : ''}>
+                      {fmtCountdown(vnpaySecondsLeft)}
+                    </strong>
+                  </div>
+                )}
+                <div className="od-vnpay-pending-actions">
+                  <button className="od-btn-vnpay-retry" disabled={retryVnpayLoading} onClick={handleRetryVnpay}>
+                    <i className="fas fa-rotate-right me-2" />
+                    {retryVnpayLoading ? 'Đang xử lý...' : 'Thanh toán lại VNPAY'}
+                  </button>
+                  <button className="od-btn-switch-cod" disabled={switchCodLoading} onClick={() => setSwitchCodOpen(true)}>
+                    <i className="fas fa-truck me-2" />
+                    {switchCodLoading ? 'Đang xử lý...' : 'Chuyển sang COD'}
+                  </button>
+                  <button className="od-btn-cancel-vnpay" onClick={() => setCancelOpen(true)}>
+                    <i className="fas fa-xmark me-2" />
+                    Hủy đơn hàng
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Dialog xác nhận chuyển COD ── */}
+          {switchCodOpen && (
+            <div className="od-modal-backdrop" onClick={() => setSwitchCodOpen(false)}>
+              <div className="od-modal" onClick={e => e.stopPropagation()}>
+                <div className="od-modal-title">
+                  <i className="fas fa-truck me-2" style={{ color: '#ea580c' }} />
+                  Xác nhận chuyển sang COD
+                </div>
+                <div className="od-modal-body">
+                  <p>Bạn muốn chuyển đơn <strong>#{order.order_code}</strong> sang <strong>COD (trả khi nhận hàng)</strong>?</p>
+                  <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+                    Giỏ hàng sẽ được dọn sạch. Đơn hàng tiếp tục xử lý bình thường.
+                  </p>
+                </div>
+                <div className="od-modal-footer">
+                  <button className="od-btn-cancel-modal" onClick={() => setSwitchCodOpen(false)}>Hủy bỏ</button>
+                  <button className="od-btn-confirm-modal" disabled={switchCodLoading} onClick={handleSwitchToCod}>
+                    {switchCodLoading ? 'Đang xử lý...' : 'Xác nhận chuyển COD'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Duplicate VNPAY pending banner and COD dialog removed — kept only the first instance above */}
 
           {/* ── CTA: Xác nhận nhận hàng ── */}
           {canConfirmReceived && (
@@ -844,16 +1061,101 @@ const OrderDetailPage: React.FC = () => {
                   </button>
                 )}
 
+                {/* Nút Chuyển sang COD cho VNPAY chưa thanh toán */}
+                {canRetryVnpay && (
+                  <button
+                    className="od-btn-full"
+                    style={{
+                      background: switchCodLoading
+                        ? '#fde68a'
+                        : 'linear-gradient(135deg, #b45309, #d97706)',
+                      border: 'none', color: '#fff',
+                      borderRadius: 10, padding: '10px 16px',
+                      fontWeight: 700, fontSize: 14,
+                      cursor: switchCodLoading ? 'not-allowed' : 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      marginBottom: 8, transition: 'all .2s',
+                    }}
+                    onClick={() => setSwitchCodOpen(true)}
+                    disabled={switchCodLoading}
+                  >
+                    <i className="fas fa-money-bill-wave" />
+                    Chuyển sang thanh toán khi nhận hàng (COD)
+                  </button>
+                )}
+
                 {canConfirmReceived && (
                   <button className="od-btn-confirm-received od-btn-full" onClick={() => setConfirmOpen(true)}>
                     <i className="fas fa-check-double me-2" />Đã nhận được hàng
                   </button>
                 )}
-                {canCancel && (
+                {canCancelDirect && (
                   <button className="od-btn-cancel od-btn-full" onClick={() => { setCancelOpen(true); setCancelReason(''); }}>
                     <i className="fas fa-times-circle me-2" />Hủy đơn hàng
                   </button>
                 )}
+                {/* Pending cancel request notice */}
+                {hasPendingCancelReq && (
+                  <div style={{
+                    background: '#fff7ed', border: '1.5px solid #fed7aa',
+                    borderRadius: 10, padding: '10px 14px', fontSize: 13,
+                    color: '#b45309', display: 'flex', alignItems: 'center', gap: 8,
+                  }}>
+                    <i className="fas fa-clock" />
+                    Yêu cầu hủy đơn đang được xử lý. Chúng tôi sẽ hoàn tiền sớm nhất có thể.
+                  </div>
+                )}
+
+                {/* Rejected cancel request notice */}
+                {cancelReqData?.status === 'rejected' && (
+                  <div style={{
+                    background: '#fef2f2', border: '1.5px solid #fecaca',
+                    borderRadius: 10, padding: '12px 14px', fontSize: 13,
+                  }}>
+                    <div style={{ fontWeight: 700, color: '#b91c1c', marginBottom: 4 }}>
+                      <i className="fas fa-times-circle me-2" />Yêu cầu hủy đã bị từ chối
+                    </div>
+                    {cancelReqData.admin_note && (
+                      <div style={{ color: '#6b7280', fontSize: 12 }}>
+                        Lý do: {cancelReqData.admin_note}
+                      </div>
+                    )}
+                    <div style={{ color: '#6b7280', fontSize: 12, marginTop: 4 }}>
+                      Bạn có thể gửi lại yêu cầu hoặc liên hệ hỗ trợ nếu cần thêm thông tin.
+                    </div>
+                  </div>
+                )}
+
+                {/* Approved cancel request — refund confirmed */}
+                {cancelReqData?.status === 'approved' && (
+                  <div style={{
+                    background: '#f0fdf4', border: '1.5px solid #bbf7d0',
+                    borderRadius: 10, padding: '12px 14px', fontSize: 13,
+                  }}>
+                    <div style={{ fontWeight: 700, color: '#15803d', marginBottom: 4 }}>
+                      <i className="fas fa-circle-check me-2" />Yêu cầu hủy đã được duyệt
+                    </div>
+                    <div style={{ color: '#166534', fontSize: 12 }}>
+                      Đơn hàng đã được hủy. Tiền hoàn sẽ được chuyển về tài khoản của bạn trong 3–5 ngày làm việc.
+                    </div>
+                    {cancelReqData.transaction_code && (
+                      <div style={{ marginTop: 6, color: '#15803d', fontWeight: 600, fontSize: 12 }}>
+                        <i className="fas fa-receipt me-1" />Mã GD hoàn tiền: <code>{cancelReqData.transaction_code}</code>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {canRequestCancel && (
+                  <button
+                    className="od-btn-full"
+                    style={{ background: '#fff7ed', border: '1.5px solid #fd7e14', color: '#b45309' }}
+                    onClick={() => setCancelReqOpen(true)}
+                  >
+                    <i className="fas fa-rotate-left me-2" />Yêu cầu hủy &amp; hoàn tiền
+                  </button>
+                )}
+
                 {canRequestReturn && (
                   <>
                     {/* Countdown cửa sổ hoàn trả */}
@@ -900,6 +1202,54 @@ const OrderDetailPage: React.FC = () => {
                     <i className="fas fa-lock me-2" />Đơn hàng đang xử lý, không thể hủy
                   </div>
                 )}
+                {/* Nút Khiếu nại */}
+                {order.status !== 'pending' && (
+                  <>
+                    {existingComplaint ? (
+                      <div style={{
+                        background: '#f0f9ff', border: '1.5px solid #bae6fd',
+                        borderRadius: 10, padding: '10px 14px',
+                        fontSize: 13, marginBottom: 8,
+                      }}>
+                        <div style={{ fontWeight: 700, color: '#0369a1', marginBottom: 4 }}>
+                          <i className="fas fa-headset me-2" />
+                          Khiếu nại đã gửi
+                          <span style={{
+                            marginLeft: 8, fontSize: 11, padding: '2px 8px', borderRadius: 6,
+                            background: existingComplaint.status === 'pending' ? '#fffbeb' :
+                              existingComplaint.status === 'resolved' ? '#f0fdf4' : '#fef2f2',
+                            color: existingComplaint.status === 'pending' ? '#b45309' :
+                              existingComplaint.status === 'resolved' ? '#15803d' : '#b91c1c',
+                          }}>
+                            {existingComplaint.status === 'pending' ? 'Chờ xử lý' :
+                              existingComplaint.status === 'processing' ? 'Đang xử lý' :
+                              existingComplaint.status === 'resolved' ? 'Đã giải quyết' : 'Từ chối'}
+                          </span>
+                        </div>
+                        <div style={{ color: '#334155' }}>{existingComplaint.subject}</div>
+                        {existingComplaint.admin_reply && (
+                          <div style={{ marginTop: 6, color: '#15803d', fontSize: 12 }}>
+                            <i className="fas fa-reply me-1" />Phản hồi: {existingComplaint.admin_reply}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        className="od-btn-full"
+                        style={{
+                          background: '#f0f9ff', border: '1.5px solid #0369a1',
+                          color: '#0369a1', borderRadius: 10, padding: '10px 16px',
+                          fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                          marginBottom: 8, transition: 'all .2s',
+                        }}
+                        onClick={() => setComplaintOpen(true)}
+                      >
+                        <i className="fas fa-headset" />Khiếu nại / Hỗ trợ
+                      </button>
+                    )}
+                  </>
+                )}
                 <Link to="/shop" style={{ textDecoration: 'none' }}>
                   <button className="od-btn-shop od-btn-full">
                     <i className="fas fa-shopping-bag me-2" />Tiếp tục mua sắm
@@ -910,6 +1260,134 @@ const OrderDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Complaint Modal ── */}
+      {complaintOpen && (
+        <div className="od-overlay" onClick={e => { if (e.target === e.currentTarget) setComplaintOpen(false); }}>
+          <div className="od-modal">
+            <div className="od-modal-hd">
+              <div>
+                <div className="od-modal-title">
+                  <i className="fas fa-headset me-2" style={{ color: '#0369a1' }} />Khiếu nại / Hỗ trợ
+                </div>
+                <div className="od-modal-sub">Mô tả vấn đề của đơn <strong>#{order.order_code}</strong></div>
+              </div>
+              <button className="od-modal-x" onClick={() => setComplaintOpen(false)}><i className="fas fa-times" /></button>
+            </div>
+            <div className="od-modal-bd">
+              <label className="od-modal-label">Loại khiếu nại</label>
+              <select
+                className="od-textarea"
+                style={{ minHeight: 40, padding: '8px 12px' }}
+                value={complaintType}
+                onChange={e => setComplaintType(e.target.value)}
+              >
+                <option value="wrong_item">Đặt sai sản phẩm / sai biến thể</option>
+                <option value="damaged">Sản phẩm hư hỏng</option>
+                <option value="late_delivery">Giao hàng chậm</option>
+                <option value="payment_issue">Vấn đề thanh toán</option>
+                <option value="other">Khác</option>
+              </select>
+
+              <label className="od-modal-label" style={{ marginTop: 12 }}>Tiêu đề</label>
+              <input
+                className="od-textarea"
+                style={{ minHeight: 40 }}
+                placeholder="Tóm tắt vấn đề của bạn..."
+                value={complaintSubject}
+                onChange={e => setComplaintSubject(e.target.value)}
+                maxLength={255}
+              />
+
+              <label className="od-modal-label" style={{ marginTop: 12 }}>Nội dung chi tiết</label>
+              <textarea
+                className="od-textarea"
+                rows={5}
+                placeholder="Mô tả chi tiết vấn đề để chúng tôi có thể hỗ trợ bạn tốt hơn..."
+                value={complaintContent}
+                onChange={e => setComplaintContent(e.target.value)}
+                maxLength={2000}
+              />
+              <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, textAlign: 'right' }}>
+                {complaintContent.length}/2000
+              </div>
+            </div>
+            <div className="od-modal-ft">
+              <button className="od-modal-btn-no" onClick={() => setComplaintOpen(false)} disabled={complaintLoading}>Hủy</button>
+              <button
+                className="od-modal-btn-yes"
+                style={{ background: '#0369a1', borderColor: '#0369a1' }}
+                onClick={handleSubmitComplaint}
+                disabled={complaintLoading}
+              >
+                {complaintLoading
+                  ? <><span className="od-spin me-2" />Đang gửi...</>
+                  : <><i className="fas fa-paper-plane me-2" />Gửi khiếu nại</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cancel Request Modal (VNPAY đã TT) ── */}
+      {cancelReqOpen && (
+        <div className="od-overlay" onClick={e => { if (e.target === e.currentTarget) setCancelReqOpen(false); }}>
+          <div className="od-modal">
+            <div className="od-modal-hd">
+              <div>
+                <div className="od-modal-title">
+                  <i className="fas fa-rotate-left me-2" style={{ color: '#fd7e14' }} />Yêu cầu hủy &amp; hoàn tiền
+                </div>
+                <div className="od-modal-sub">Đơn <strong>#{order.order_code}</strong> đã thanh toán VNPAY. Admin sẽ xử lý hoàn tiền thủ công.</div>
+              </div>
+              <button className="od-modal-x" onClick={() => setCancelReqOpen(false)}><i className="fas fa-times" /></button>
+            </div>
+            <div className="od-modal-bd">
+              <label className="od-modal-label">Lý do hủy <span style={{ color: '#dc2626' }}>*</span></label>
+              <textarea
+                className="od-textarea"
+                rows={3}
+                placeholder="Nhập lý do bạn muốn hủy đơn..."
+                value={cancelReqReason}
+                onChange={e => setCancelReqReason(e.target.value)}
+                maxLength={1000}
+              />
+              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>{cancelReqReason.length}/1000</div>
+
+              <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff7ed', borderRadius: 10, border: '1px solid #fed7aa' }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#b45309', marginBottom: 10 }}>
+                  <i className="fas fa-university me-2" />Thông tin tài khoản nhận hoàn tiền
+                </div>
+                <label className="od-modal-label">Ngân hàng</label>
+                <input className="od-textarea" style={{ minHeight: 38 }} placeholder="Vd: Vietcombank, MB Bank..." value={cancelReqBank.bank} onChange={e => setCancelReqBank(b => ({ ...b, bank: e.target.value }))} />
+                <label className="od-modal-label" style={{ marginTop: 8 }}>Tên chủ tài khoản</label>
+                <input className="od-textarea" style={{ minHeight: 38 }} placeholder="Nguyễn Văn A" value={cancelReqBank.accountName} onChange={e => setCancelReqBank(b => ({ ...b, accountName: e.target.value }))} />
+                <label className="od-modal-label" style={{ marginTop: 8 }}>Số tài khoản</label>
+                <input className="od-textarea" style={{ minHeight: 38 }} placeholder="0123456789" value={cancelReqBank.accountNumber} onChange={e => setCancelReqBank(b => ({ ...b, accountNumber: e.target.value }))} />
+              </div>
+
+              <div style={{ marginTop: 12, fontSize: 12, color: '#6c757d', background: '#f8f9fa', padding: '10px 12px', borderRadius: 8 }}>
+                <i className="fas fa-info-circle me-1" /> Sau khi gửi yêu cầu, chúng tôi sẽ liên hệ xác nhận và hoàn tiền trong <strong>3–5 ngày làm việc</strong>.
+              </div>
+            </div>
+            <div className="od-modal-ft">
+              <button className="od-modal-btn-no" onClick={() => setCancelReqOpen(false)} disabled={cancelReqLoading}>Đóng</button>
+              <button
+                className="od-modal-btn-yes"
+                style={{ background: '#fd7e14', borderColor: '#fd7e14' }}
+                onClick={handleCancelRequest}
+                disabled={cancelReqLoading}
+              >
+                {cancelReqLoading
+                  ? <><span className="od-spin me-2" />Đang gửi...</>
+                  : <><i className="fas fa-paper-plane me-2" />Gửi yêu cầu hủy</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Cancel Modal ── */}
       {cancelOpen && (
@@ -985,6 +1463,53 @@ const OrderDetailPage: React.FC = () => {
                 {confirmLoading
                   ? <><span className="od-spin me-2" />Đang xác nhận...</>
                   : <><i className="fas fa-check-double me-2" />Đã nhận được hàng</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Switch to COD Modal ── */}
+      {switchCodOpen && (
+        <div className="od-overlay" onClick={e => { if (e.target === e.currentTarget) setSwitchCodOpen(false); }}>
+          <div className="od-modal">
+            <div className="od-modal-hd">
+              <div>
+                <div className="od-modal-title">
+                  <i className="fas fa-money-bill-wave me-2" style={{ color: '#b45309' }} />Chuyển phương thức thanh toán
+                </div>
+                <div className="od-modal-sub">Đơn hàng <strong>#{order.order_code}</strong> sẽ chuyển sang thanh toán khi nhận hàng (COD).</div>
+              </div>
+              <button className="od-modal-x" onClick={() => setSwitchCodOpen(false)}><i className="fas fa-times" /></button>
+            </div>
+            <div className="od-modal-bd">
+              <div className="od-confirm-info-box" style={{ background: '#fffbeb', border: '1.5px solid #fde68a' }}>
+                <i className="fas fa-info-circle me-2" style={{ color: '#b45309' }} />
+                <div>
+                  <div style={{ marginBottom: 6 }}>Sau khi chuyển đổi:</div>
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.8 }}>
+                    <li>Phương thức thanh toán sẽ đổi thành <strong>COD (thanh toán khi nhận hàng)</strong></li>
+                    <li>Đơn hàng vẫn giữ nguyên sản phẩm và giá</li>
+                    <li>Bạn sẽ thanh toán cho shipper khi nhận hàng</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="od-modal-ft">
+              <button className="od-modal-btn-no" onClick={() => setSwitchCodOpen(false)} disabled={switchCodLoading}>Hủy</button>
+              <button
+                className="od-modal-btn-yes"
+                style={{
+                  background: switchCodLoading ? '#fde68a' : 'linear-gradient(135deg, #b45309, #d97706)',
+                  border: 'none', color: '#fff',
+                }}
+                onClick={handleSwitchToCod}
+                disabled={switchCodLoading}
+              >
+                {switchCodLoading
+                  ? <><span className="od-spin me-2" />Đang xử lý...</>
+                  : <><i className="fas fa-check me-2" />Xác nhận chuyển sang COD</>
                 }
               </button>
             </div>
@@ -1387,6 +1912,40 @@ const CSS = `
   .od-error-box { text-align: center; padding: 80px 0; }
   .od-error-icon { font-size: 56px; color: #dc3545; margin-bottom: 16px; display: block; }
   .od-error-msg { font-size: 16px; font-weight: 600; color: #2d3748; margin-bottom: 20px; }
+
+  /* ── VNPAY Pending Banner ── */
+  .od-vnpay-pending-card { border-radius: 14px; border: 2px solid #fde68a; overflow: hidden; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(251,191,36,.18); }
+  .od-vnpay-pending-header { background: linear-gradient(90deg, #f59e0b, #fbbf24); color: #fff; font-weight: 700; font-size: 1rem; padding: 14px 20px; display: flex; align-items: center; }
+  .od-vnpay-pending-body { background: #fffbeb; padding: 18px 20px; }
+  .od-vnpay-pending-desc { color: #78350f; font-size: 0.92rem; margin-bottom: 10px; }
+  .od-vnpay-countdown { font-size: 1.1rem; font-weight: 600; color: #b45309; background: #fef3c7; border-radius: 8px; padding: 8px 16px; display: inline-block; margin-bottom: 16px; }
+  .od-text-danger { color: #dc2626 !important; }
+  .od-vnpay-pending-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .od-btn-vnpay-retry { background: linear-gradient(135deg, #0369a1, #0284c7); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: box-shadow .2s; display: flex; align-items: center; }
+  .od-btn-vnpay-retry:not(:disabled):hover { box-shadow: 0 6px 18px rgba(3,105,161,.35); }
+  .od-btn-vnpay-retry:disabled { opacity: .65; cursor: not-allowed; }
+  .od-btn-switch-cod { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: box-shadow .2s; display: flex; align-items: center; }
+  .od-btn-switch-cod:not(:disabled):hover { box-shadow: 0 6px 18px rgba(21,128,61,.35); }
+  .od-btn-switch-cod:disabled { opacity: .65; cursor: not-allowed; }
+  .od-btn-cancel-vnpay { background: transparent; color: #b91c1c; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background .2s; display: flex; align-items: center; }
+  .od-btn-cancel-vnpay:hover { background: #fef2f2; }
+
+  /* ── VNPAY Pending Banner ── */
+  .od-vnpay-pending-card { border-radius: 14px; border: 2px solid #fde68a; overflow: hidden; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(251,191,36,.18); }
+  .od-vnpay-pending-header { background: linear-gradient(90deg, #f59e0b, #fbbf24); color: #fff; font-weight: 700; font-size: 1rem; padding: 14px 20px; display: flex; align-items: center; }
+  .od-vnpay-pending-body { background: #fffbeb; padding: 18px 20px; }
+  .od-vnpay-pending-desc { color: #78350f; font-size: 0.92rem; margin-bottom: 10px; }
+  .od-vnpay-countdown { font-size: 1.1rem; font-weight: 600; color: #b45309; background: #fef3c7; border-radius: 8px; padding: 8px 16px; display: inline-block; margin-bottom: 16px; }
+  .od-text-danger { color: #dc2626 !important; }
+  .od-vnpay-pending-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .od-btn-vnpay-retry { background: linear-gradient(135deg, #0369a1, #0284c7); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: box-shadow .2s; display: flex; align-items: center; }
+  .od-btn-vnpay-retry:not(:disabled):hover { box-shadow: 0 6px 18px rgba(3,105,161,.35); }
+  .od-btn-vnpay-retry:disabled { opacity: .65; cursor: not-allowed; }
+  .od-btn-switch-cod { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: box-shadow .2s; display: flex; align-items: center; }
+  .od-btn-switch-cod:not(:disabled):hover { box-shadow: 0 6px 18px rgba(21,128,61,.35); }
+  .od-btn-switch-cod:disabled { opacity: .65; cursor: not-allowed; }
+  .od-btn-cancel-vnpay { background: transparent; color: #b91c1c; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background .2s; display: flex; align-items: center; }
+  .od-btn-cancel-vnpay:hover { background: #fef2f2; }
 `;
 
 const CSS_INJECT = <style>{CSS}</style>;

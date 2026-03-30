@@ -26,14 +26,14 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: "Admin - Banners", description: "Admin - Banners")]
 #[OA\Tag(name: "Admin - Categories", description: "Admin - Categories")]
 #[OA\Tag(name: "Admin - Contacts", description: "Admin - Contacts")]
-#[OA\Tag(name: "Admin - Categories", description: "Admin - Categories")]
-#[OA\Tag(name: "Admin - Contacts", description: "Admin - Contacts")]
+#[OA\Tag(name: "Admin - Comments", description: "Admin - Comments")]
 #[OA\Tag(name: "Admin - Dashboard", description: "Admin - Dashboard")]
 #[OA\Tag(name: "Admin - News", description: "Admin - News")]
 #[OA\Tag(name: "Admin - Orders", description: "Admin - Orders")]
 #[OA\Tag(name: "Admin - Product Images", description: "Admin - Product Images")]
 #[OA\Tag(name: "Admin - Product Variants", description: "Admin - Product Variants")]
 #[OA\Tag(name: "Admin - Products", description: "Admin - Products")]
+#[OA\Tag(name: "Admin - Product Specifications", description: "Admin - Product Specifications")]
 #[OA\Tag(name: "Admin - Reviews", description: "Admin - Reviews")]
 #[OA\Tag(name: "Admin - Shippings", description: "Admin - Shippings")]
 #[OA\Tag(name: "Admin - Users", description: "Admin - Users")]
@@ -54,6 +54,9 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: "Public - Contacts", description: "Public - Contacts")]
 #[OA\Tag(name: "Public - News", description: "Public - News")]
 #[OA\Tag(name: "Public - Reviews", description: "Public - Reviews")]
+#[OA\Tag(name: "Public - Search", description: "Public - Search (Scout database driver)")]
+#[OA\Tag(name: "Client - Comments", description: "Client - Comments")]
+#[OA\Tag(name: "Admin - Comments", description: "Admin - Comments")]
 interface SwaggerDocumentationController
 {
     // --- Api/Admin/CategoryControllerDocs.php ---
@@ -1589,6 +1592,217 @@ interface SwaggerDocumentationController
         )]
     public function api_client_productController_show();
 
+    #[OA\Get(
+            path: '/api/products/compare',
+            summary: 'So sánh thông số chi tiết sản phẩm',
+            tags: ['Client - Products'],
+            parameters: [
+                new OA\Parameter(
+                    name: 'slugs',
+                    in: 'query',
+                    description: 'Danh sách slug sản phẩm, cách nhau bởi dấu phẩy (VD: iphone-15,samsung-s24)',
+                    required: true,
+                    schema: new OA\Schema(type: 'string', example: 'iphone-15,samsung-s24')
+                )
+            ],
+            responses: [
+                new OA\Response(
+                    response: 200,
+                    description: 'Dữ liệu so sánh sản phẩm',
+                    content: new OA\JsonContent(
+                        properties: [
+                            new OA\Property(property: 'products', type: 'array', items: new OA\Items(type: 'object')),
+                            new OA\Property(property: 'specifications', type: 'array', items: new OA\Items(type: 'object')),
+                        ]
+                    )
+                ),
+                new OA\Response(
+                    response: 400,
+                    description: 'Thiếu ID hoặc ít hơn 2 sản phẩm'
+                ),
+                new OA\Response(
+                    response: 404,
+                    description: 'Không tìm thấy sản phẩm'
+                )
+            ]
+        )]
+    public function api_client_productController_compare();
+
+    // --- Admin - Spec Groups ---
+    #[OA\Get(
+            path: '/api/admin/spec-groups',
+            summary: '[Admin] Danh sách nhóm thông số kỹ thuật',
+            tags: ['Admin - Product Specifications'],
+            security: [['sanctum' => []]],
+            responses: [
+                new OA\Response(response: 200, description: 'Danh sách spec groups',
+                    content: new OA\JsonContent(properties: [
+                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(properties: [
+                            new OA\Property(property: 'id',            type: 'integer'),
+                            new OA\Property(property: 'name',          type: 'string', example: 'screen'),
+                            new OA\Property(property: 'display_name', type: 'string', example: 'Màn hình'),
+                            new OA\Property(property: 'display_order', type: 'integer'),
+                        ]))
+                    ])
+                ),
+                new OA\Response(response: 401, description: 'Chưa xác thực'),
+            ]
+        )]
+    public function api_admin_specGroupController_index();
+
+    #[OA\Post(
+            path: '/api/admin/spec-groups',
+            summary: '[Admin] Tạo nhóm thông số kỹ thuật mới',
+            tags: ['Admin - Product Specifications'],
+            security: [['sanctum' => []]],
+            requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+                required: ['name', 'display_name'],
+                properties: [
+                    new OA\Property(property: 'name',          type: 'string', example: 'battery',     description: 'Slug nội bộ, unique'),
+                    new OA\Property(property: 'display_name', type: 'string', example: 'Pin',          description: 'Tên hiển thị'),
+                    new OA\Property(property: 'display_order', type: 'integer', example: 3, nullable: true),
+                ]
+            )),
+            responses: [
+                new OA\Response(response: 201, description: 'Tạo thành công'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_specGroupController_store();
+
+    #[OA\Put(
+            path: '/api/admin/spec-groups/{id}',
+            summary: '[Admin] Cập nhật nhóm thông số kỹ thuật',
+            tags: ['Admin - Product Specifications'],
+            security: [['sanctum' => []]],
+            parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+            requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'name',          type: 'string'),
+                new OA\Property(property: 'display_name', type: 'string'),
+                new OA\Property(property: 'display_order', type: 'integer', nullable: true),
+            ])),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+            ]
+        )]
+    public function api_admin_specGroupController_update();
+
+    #[OA\Delete(
+            path: '/api/admin/spec-groups/{id}',
+            summary: '[Admin] Xóa nhóm thông số kỹ thuật',
+            tags: ['Admin - Product Specifications'],
+            security: [['sanctum' => []]],
+            parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+            responses: [
+                new OA\Response(response: 200, description: 'Đã xóa'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+            ]
+        )]
+    public function api_admin_specGroupController_destroy();
+
+    // --- Admin - Product Specifications ---
+    #[OA\Get(
+            path: '/api/admin/products/{product}/specifications',
+            summary: '[Admin] Lấy thông số kỹ thuật của sản phẩm (nhóm theo spec_group)',
+            tags: ['Admin - Product Specifications'],
+            security: [['sanctum' => []]],
+            parameters: [new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm')],
+            responses: [
+                new OA\Response(response: 200, description: 'Danh sách thông số kỹ thuật theo nhóm'),
+                new OA\Response(response: 404, description: 'Không tìm thấy sản phẩm'),
+            ]
+        )]
+    public function api_admin_productSpecificationController_index();
+
+    #[OA\Post(
+            path: '/api/admin/products/{product}/specifications',
+            summary: '[Admin] Thêm 1 thông số kỹ thuật',
+            tags: ['Admin - Product Specifications'],
+            security: [['sanctum' => []]],
+            parameters: [new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+            requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+                required: ['spec_group_id', 'name', 'value'],
+                properties: [
+                    new OA\Property(property: 'spec_group_id', type: 'integer', example: 1),
+                    new OA\Property(property: 'name',          type: 'string',  example: 'Công nghệ màn hình'),
+                    new OA\Property(property: 'value',         type: 'string',  example: 'AMOLED'),
+                    new OA\Property(property: 'display_order', type: 'integer', nullable: true, example: 1),
+                ]
+            )),
+            responses: [
+                new OA\Response(response: 201, description: 'Thêm thành công'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_productSpecificationController_store();
+
+    #[OA\Put(
+            path: '/api/admin/products/{product}/specifications/bulk',
+            summary: '[Admin] Ghi đè toàn bộ thông số kỹ thuật của sản phẩm',
+            description: 'Xóa tất cả thông số cũ và tạo lại từ dữ liệu gửi lên. Dùng để admin save form thông số một lần.',
+            tags: ['Admin - Product Specifications'],
+            security: [['sanctum' => []]],
+            parameters: [new OA\Parameter(name: 'product', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+            requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+                required: ['specifications'],
+                properties: [
+                    new OA\Property(property: 'specifications', type: 'array', items: new OA\Items(
+                        required: ['spec_group_id', 'name', 'value'],
+                        properties: [
+                            new OA\Property(property: 'spec_group_id', type: 'integer'),
+                            new OA\Property(property: 'name',          type: 'string'),
+                            new OA\Property(property: 'value',         type: 'string'),
+                            new OA\Property(property: 'display_order', type: 'integer', nullable: true),
+                        ]
+                    ))
+                ]
+            )),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công'),
+                new OA\Response(response: 422, description: 'Validation thất bại'),
+            ]
+        )]
+    public function api_admin_productSpecificationController_bulk();
+
+    #[OA\Put(
+            path: '/api/admin/products/{product}/specifications/{specification}',
+            summary: '[Admin] Cập nhật 1 thông số kỹ thuật',
+            tags: ['Admin - Product Specifications'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'product',       in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+                new OA\Parameter(name: 'specification', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'spec_group_id', type: 'integer'),
+                new OA\Property(property: 'name',          type: 'string'),
+                new OA\Property(property: 'value',         type: 'string'),
+                new OA\Property(property: 'display_order', type: 'integer', nullable: true),
+            ])),
+            responses: [
+                new OA\Response(response: 200, description: 'Cập nhật thành công'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+            ]
+        )]
+    public function api_admin_productSpecificationController_update();
+
+    #[OA\Delete(
+            path: '/api/admin/products/{product}/specifications/{specification}',
+            summary: '[Admin] Xóa 1 thông số kỹ thuật',
+            tags: ['Admin - Product Specifications'],
+            security: [['sanctum' => []]],
+            parameters: [
+                new OA\Parameter(name: 'product',       in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+                new OA\Parameter(name: 'specification', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            ],
+            responses: [
+                new OA\Response(response: 200, description: 'Đã xóa'),
+                new OA\Response(response: 404, description: 'Không tìm thấy'),
+            ]
+        )]
+    public function api_admin_productSpecificationController_destroy();
+
     // --- Api/Client/ProfileControllerDocs.php ---
     #[OA\Get(
             path: '/api/profile',
@@ -2275,4 +2489,387 @@ interface SwaggerDocumentationController
     )]
     public function api_client_shippingController_index();
 
+    // --- Api/Client/SearchControllerDocs ---
+    #[OA\Get(
+        path: '/api/search',
+        summary: 'Tìm kiếm sản phẩm và tin tức',
+        description: 'Tìm kiếm toàn văn bằng Laravel Scout (database driver). Yêu cầu tối thiểu **2 ký tự**. Giới hạn **60 request/phút/IP** (HTTP 429 nếu vượt).',
+        tags: ['Public - Search'],
+        parameters: [
+            new OA\Parameter(
+                name: 'q',
+                in: 'query',
+                description: 'Từ khóa tìm kiếm (bắt buộc)',
+                required: true,
+                schema: new OA\Schema(type: 'string', minLength: 2, maxLength: 255, example: 'iphone')
+            ),
+            new OA\Parameter(
+                name: 'type',
+                in: 'query',
+                description: 'Loại kết quả cần tìm: `all` (mặc định), `products`, `news`',
+                required: false,
+                schema: new OA\Schema(type: 'string', enum: ['all', 'products', 'news'], default: 'all')
+            ),
+            new OA\Parameter(
+                name: 'category_id',
+                in: 'query',
+                description: 'Lọc sản phẩm theo ID danh mục',
+                required: false,
+                schema: new OA\Schema(type: 'integer', example: 1)
+            ),
+            new OA\Parameter(
+                name: 'brand_id',
+                in: 'query',
+                description: 'Lọc sản phẩm theo ID thương hiệu',
+                required: false,
+                schema: new OA\Schema(type: 'integer', example: 2)
+            ),
+            new OA\Parameter(
+                name: 'min_price',
+                in: 'query',
+                description: 'Giá tối thiểu (VNĐ)',
+                required: false,
+                schema: new OA\Schema(type: 'number', example: 1000000)
+            ),
+            new OA\Parameter(
+                name: 'max_price',
+                in: 'query',
+                description: 'Giá tối đa (VNĐ)',
+                required: false,
+                schema: new OA\Schema(type: 'number', example: 30000000)
+            ),
+            new OA\Parameter(
+                name: 'sort_by',
+                in: 'query',
+                description: 'Sắp xếp kết quả: `latest` (mặc định), `price_asc`, `price_desc`, `relevance`',
+                required: false,
+                schema: new OA\Schema(type: 'string', enum: ['latest', 'price_asc', 'price_desc', 'relevance'])
+            ),
+            new OA\Parameter(
+                name: 'per_page',
+                in: 'query',
+                description: 'Số kết quả mỗi trang (mặc định 12, tối đa 50)',
+                required: false,
+                schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 50, default: 12)
+            ),
+            new OA\Parameter(
+                name: 'page',
+                in: 'query',
+                description: 'Số trang hiện tại',
+                required: false,
+                schema: new OA\Schema(type: 'integer', example: 1)
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Kết quả tìm kiếm',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'string', example: 'success'),
+                        new OA\Property(property: 'query',  type: 'string', example: 'iphone'),
+                        new OA\Property(property: 'type',   type: 'string', example: 'all'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(
+                                    property: 'products',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'data',         type: 'array', items: new OA\Items(
+                                            properties: [
+                                                new OA\Property(property: 'id',            type: 'integer', example: 1),
+                                                new OA\Property(property: 'name',          type: 'string',  example: 'iPhone 15 Pro'),
+                                                new OA\Property(property: 'slug',          type: 'string',  example: 'iphone-15-pro'),
+                                                new OA\Property(property: 'sku',           type: 'string',  example: 'IP15PRO'),
+                                                new OA\Property(property: 'price',         type: 'number',  example: 29990000),
+                                                new OA\Property(property: 'sale_price',    type: 'number',  nullable: true, example: 27990000),
+                                                new OA\Property(property: 'thumbnail_url', type: 'string',  nullable: true, example: 'http://localhost:8000/storage/products/iphone.jpg'),
+                                                new OA\Property(property: 'category',      type: 'object',  nullable: true),
+                                                new OA\Property(property: 'brand',         type: 'object',  nullable: true),
+                                            ]
+                                        )),
+                                        new OA\Property(property: 'total',        type: 'integer', example: 5),
+                                        new OA\Property(property: 'per_page',     type: 'integer', example: 12),
+                                        new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                                        new OA\Property(property: 'last_page',    type: 'integer', example: 1),
+                                    ]
+                                ),
+                                new OA\Property(
+                                    property: 'news',
+                                    type: 'object',
+                                    properties: [
+                                        new OA\Property(property: 'data',         type: 'array', items: new OA\Items(type: 'object')),
+                                        new OA\Property(property: 'total',        type: 'integer', example: 2),
+                                        new OA\Property(property: 'per_page',     type: 'integer', example: 12),
+                                        new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                                        new OA\Property(property: 'last_page',    type: 'integer', example: 1),
+                                    ]
+                                ),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Thiếu hoặc sai param `q` (ví dụ: ngắn hơn 2 ký tự)',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status',  type: 'string', example: 'error'),
+                        new OA\Property(property: 'message', type: 'string', example: 'Dữ liệu không hợp lệ.'),
+                        new OA\Property(property: 'errors',  type: 'object'),
+                    ]
+                )
+            ),
+            new OA\Response(
+                response: 429,
+                description: 'Quá nhiều request — Rate limit 60 req/phút/IP'
+            ),
+        ]
+    )]
+    public function api_public_searchController_search();
+
+    #[OA\Get(
+        path: '/api/search/autocomplete',
+        summary: 'Gợi ý tìm kiếm (Autocomplete)',
+        description: 'Trả về tối đa 8 sản phẩm gợi ý theo từ khóa. Kết quả được cache 5 phút. Yêu cầu tối thiểu **2 ký tự**. Giới hạn **60 request/phút/IP**.',
+        tags: ['Public - Search'],
+        parameters: [
+            new OA\Parameter(
+                name: 'q',
+                in: 'query',
+                description: 'Từ khóa gợi ý (tối thiểu 2 ký tự)',
+                required: true,
+                schema: new OA\Schema(type: 'string', minLength: 2, example: 'ip')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Danh sách gợi ý (mảng rỗng [] nếu q < 2 ký tự)',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'string', example: 'success'),
+                        new OA\Property(property: 'query',  type: 'string', example: 'ip'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'id',            type: 'integer', example: 1),
+                                    new OA\Property(property: 'name',          type: 'string',  example: 'iPhone 15 Pro'),
+                                    new OA\Property(property: 'slug',          type: 'string',  example: 'iphone-15-pro'),
+                                    new OA\Property(property: 'price',         type: 'number',  example: 29990000),
+                                    new OA\Property(property: 'sale_price',    type: 'number',  nullable: true, example: 27990000),
+                                    new OA\Property(property: 'thumbnail_url', type: 'string',  nullable: true),
+                                ]
+                            )
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(
+                response: 429,
+                description: 'Quá nhiều request — Rate limit 60 req/phút/IP'
+            ),
+        ]
+
+    )]
+    public function api_public_searchController_autocomplete();
+
+    // --- Api/Client/CommentControllerDocs.php ---
+    #[OA\Get(
+        path: '/api/products/{productId}/comments',
+        summary: 'Lấy danh sách bình luận (Public)',
+        description: 'Lấy các bình luận đã được duyệt của một sản phẩm.',
+        tags: ['Client - Comments'],
+        parameters: [
+            new OA\Parameter(name: 'productId', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID sản phẩm'),
+            new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer'), description: 'Trang hiện tại'),
+            new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer'), description: 'Số bản ghi/trang'),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 404, description: 'Sản phẩm không tồn tại'),
+        ]
+    )]
+    public function api_client_commentController_index();
+
+    #[OA\Post(
+        path: '/api/client/comments',
+        summary: 'Thêm bình luận mới (Auth)',
+        description: 'Tạo bình luận mới (chờ duyệt).',
+        tags: ['Client - Comments'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['product_id', 'content'],
+                properties: [
+                    new OA\Property(property: 'product_id', type: 'integer'),
+                    new OA\Property(property: 'content', type: 'string'),
+                    new OA\Property(property: 'parent_id', type: 'integer', nullable: true),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Tạo thành công chờ duyệt'),
+            new OA\Response(response: 401, description: 'Chưa đăng nhập'),
+            new OA\Response(response: 422, description: 'Lỗi validation'),
+        ]
+    )]
+    public function api_client_commentController_store();
+
+    #[OA\Get(
+        path: '/api/comments/{id}',
+        summary: 'Chi tiết bình luận (Public)',
+        tags: ['Client - Comments'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_client_commentController_show();
+
+    #[OA\Get(
+        path: '/api/comments/{id}/replies',
+        summary: 'Danh sách replies phân trang (Public)',
+        description: 'Lấy danh sách replies được duyệt của 1 bình luận gốc. Trả về mặc định 10 replies/trang.',
+        tags: ['Client - Comments'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID bình luận gốc'),
+            new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 404, description: 'Không tìm thấy bình luận gốc'),
+        ]
+    )]
+    public function api_client_commentController_replies();
+
+    #[OA\Put(
+        path: '/api/client/comments/{id}',
+        summary: 'Cập nhật bình luận (Auth)',
+        tags: ['Client - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['content'],
+                properties: [
+                    new OA\Property(property: 'content', type: 'string'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Cập nhật thành công'),
+            new OA\Response(response: 403, description: 'Không có quyền'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_client_commentController_update();
+
+    #[OA\Delete(
+        path: '/api/client/comments/{id}',
+        summary: 'Xóa bình luận cá nhân (Auth)',
+        tags: ['Client - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã xóa'),
+            new OA\Response(response: 403, description: 'Không có quyền'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_client_commentController_destroy();
+
+    // --- Api/Admin/CommentControllerDocs.php ---
+    #[OA\Get(
+        path: '/api/admin/comments',
+        summary: '[Admin] Danh sách bình luận',
+        tags: ['Admin - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['pending','approved','rejected'])),
+            new OA\Parameter(name: 'product_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'keyword', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 403, description: 'Không phải Admin'),
+        ]
+    )]
+    public function api_admin_commentController_index();
+
+    #[OA\Patch(
+        path: '/api/admin/comments/{id}/approve',
+        summary: '[Admin] Duyệt bình luận',
+        tags: ['Admin - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_admin_commentController_approve();
+
+    #[OA\Patch(
+        path: '/api/admin/comments/{id}/reject',
+        summary: '[Admin] Từ chối bình luận',
+        tags: ['Admin - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_admin_commentController_reject();
+
+    #[OA\Patch(
+        path: '/api/admin/comments/{id}/toggle-hide',
+        summary: '[Admin] Ẩn/Hiện bình luận',
+        tags: ['Admin - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Thành công'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_admin_commentController_toggleHide();
+
+    #[OA\Delete(
+        path: '/api/admin/comments/{id}',
+        summary: '[Admin] Xóa bình luận',
+        tags: ['Admin - Comments'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Đã xóa'),
+            new OA\Response(response: 404, description: 'Không tìm thấy'),
+        ]
+    )]
+    public function api_admin_commentController_destroy();
 }

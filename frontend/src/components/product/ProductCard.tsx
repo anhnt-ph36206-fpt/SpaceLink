@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ShoppingCart, Eye, Shuffle, Heart, Star } from 'lucide-react'
+import { useWishlist } from '../../context/WishlistContext'
 
 const formatVND = (v: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
@@ -25,6 +26,9 @@ export function ProductCard({
   badge,
   rating = 4,
 }: ProductCardProps) {
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const inWishlist = isInWishlist(id);
+
   return (
     <div className="product-item rounded">
       <div className="product-item-inner border rounded">
@@ -77,8 +81,15 @@ export function ProductCard({
             <button className="rounded-circle btn-sm-square border border-primary bg-transparent text-primary d-flex align-items-center justify-content-center me-3 p-0">
               <Shuffle size={16} />
             </button>
-            <button className="rounded-circle btn-sm-square border border-primary bg-transparent text-primary d-flex align-items-center justify-content-center p-0">
-              <Heart size={16} />
+            <button 
+                className={`rounded-circle btn-sm-square border ${inWishlist ? 'border-danger text-danger bg-danger bg-opacity-10' : 'border-primary bg-transparent text-primary'} d-flex align-items-center justify-content-center p-0`}
+                onClick={(e) => {
+                    e.preventDefault();
+                    if (inWishlist) removeFromWishlist(id);
+                    else addToWishlist(id);
+                }}
+            >
+              <Heart size={16} fill={inWishlist ? 'currentColor' : 'none'} color={inWishlist ? '#dc3545' : 'currentColor'} />
             </button>
           </div>
         </div>

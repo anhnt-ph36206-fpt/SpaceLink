@@ -13,15 +13,18 @@ use App\Models\ProductVariant;
 use App\Models\UserAddress;
 use App\Models\Voucher;
 use App\Models\VoucherUsage;
+use App\Models\AdminNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
-    public function checkVoucher(CheckoutRequest $request)
+    public function checkVoucher(\Illuminate\Http\Request $request)
     {
         $user = auth('sanctum')->user();
-        if (! $request->filled('voucher_code')) {
+        $code = $request->input('code') ?? $request->input('voucher_code');
+
+        if (! $code) {
             return response()->json(['status' => 'error', 'message' => 'Vui lòng nhập mã voucher.'], 400);
         }
 
@@ -45,17 +48,20 @@ class CheckoutController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Giỏ hàng trống.'], 400);
         }
 
-        $subtotal = $cartItems->sum(function ($item) {
-            if ($item instanceof Cart) {
-                return (float) ($item->variant?->sale_price ?? $item->variant?->price ?? $item->product->sale_price ?? $item->product->price) * $item->quantity;
-            }
-            $v = ProductVariant::find($item->variant_id);
+        $subtotal = (float) $request->input('order_value', 0);
+        if ($subtotal <= 0) {
+            $subtotal = $cartItems->sum(function ($item) {
+                if ($item instanceof Cart) {
+                    return (float) ($item->variant?->sale_price ?? $item->variant?->price ?? $item->product->sale_price ?? $item->product->price) * $item->quantity;
+                }
+                $v = ProductVariant::find($item->variant_id);
 
-            return (float) ($v?->sale_price ?? $v?->price ?? $item->product?->sale_price ?? $item->product?->price) * $item->quantity;
-        });
+                return (float) ($v?->sale_price ?? $v?->price ?? $item->product?->sale_price ?? $item->product?->price) * $item->quantity;
+            });
+        }
 
         try {
-            [$voucher, $discount] = $this->applyVoucher($request->voucher_code, $subtotal, $user?->id);
+            [$voucher, $discount] = $this->applyVoucher($code, $subtotal, $user?->id, $cartItems);
 
             return response()->json(['status' => 'success', 'data' => ['code' => $voucher->code, 'discount_amount' => $discount, 'discount_type' => $voucher->discount_type, 'discount_value' => $voucher->discount_value]]);
         } catch (\Exception $e) {
@@ -107,17 +113,21 @@ class CheckoutController extends Controller
         foreach ($cartItems as $item) {
             if (! $item->variant_id) continue;
 
-            // Đọc stock hiện tại (không lock — đây chỉ là kiểm tra sớm, lock thật sẽ trong transaction)
             $currentVariant = ProductVariant::select('id', 'quantity', 'is_active')
                 ->find($item->variant_id);
 
             if (! $currentVariant || ! $currentVariant->is_active) {
                 $stockErrors[] = "Sản phẩm \"{$item->product->name}\" đã ngừng bán.";
-            } elseif ($currentVariant->quantity < $item->quantity) {
-                $available = $currentVariant->quantity;
-                $stockErrors[] = $available === 0
-                    ? "Sản phẩm \"{$item->product->name}\" đã hết hàng."
-                    : "Sản phẩm \"{$item->product->name}\" chỉ còn {$available} trong kho (bạn đang mua {$item->quantity}).";
+            } else {
+                // User cart items đã reserved stock khi add to cart → cộng lại để validate đúng
+                $reservedQty = ($user && ! $request->boolean('is_buy_now')) ? $item->quantity : 0;
+                $effectiveStock = $currentVariant->quantity + $reservedQty;
+                if ($effectiveStock < $item->quantity) {
+                    $available = $effectiveStock;
+                    $stockErrors[] = $available === 0
+                        ? "Sản phẩm \"{$item->product->name}\" đã hết hàng."
+                        : "Sản phẩm \"{$item->product->name}\" chỉ còn {$available} trong kho (bạn đang mua {$item->quantity}).";
+                }
             }
         }
 
@@ -166,7 +176,10 @@ class CheckoutController extends Controller
                     if (! $variant || ! $variant->is_active) {
                         throw new \App\Exceptions\StockException("Sản phẩm \"{$item->product->name}\" hiện không còn bán.");
                     }
-                    if ($variant->quantity < $item->quantity) {
+                    // User cart items: stock đã bị trừ khi add to cart (reservation)
+                    // Cần cộng lại phần đang hold để validate đúng tồn kho thực
+                    $reservedQty = ($user && ! $request->boolean('is_buy_now')) ? $item->quantity : 0;
+                    if (($variant->quantity + $reservedQty) < $item->quantity) {
                         throw new \App\Exceptions\StockException("Sản phẩm \"{$item->product->name}\" không đủ tồn kho.");
                     }
                 }
@@ -177,7 +190,7 @@ class CheckoutController extends Controller
                 $voucher = null;
                 $discountValue = 0;
                 if ($request->filled('voucher_code')) {
-                    [$voucher, $discountValue] = $this->applyVoucher($request->voucher_code, $subtotal, $user?->id);
+                    [$voucher, $discountValue] = $this->applyVoucher($request->voucher_code, $subtotal, $user?->id, $cartItems);
                 }
                 $totalAmount = max(0, $subtotal + $shippingFee - $discountValue);
 
@@ -228,25 +241,29 @@ class CheckoutController extends Controller
                         'total'        => $price * $item->quantity,
                     ]);
 
-                    // Trừ tồn kho variant — sàng lọc an toàn: chỉ decrement nếu còn đủ hàng
-                    // (chống oversell ngay cả khi 2 request cùng thông qua lock bất đồng bộ)
-                    if ($item->variant_id) {
+                    // Trừ tồn kho variant:
+                    // - User cart (is_buy_now=false): stock đã reserved khi add to cart → SKIP
+                    // - Buy Now / Guest: stock chưa reserved → cần decrement ngay
+                    $isCartReserved = ($user && ! $request->boolean('is_buy_now'));
+
+                    if ($item->variant_id && ! $isCartReserved) {
                         $affected = ProductVariant::where('id', $item->variant_id)
-                            ->where('quantity', '>=', $item->quantity)  // atomic guard
+                            ->where('quantity', '>=', $item->quantity)
                             ->decrement('quantity', $item->quantity);
 
                         if ($affected === 0) {
-                            // Race condition đã xảy ra — tồn kho đã bị ai đó móc mất
                             throw new \App\Exceptions\StockException(
                                 "Sản phẩm \"{$item->product->name}\" vừa hết hàng. Vui lòng kiểm tra lại giỏ hàng."
                             );
                         }
                     }
 
-                    // Trừ tồn kho tổng của product (safe decrement — không để về âm)
-                    Product::where('id', $item->product_id)
-                        ->where('quantity', '>=', $item->quantity)
-                        ->decrement('quantity', $item->quantity);
+                    // Trừ tồn kho tổng của product (chỉ khi chưa reserved)
+                    if (! $isCartReserved) {
+                        Product::where('id', $item->product_id)
+                            ->where('quantity', '>=', $item->quantity)
+                            ->decrement('quantity', $item->quantity);
+                    }
                 }
 
                 if ($voucher) {
@@ -255,6 +272,14 @@ class CheckoutController extends Controller
                 }
 
                 OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => 'pending', 'note' => 'Đơn hàng được khởi tạo.', 'changed_by' => $user?->id]);
+
+                // Admin notification: đơn hàng mới
+                AdminNotification::notify(
+                    'new_order',
+                    '🛒 Đơn hàng mới',
+                    "#{$order->order_code} — " . ($order->shipping_name ?? 'Khách vãng lai') . ' — ' . number_format((float) $order->total_amount, 0, ',', '.') . '₫',
+                    $order->id
+                );
 
                 if ($user && ! $request->filled('shipping_address_id') && $request->boolean('save_address')) {
                     UserAddress::create([
@@ -266,7 +291,10 @@ class CheckoutController extends Controller
                 }
 
                 // 7. Xóa giỏ hàng (Guest hoặc User)
-                if (! $request->boolean('is_buy_now')) {
+                // VNPAY: KHÔNG xóa giỏ hàng ở đây — sẽ xóa sau khi thanh toán thành công qua IPN
+                // COD/Banking: xóa ngay vì thanh toán được xác nhận
+                $isVnpay = ($request->payment_method === 'vnpay');
+                if (! $request->boolean('is_buy_now') && ! $isVnpay) {
                     $cartQuery = Cart::query();
                     if ($user) {
                         $cartQuery->where('user_id', $user->id);
@@ -386,33 +414,34 @@ class CheckoutController extends Controller
 
                 foreach ($cartItems as $item) {
                     $effectivePrice = $this->resolvePrice($item, $lockedVariants);
-                    $variant = $item->variant_id ? $lockedVariants->get($item->variant_id) : null;
+                    $variant = $item->variant_id ? $lockedVariants->find($item->variant_id) : null;
 
                     if ($variant) {
-                        if ($variant->quantity < $item->quantity) {
-                            throw new \Exception("Sản phẩm {$item->product->name} (Biến thể ID: {$variant->id}) chỉ còn {$variant->quantity} trong kho.");
+                        // Stock đã được reserved khi user add to cart (CartController đã decrement)
+                        // → KHÔNG decrement thêm ở đây để tránh double-decrement
+                        // Chỉ validate: tồn kho DB + reserved cũ >= qty cần mua
+                        $reservedQty = $item->quantity; // phần đang hold trong cart
+                        $effectiveStock = $variant->quantity + $reservedQty;
+                        if ($effectiveStock < $item->quantity) {
+                            throw new \Exception("Sản phẩm {$item->product->name} chỉ còn {$effectiveStock} trong kho.");
                         }
-                        // Trừ tồn kho biến thể
-                        $variant->decrement('quantity', $item->quantity);
-                        // Trừ tồn kho tổng của product
-                        Product::where('id', $item->product_id)
-                            ->decrement('quantity', $item->quantity);
+                        // Không decrement — stock đã reserved từ CartController
                     } else {
                         throw new \Exception("Vui lòng chọn phân loại sản phẩm cho {$item->product->name}.");
                     }
 
                     OrderItem::create([
-                        'order_id' => $order->id,
-                        'product_id' => $item->product_id,
-                        'variant_id' => $item->variant_id,
+                        'order_id'     => $order->id,
+                        'product_id'   => $item->product_id,
+                        'variant_id'   => $item->variant_id,
                         'product_name' => $item->product->name,
-                        'variant_name' => 'Variant Name '.$variant->id,
                         'variant_info' => null,
-                        'sku' => $variant->sku,
-                        'quantity' => $item->quantity,
-                        'price' => $effectivePrice,
+                        'sku'          => $variant->sku,
+                        'quantity'     => $item->quantity,
+                        'price'        => $effectivePrice,
                     ]);
                 }
+
 
                 if ($voucher) {
                     VoucherUsage::create(['voucher_id' => $voucher->id, 'user_id' => $user->id, 'order_id' => $order->id]);
@@ -420,7 +449,7 @@ class CheckoutController extends Controller
                 }
 
                 OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => 'pending', 'note' => 'Khởi tạo thanh toán VNPAY']);
-                Cart::where('user_id', $user->id)->delete();
+                // KHÔNG xóa cart ở đây — chỉ xóa sau khi IPN xác nhận thanh toán thành công
 
                 return $order;
             });
@@ -515,6 +544,11 @@ class CheckoutController extends Controller
                     if ($inputData['vnp_ResponseCode'] == '00') {
                         $order->update(['payment_status' => 'paid']);
                         OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => $order->status, 'note' => 'Thanh toán VNPAY thành công. Mã GD: '.$inputData['vnp_TransactionNo']]);
+
+                        // Xóa giỏ hàng sau khi thanh toán VNPAY thành công
+                        if ($order->user_id) {
+                            Cart::where('user_id', $order->user_id)->delete();
+                        }
                     } else {
                         $order->update(['payment_status' => 'unpaid']);
                         OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => $order->status, 'note' => 'Thanh toán VNPAY thất bại. Đơn vẫn ở trạng thái chưa thanh toán.']);
@@ -636,26 +670,64 @@ class CheckoutController extends Controller
         return $vnpUrl;
     }
 
-    private function applyVoucher(string $code, float $subtotal, ?int $userId): array
+    private function applyVoucher(string $code, float $subtotal, ?int $userId, $cartItems = null): array
     {
         $voucher = Voucher::where('code', strtoupper(trim($code)))->first();
         if (! $voucher || ! $voucher->is_active) {
-            throw new \App\Exceptions\StockException('Voucher không tồn tại.');
+            throw new \App\Exceptions\StockException('Voucher không tồn tại hoặc đã bị vô hiệu hóa.');
         }
         if (now()->lt($voucher->start_date) || now()->gt($voucher->end_date)) {
-            throw new \App\Exceptions\StockException('Voucher hết hạn.');
+            throw new \App\Exceptions\StockException('Voucher đã hết hạn sử dụng.');
         }
         if ($subtotal < $voucher->min_order_amount) {
-            throw new \App\Exceptions\StockException('Đơn chưa đạt tối thiểu.');
-        }
-        if ($voucher->used_count >= $voucher->limit_number) {
-            throw new \App\Exceptions\StockException('Voucher hết lượt.');
-        }
-        if ($userId && VoucherUsage::where('voucher_id', $voucher->id)->where('user_id', $userId)->exists()) {
-            throw new \App\Exceptions\StockException('Bạn đã dùng voucher này.');
+            $formatted = number_format($voucher->min_order_amount, 0, ',', '.');
+            throw new \App\Exceptions\StockException("Đơn hàng chưa đạt giá trị tối thiểu {$formatted}₫ để áp dụng voucher.");
         }
 
-        $discount = ($voucher->discount_type === 'percent') ? ($subtotal * $voucher->discount_value / 100) : $voucher->discount_value;
+        // Bug fix #1: DB field là `quantity`, không phải `limit_number`
+        if ($voucher->quantity !== null && $voucher->used_count >= $voucher->quantity) {
+            throw new \App\Exceptions\StockException('Voucher đã hết lượt sử dụng.');
+        }
+
+        // Bug fix #2: Check usage_limit_per_user bằng count thay vì exists
+        if ($userId && $voucher->usage_limit_per_user !== null) {
+            $userUsedCount = VoucherUsage::where('voucher_id', $voucher->id)
+                ->where('user_id', $userId)->count();
+            if ($userUsedCount >= $voucher->usage_limit_per_user) {
+                throw new \App\Exceptions\StockException('Bạn đã hết lượt sử dụng voucher này.');
+            }
+        }
+
+        // Bug fix #3: Validate scope product_id / category_id
+        if ($cartItems && $cartItems->isNotEmpty()) {
+            if ($voucher->product_id) {
+                $hasMatchingProduct = $cartItems->contains(function ($item) use ($voucher) {
+                    $productId = $item->product_id ?? ($item->product->id ?? null);
+                    return $productId == $voucher->product_id;
+                });
+                if (! $hasMatchingProduct) {
+                    $productName = $voucher->product?->name ?? 'sản phẩm chỉ định';
+                    throw new \App\Exceptions\StockException("Voucher chỉ áp dụng cho {$productName}.");
+                }
+            }
+
+            if ($voucher->category_id) {
+                $hasMatchingCategory = $cartItems->contains(function ($item) use ($voucher) {
+                    $categoryId = $item->product->category_id ?? null;
+                    return $categoryId == $voucher->category_id;
+                });
+                if (! $hasMatchingCategory) {
+                    $categoryName = $voucher->category?->name ?? 'danh mục chỉ định';
+                    throw new \App\Exceptions\StockException("Voucher chỉ áp dụng cho danh mục {$categoryName}.");
+                }
+            }
+        }
+
+        // Tính discount trên subtotal toàn đơn (theo yêu cầu)
+        $discount = ($voucher->discount_type === 'percent')
+            ? ($subtotal * $voucher->discount_value / 100)
+            : $voucher->discount_value;
+
         if ($voucher->max_discount && $discount > $voucher->max_discount) {
             $discount = $voucher->max_discount;
         }
