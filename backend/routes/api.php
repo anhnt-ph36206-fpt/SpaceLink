@@ -110,6 +110,9 @@ Route::prefix('client')->name('client.')->group(function () {
 
     // --- Checkout & Payment ---
     Route::middleware('auth:sanctum')->group(function () {
+        // Voucher (client)
+        Route::get('/vouchers/available', [\App\Http\Controllers\Api\Client\VoucherController::class, 'available']);
+
         Route::post('checkout/vnpay', [CheckoutController::class, 'createVnpayPayment']);
         Route::post('/checkout', [CheckoutController::class, 'checkout']);
         Route::post('/checkout/check-voucher', [CheckoutController::class, 'checkVoucher']);
@@ -119,6 +122,8 @@ Route::prefix('client')->name('client.')->group(function () {
         Route::get('/orders/{id}', [ClientOrderController::class, 'show']);
         Route::post('/orders/{id}/cancel', [ClientOrderController::class, 'cancel']);
         Route::post('/orders/{id}/cancel-vnpay', [ClientOrderController::class, 'cancelUnpaidVnpay']);
+        Route::post('/orders/{id}/cancel-request', [\App\Http\Controllers\Api\Client\OrderCancelRequestController::class, 'store']);
+        Route::get('/orders/{id}/cancel-request', [\App\Http\Controllers\Api\Client\OrderCancelRequestController::class, 'show']);
         Route::post('/orders/{id}/confirm-received', [ClientOrderController::class, 'confirmReceived']);
         Route::post('/orders/{id}/return-request', [ClientOrderController::class, 'requestReturn']);
         Route::get('/orders/{id}/retry-vnpay', [ClientOrderController::class, 'retryVnpayPayment']);
@@ -202,6 +207,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     Route::patch('orders/{order}/payment-status', [\App\Http\Controllers\Api\Admin\OrderController::class, 'updatePaymentStatus']);
     Route::post('orders/{order}/return/approve', [\App\Http\Controllers\Api\Admin\OrderController::class, 'approveReturn']);
     Route::post('orders/{order}/return/reject', [\App\Http\Controllers\Api\Admin\OrderController::class, 'rejectReturn']);
+    // Cancel requests
+    Route::get('orders/{order}/cancel-requests', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'cancelRequests']);
+    Route::post('orders/{order}/cancel-requests/{req}/approve', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'approveCancelRequest']);
+    Route::post('orders/{order}/cancel-requests/{req}/reject', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'rejectCancelRequest']);
+    // Admin Notifications
+    Route::get('notifications', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'index']);
+    Route::patch('notifications/read-all', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'readAll']);
+    Route::patch('notifications/{id}/read', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'markRead']);
 
     Route::apiResource('vouchers', \App\Http\Controllers\Api\Admin\VoucherController::class);
 

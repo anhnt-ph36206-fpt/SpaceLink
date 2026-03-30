@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminNotification;
 use App\Models\Order;
 use App\Models\OrderComplaint;
 use Illuminate\Http\Request;
@@ -75,6 +76,13 @@ class ComplaintController extends Controller
             'content'  => $request->content,
             'status'   => 'pending',
         ]);
+
+        AdminNotification::notify(
+            'complaint',
+            '💬 Khiếu nại mới',
+            "#{$order->order_code} — {$user->fullname}: {$request->subject}",
+            $order->id
+        );
 
         return response()->json([
             'status'  => 'success',

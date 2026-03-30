@@ -42,6 +42,19 @@ interface StatusHistory {
   from: string; to: string;
   note?: string; changed_by?: number; created_at: string;
 }
+interface CancelRequest {
+  id: number;
+  reason: string;
+  refund_bank?: string;
+  refund_account_name?: string;
+  refund_account_number?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  transaction_code?: string;
+  admin_note?: string;
+  processed_at?: string;
+  created_at: string;
+  user?: { fullname?: string; email?: string; phone?: string };
+}
 interface Order {
   id: number;
   order_code: string;
@@ -71,6 +84,7 @@ interface Order {
   updated_at?: string;
   items?: OrderItem[];
   status_history?: StatusHistory[];
+  cancel_request?: CancelRequest | null;
   product_return?: {
     id?: number;
     status?: string;
@@ -297,6 +311,15 @@ const AdminOrderDetailPage: React.FC = () => {
   const [returnRejectReason, setReturnRejectReason] = useState('');
   const [returnRejectLoading, setReturnRejectLoading] = useState(false);
 
+  // Cancel Request states
+  const [cancelReqApproveOpen, setCancelReqApproveOpen] = useState(false);
+  const [cancelReqTransCode, setCancelReqTransCode] = useState('');
+  const [cancelReqAdminNote, setCancelReqAdminNote] = useState('');
+  const [cancelReqApproveLoading, setCancelReqApproveLoading] = useState(false);
+  const [cancelReqRejectOpen, setCancelReqRejectOpen] = useState(false);
+  const [cancelReqRejectNote, setCancelReqRejectNote] = useState('');
+  const [cancelReqRejectLoading, setCancelReqRejectLoading] = useState(false);
+
   // ── Fetch ──────────────────────────────────────────────────
   const fetchOrder = useCallback(async () => {
     if (!id) return;
@@ -425,6 +448,49 @@ const AdminOrderDetailPage: React.FC = () => {
       message.error(error?.response?.data?.message ?? 'Không thể từ chối hoàn trả');
     } finally {
       setReturnRejectLoading(false);
+    }
+  };
+
+  // ── Cancel Request handlers ──────────────────────────────────
+  const handleApproveCancelReq = async () => {
+    if (!order?.cancel_request) return;
+    setCancelReqApproveLoading(true);
+    try {
+      await axiosInstance.post(
+        `${API_BASE}/${order.id}/cancel-requests/${order.cancel_request.id}/approve`,
+        { transaction_code: cancelReqTransCode, admin_note: cancelReqAdminNote }
+      );
+      message.success('Đã duyệt yêu cầu hủy. Đơn hàng đã được hủy và tồn kho đã hoàn lại.');
+      setCancelReqApproveOpen(false);
+      setCancelReqTransCode('');
+      setCancelReqAdminNote('');
+      fetchOrder();
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      message.error(error?.response?.data?.message ?? 'Không thể duyệt yêu cầu hủy');
+    } finally {
+      setCancelReqApproveLoading(false);
+    }
+  };
+
+  const handleRejectCancelReq = async () => {
+    if (!order?.cancel_request) return;
+    if (!cancelReqRejectNote.trim()) { message.error('Vui lòng nhập lý do từ chối.'); return; }
+    setCancelReqRejectLoading(true);
+    try {
+      await axiosInstance.post(
+        `${API_BASE}/${order.id}/cancel-requests/${order.cancel_request.id}/reject`,
+        { admin_note: cancelReqRejectNote }
+      );
+      message.success('Đã từ chối yêu cầu hủy.');
+      setCancelReqRejectOpen(false);
+      setCancelReqRejectNote('');
+      fetchOrder();
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      message.error(error?.response?.data?.message ?? 'Không thể từ chối');
+    } finally {
+      setCancelReqRejectLoading(false);
     }
   };
 
@@ -617,6 +683,98 @@ const AdminOrderDetailPage: React.FC = () => {
                   </div>
                 )}
               </div>
+            )}
+          </Space>
+        </Card>
+      )}
+
+      {/* ── Cancel Request Card (Yêu cầu hủy VNPAY đã TT) ── */}
+      {order.cancel_request && (
+        <Card
+          style={{
+            ...cardStyle,
+            border: `1.5px solid ${
+              order.cancel_request.status === 'pending' ? '#fed7aa' :
+              order.cancel_request.status === 'approved' ? '#bbf7d0' : '#fecaca'
+            }`,
+            background: order.cancel_request.status === 'pending' ? '#fffbeb' :
+              order.cancel_request.status === 'approved' ? '#f0fdf4' : '#fef2f2',
+          }}
+          styles={{ body: { padding: '16px 20px' } }}
+          title={
+            <Space>
+              <WarningOutlined style={{ color: order.cancel_request.status === 'pending' ? '#d97706' : order.cancel_request.status === 'approved' ? '#16a34a' : '#dc2626' }} />
+              <span style={{ fontWeight: 700 }}>Yêu cầu hủy &amp; hoàn tiền</span>
+              <Tag color={
+                order.cancel_request.status === 'pending' ? 'orange' :
+                order.cancel_request.status === 'approved' ? 'success' : 'error'
+              } style={{ borderRadius: 16 }}>
+                {order.cancel_request.status === 'pending' ? 'Chờ xử lý' :
+                 order.cancel_request.status === 'approved' ? 'Đã duyệt' : 'Từ chối'}
+              </Tag>
+            </Space>
+          }
+        >
+          <Space direction="vertical" size={12} style={{ width: '100%' }}>
+            {/* Lý do hủy của khách */}
+            <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: '10px 14px' }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>Lý do khách hàng:</Text>
+              <div style={{ marginTop: 4, color: '#1a1a2e', fontSize: 14 }}>{order.cancel_request.reason}</div>
+            </div>
+
+            {/* Thông tin hoàn tiền */}
+            {(order.cancel_request.refund_bank || order.cancel_request.refund_account_number) && (
+              <div style={{ background: '#fff7ed', borderRadius: 10, padding: '10px 14px', border: '1px solid #fed7aa' }}>
+                <Text strong style={{ fontSize: 12, color: '#b45309' }}>
+                  <DollarOutlined style={{ marginRight: 6 }} />Thông tin tài khoản nhận hoàn tiền
+                </Text>
+                <Descriptions column={1} size="small" style={{ marginTop: 8 }} styles={{ label: { fontSize: 12 }, content: { fontSize: 12, fontWeight: 700 } }}>
+                  <Descriptions.Item label="Ngân hàng">{order.cancel_request.refund_bank || '—'}</Descriptions.Item>
+                  <Descriptions.Item label="Chủ TK">{order.cancel_request.refund_account_name || '—'}</Descriptions.Item>
+                  <Descriptions.Item label="Số TK">
+                    {order.cancel_request.refund_account_number || '—'}
+                    {order.cancel_request.refund_account_number && (
+                      <Button type="text" size="small" icon={<CopyOutlined style={{ fontSize: 10 }} />}
+                        onClick={() => copy(order.cancel_request!.refund_account_number!)} />
+                    )}
+                  </Descriptions.Item>
+                </Descriptions>
+              </div>
+            )}
+
+            {/* Sau khi duyệt - hiện mã giao dịch */}
+            {order.cancel_request.status === 'approved' && order.cancel_request.transaction_code && (
+              <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '10px 14px', border: '1px solid #bbf7d0' }}>
+                <Text strong style={{ fontSize: 12, color: '#16a34a' }}>Mã GD hoàn tiền:</Text>
+                <Text code style={{ marginLeft: 8 }}>{order.cancel_request.transaction_code}</Text>
+              </div>
+            )}
+            {order.cancel_request.status === 'rejected' && order.cancel_request.admin_note && (
+              <div style={{ fontSize: 13, color: '#b91c1c' }}>
+                <CloseCircleOutlined style={{ marginRight: 6 }} />Lý do từ chối: {order.cancel_request.admin_note}
+              </div>
+            )}
+
+            {/* Nút action - chỉ hiện khi pending */}
+            {order.cancel_request.status === 'pending' && (
+              <Space>
+                <Button
+                  type="primary"
+                  icon={<CheckCircleOutlined />}
+                  onClick={() => { setCancelReqTransCode(''); setCancelReqAdminNote(''); setCancelReqApproveOpen(true); }}
+                  style={{ borderRadius: 10, background: 'linear-gradient(135deg,#16a34a,#14532d)', border: 'none' }}
+                >
+                  Duyệt &#x26; Xác nhận hoàn tiền
+                </Button>
+                <Button
+                  danger
+                  icon={<CloseCircleOutlined />}
+                  onClick={() => { setCancelReqRejectNote(''); setCancelReqRejectOpen(true); }}
+                  style={{ borderRadius: 10 }}
+                >
+                  Từ chối yêu cầu
+                </Button>
+              </Space>
             )}
           </Space>
         </Card>
@@ -1014,6 +1172,69 @@ const AdminOrderDetailPage: React.FC = () => {
               value={returnRejectReason}
               onChange={(e) => setReturnRejectReason(e.target.value)}
               placeholder="Ví dụ: Lý do không chấp nhận hoàn trả..."
+              style={{ borderRadius: 8 }}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* ── Cancel Request Approve Modal ── */}
+      <Modal
+        title={<Space><CheckCircleOutlined style={{ color: '#16a34a' }} /><span>Duyệt yêu cầu hủy — <Text code>{order.order_code}</Text></span></Space>}
+        open={cancelReqApproveOpen}
+        onOk={handleApproveCancelReq}
+        onCancel={() => setCancelReqApproveOpen(false)}
+        okText="Xác nhận duyệt"
+        cancelText="Hủy"
+        confirmLoading={cancelReqApproveLoading}
+        width={520}
+        style={{ top: 120 }}
+        okButtonProps={{ style: { borderRadius: 10, background: '#16a34a', borderColor: '#16a34a' } }}
+      >
+        <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#14532d', border: '1px solid #bbf7d0' }}>
+          Sau khi duyệt: Đơn hàng sẽ được <strong>hủy</strong>, tồn kho được khôi phục. Ghi lại mã giao dịch hoàn tiền nếu đã chuyển tiền.
+        </div>
+        <Form layout="vertical">
+          <Form.Item label="Mã giao dịch hoàn tiền" extra="Không bắt buộc — có thể điền sau">
+            <Input
+              placeholder="VD: FT26090078423..."
+              value={cancelReqTransCode}
+              onChange={e => setCancelReqTransCode(e.target.value)}
+              style={{ borderRadius: 8 }}
+            />
+          </Form.Item>
+          <Form.Item label="Ghi chú cho khách">
+            <Input.TextArea
+              rows={2}
+              placeholder="Thông tin thêm cho khách hàng..."
+              value={cancelReqAdminNote}
+              onChange={e => setCancelReqAdminNote(e.target.value)}
+              style={{ borderRadius: 8 }}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* ── Cancel Request Reject Modal ── */}
+      <Modal
+        title={<Space><CloseCircleOutlined style={{ color: '#dc3545' }} /><span>Từ chối yêu cầu hủy — <Text code>{order.order_code}</Text></span></Space>}
+        open={cancelReqRejectOpen}
+        onOk={handleRejectCancelReq}
+        onCancel={() => setCancelReqRejectOpen(false)}
+        okText="Xác nhận từ chối"
+        cancelText="Hủy"
+        confirmLoading={cancelReqRejectLoading}
+        width={480}
+        style={{ top: 120 }}
+        okButtonProps={{ danger: true, style: { borderRadius: 10 } }}
+      >
+        <Form layout="vertical">
+          <Form.Item label="Lý do từ chối" required>
+            <Input.TextArea
+              rows={3}
+              value={cancelReqRejectNote}
+              onChange={e => setCancelReqRejectNote(e.target.value)}
+              placeholder="Ví dụ: Đơn hàng đã được xử lý..."
               style={{ borderRadius: 8 }}
             />
           </Form.Item>

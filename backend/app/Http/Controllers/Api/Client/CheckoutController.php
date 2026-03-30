@@ -13,15 +13,18 @@ use App\Models\ProductVariant;
 use App\Models\UserAddress;
 use App\Models\Voucher;
 use App\Models\VoucherUsage;
+use App\Models\AdminNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
-    public function checkVoucher(CheckoutRequest $request)
+    public function checkVoucher(\Illuminate\Http\Request $request)
     {
         $user = auth('sanctum')->user();
-        if (! $request->filled('voucher_code')) {
+        $code = $request->input('code') ?? $request->input('voucher_code');
+
+        if (! $code) {
             return response()->json(['status' => 'error', 'message' => 'Vui lòng nhập mã voucher.'], 400);
         }
 
@@ -45,17 +48,20 @@ class CheckoutController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Giỏ hàng trống.'], 400);
         }
 
-        $subtotal = $cartItems->sum(function ($item) {
-            if ($item instanceof Cart) {
-                return (float) ($item->variant?->sale_price ?? $item->variant?->price ?? $item->product->sale_price ?? $item->product->price) * $item->quantity;
-            }
-            $v = ProductVariant::find($item->variant_id);
+        $subtotal = (float) $request->input('order_value', 0);
+        if ($subtotal <= 0) {
+            $subtotal = $cartItems->sum(function ($item) {
+                if ($item instanceof Cart) {
+                    return (float) ($item->variant?->sale_price ?? $item->variant?->price ?? $item->product->sale_price ?? $item->product->price) * $item->quantity;
+                }
+                $v = ProductVariant::find($item->variant_id);
 
-            return (float) ($v?->sale_price ?? $v?->price ?? $item->product?->sale_price ?? $item->product?->price) * $item->quantity;
-        });
+                return (float) ($v?->sale_price ?? $v?->price ?? $item->product?->sale_price ?? $item->product?->price) * $item->quantity;
+            });
+        }
 
         try {
-            [$voucher, $discount] = $this->applyVoucher($request->voucher_code, $subtotal, $user?->id);
+            [$voucher, $discount] = $this->applyVoucher($code, $subtotal, $user?->id, $cartItems);
 
             return response()->json(['status' => 'success', 'data' => ['code' => $voucher->code, 'discount_amount' => $discount, 'discount_type' => $voucher->discount_type, 'discount_value' => $voucher->discount_value]]);
         } catch (\Exception $e) {
@@ -184,7 +190,7 @@ class CheckoutController extends Controller
                 $voucher = null;
                 $discountValue = 0;
                 if ($request->filled('voucher_code')) {
-                    [$voucher, $discountValue] = $this->applyVoucher($request->voucher_code, $subtotal, $user?->id);
+                    [$voucher, $discountValue] = $this->applyVoucher($request->voucher_code, $subtotal, $user?->id, $cartItems);
                 }
                 $totalAmount = max(0, $subtotal + $shippingFee - $discountValue);
 
@@ -266,6 +272,14 @@ class CheckoutController extends Controller
                 }
 
                 OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => 'pending', 'note' => 'Đơn hàng được khởi tạo.', 'changed_by' => $user?->id]);
+
+                // Admin notification: đơn hàng mới
+                AdminNotification::notify(
+                    'new_order',
+                    '🛒 Đơn hàng mới',
+                    "#{$order->order_code} — " . ($order->shipping_name ?? 'Khách vãng lai') . ' — ' . number_format((float) $order->total_amount, 0, ',', '.') . '₫',
+                    $order->id
+                );
 
                 if ($user && ! $request->filled('shipping_address_id') && $request->boolean('save_address')) {
                     UserAddress::create([
@@ -656,26 +670,64 @@ class CheckoutController extends Controller
         return $vnpUrl;
     }
 
-    private function applyVoucher(string $code, float $subtotal, ?int $userId): array
+    private function applyVoucher(string $code, float $subtotal, ?int $userId, $cartItems = null): array
     {
         $voucher = Voucher::where('code', strtoupper(trim($code)))->first();
         if (! $voucher || ! $voucher->is_active) {
-            throw new \App\Exceptions\StockException('Voucher không tồn tại.');
+            throw new \App\Exceptions\StockException('Voucher không tồn tại hoặc đã bị vô hiệu hóa.');
         }
         if (now()->lt($voucher->start_date) || now()->gt($voucher->end_date)) {
-            throw new \App\Exceptions\StockException('Voucher hết hạn.');
+            throw new \App\Exceptions\StockException('Voucher đã hết hạn sử dụng.');
         }
         if ($subtotal < $voucher->min_order_amount) {
-            throw new \App\Exceptions\StockException('Đơn chưa đạt tối thiểu.');
-        }
-        if ($voucher->used_count >= $voucher->limit_number) {
-            throw new \App\Exceptions\StockException('Voucher hết lượt.');
-        }
-        if ($userId && VoucherUsage::where('voucher_id', $voucher->id)->where('user_id', $userId)->exists()) {
-            throw new \App\Exceptions\StockException('Bạn đã dùng voucher này.');
+            $formatted = number_format($voucher->min_order_amount, 0, ',', '.');
+            throw new \App\Exceptions\StockException("Đơn hàng chưa đạt giá trị tối thiểu {$formatted}₫ để áp dụng voucher.");
         }
 
-        $discount = ($voucher->discount_type === 'percent') ? ($subtotal * $voucher->discount_value / 100) : $voucher->discount_value;
+        // Bug fix #1: DB field là `quantity`, không phải `limit_number`
+        if ($voucher->quantity !== null && $voucher->used_count >= $voucher->quantity) {
+            throw new \App\Exceptions\StockException('Voucher đã hết lượt sử dụng.');
+        }
+
+        // Bug fix #2: Check usage_limit_per_user bằng count thay vì exists
+        if ($userId && $voucher->usage_limit_per_user !== null) {
+            $userUsedCount = VoucherUsage::where('voucher_id', $voucher->id)
+                ->where('user_id', $userId)->count();
+            if ($userUsedCount >= $voucher->usage_limit_per_user) {
+                throw new \App\Exceptions\StockException('Bạn đã hết lượt sử dụng voucher này.');
+            }
+        }
+
+        // Bug fix #3: Validate scope product_id / category_id
+        if ($cartItems && $cartItems->isNotEmpty()) {
+            if ($voucher->product_id) {
+                $hasMatchingProduct = $cartItems->contains(function ($item) use ($voucher) {
+                    $productId = $item->product_id ?? ($item->product->id ?? null);
+                    return $productId == $voucher->product_id;
+                });
+                if (! $hasMatchingProduct) {
+                    $productName = $voucher->product?->name ?? 'sản phẩm chỉ định';
+                    throw new \App\Exceptions\StockException("Voucher chỉ áp dụng cho {$productName}.");
+                }
+            }
+
+            if ($voucher->category_id) {
+                $hasMatchingCategory = $cartItems->contains(function ($item) use ($voucher) {
+                    $categoryId = $item->product->category_id ?? null;
+                    return $categoryId == $voucher->category_id;
+                });
+                if (! $hasMatchingCategory) {
+                    $categoryName = $voucher->category?->name ?? 'danh mục chỉ định';
+                    throw new \App\Exceptions\StockException("Voucher chỉ áp dụng cho danh mục {$categoryName}.");
+                }
+            }
+        }
+
+        // Tính discount trên subtotal toàn đơn (theo yêu cầu)
+        $discount = ($voucher->discount_type === 'percent')
+            ? ($subtotal * $voucher->discount_value / 100)
+            : $voucher->discount_value;
+
         if ($voucher->max_discount && $discount > $voucher->max_discount) {
             $discount = $voucher->max_discount;
         }

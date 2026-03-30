@@ -111,4 +111,10 @@ class Order extends Model
     {
         return $this->hasMany(OrderComplaint::class);
     }
+
+    // Order có thể có nhiều yêu cầu hủy sau TT VNPAY
+    public function cancelRequests()
+    {
+        return $this->hasMany(OrderCancelRequest::class);
+    }
 }

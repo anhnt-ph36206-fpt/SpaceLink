@@ -11,6 +11,8 @@ use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
+use App\Models\Voucher;
+use App\Models\VoucherUsage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -94,6 +96,7 @@ class OrderController extends Controller
             'items',
             'statusHistory' => fn ($q) => $q->orderBy('id', 'asc'),
             'productReturn.evidences',
+            'cancelRequests' => fn ($q) => $q->latest()->limit(1),
         ])->findOrFail($id);
 
         return new OrderResource($order);
@@ -165,6 +168,16 @@ class OrderController extends Controller
                 if ($order->user_id && count($variantIdsInOrder) > 0) {
                     \App\Models\Cart::where('user_id', $order->user_id)
                         ->whereIn('variant_id', $variantIdsInOrder)
+                        ->delete();
+                }
+
+                // Hoàn trả voucher khi admin hủy đơn
+                if ($order->voucher_id) {
+                    Voucher::where('id', $order->voucher_id)
+                        ->where('used_count', '>', 0)
+                        ->decrement('used_count');
+                    VoucherUsage::where('voucher_id', $order->voucher_id)
+                        ->where('order_id', $order->id)
                         ->delete();
                 }
             }

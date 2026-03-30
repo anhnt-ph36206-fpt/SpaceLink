@@ -243,6 +243,18 @@ const OrderDetailPage: React.FC = () => {
   const [switchCodLoading, setSwitchCodLoading] = useState(false);
   const [switchCodOpen, setSwitchCodOpen] = useState(false);
 
+  // VNPAY paid cancel request
+  const [cancelReqOpen, setCancelReqOpen] = useState(false);
+  const [cancelReqReason, setCancelReqReason] = useState('');
+  const [cancelReqBank, setCancelReqBank] = useState({ bank: '', accountName: '', accountNumber: '' });
+  const [cancelReqLoading, setCancelReqLoading] = useState(false);
+  const [cancelReqData, setCancelReqData] = useState<{
+    status: string;
+    reason: string;
+    admin_note?: string;
+    transaction_code?: string;
+  } | null>(null);
+
   // VNPAY countdown timer (giây còn lại)
   const [vnpaySecondsLeft, setVnpaySecondsLeft] = useState<number | null>(null);
 
@@ -277,20 +289,31 @@ const OrderDetailPage: React.FC = () => {
     if (!id) return;
     setLoading(true);
     setError('');
-    try {
-      const res = await axiosInstance.get(`/client/orders/${id}`);
-      const d: ClientOrder = res.data?.data ?? res.data;
+    const [orderRes, cancelReqRes] = await Promise.allSettled([
+      axiosInstance.get(`/client/orders/${id}`),
+      axiosInstance.get(`/client/orders/${id}/cancel-request`),
+    ]);
+    if (orderRes.status === 'fulfilled') {
+      const d: ClientOrder = orderRes.value.data?.data ?? orderRes.value.data;
       setOrder(d);
-    } catch (err: unknown) {
-      const e = err as { response?: { status?: number; data?: { message?: string } } };
+    } else {
+      const e = (orderRes as PromiseRejectedResult).reason as { response?: { status?: number; data?: { message?: string } } };
       if (e?.response?.status === 403 || e?.response?.status === 404) {
         setError(e?.response?.data?.message ?? 'Không tìm thấy đơn hàng.');
       } else {
         setError('Không thể tải thông tin đơn hàng. Vui lòng thử lại.');
       }
-    } finally {
-      setLoading(false);
     }
+    if (cancelReqRes.status === 'fulfilled') {
+      const cr = cancelReqRes.value.data?.data;
+      setCancelReqData(cr ? {
+        status: cr.status,
+        reason: cr.reason,
+        admin_note: cr.admin_note,
+        transaction_code: cr.transaction_code,
+      } : null);
+    }
+    setLoading(false);
   }, [id]);
 
   useEffect(() => {
@@ -393,6 +416,32 @@ const OrderDetailPage: React.FC = () => {
       showToast(e?.response?.data?.message ?? 'Không thể chuyển sang COD', 'error');
     } finally {
       setSwitchCodLoading(false);
+    }
+  };
+
+  // ── Cancel Request (VNPAY đã TT) ─────────────────────────────────
+  const handleCancelRequest = async () => {
+    if (!order) return;
+    if (!cancelReqReason.trim()) { showToast('Vui lòng nhập lý do hủy đơn.', 'error'); return; }
+    setCancelReqLoading(true);
+    try {
+      await axiosInstance.post(`/client/orders/${order.id}/cancel-request`, {
+        reason: cancelReqReason,
+        refund_bank: cancelReqBank.bank,
+        refund_account_name: cancelReqBank.accountName,
+        refund_account_number: cancelReqBank.accountNumber,
+      });
+      showToast('✅ Yêu cầu hủy đã được gửi. Chúng tôi sẽ hoàn tiền trong 3–5 ngày làm việc.', 'success');
+      setCancelReqOpen(false);
+      setCancelReqReason('');
+      setCancelReqBank({ bank: '', accountName: '', accountNumber: '' });
+      setCancelReqData({ status: 'pending', reason: cancelReqReason });
+      fetchOrder();
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showToast(e?.response?.data?.message ?? 'Không thể gửi yêu cầu hủy.', 'error');
+    } finally {
+      setCancelReqLoading(false);
     }
   };
 
@@ -528,7 +577,16 @@ const OrderDetailPage: React.FC = () => {
   const isCancelled = order.status === 'cancelled' || order.status === 'returned';
   const currentStep = isCancelled ? -1 : (statusCfg.step ?? 0);
 
-  const canCancel = order.status === 'pending';
+  // Phân biệt 2 loại hủy:
+  // 1. Hủy trực tiếp: COD pending + chưa TT VNPAY
+  const canCancelDirect = order.status === 'pending' &&
+    !(order.payment_method === 'vnpay' && order.payment_status === 'paid');
+  // 2. Yêu cầu hủy: VNPAY đã thanh toán, đơn còn pending/confirmed
+  const canRequestCancel = order.payment_method === 'vnpay' &&
+    order.payment_status === 'paid' &&
+    ['pending', 'confirmed'].includes(order.status) &&
+    cancelReqData?.status !== 'pending';
+  const hasPendingCancelReq = cancelReqData?.status === 'pending';
   const canConfirmReceived = order.status === 'delivered';
 
   // ── Logic hoàn trả và deadline ───────────────────────────────────
@@ -1031,11 +1089,73 @@ const OrderDetailPage: React.FC = () => {
                     <i className="fas fa-check-double me-2" />Đã nhận được hàng
                   </button>
                 )}
-                {canCancel && (
+                {canCancelDirect && (
                   <button className="od-btn-cancel od-btn-full" onClick={() => { setCancelOpen(true); setCancelReason(''); }}>
                     <i className="fas fa-times-circle me-2" />Hủy đơn hàng
                   </button>
                 )}
+                {/* Pending cancel request notice */}
+                {hasPendingCancelReq && (
+                  <div style={{
+                    background: '#fff7ed', border: '1.5px solid #fed7aa',
+                    borderRadius: 10, padding: '10px 14px', fontSize: 13,
+                    color: '#b45309', display: 'flex', alignItems: 'center', gap: 8,
+                  }}>
+                    <i className="fas fa-clock" />
+                    Yêu cầu hủy đơn đang được xử lý. Chúng tôi sẽ hoàn tiền sớm nhất có thể.
+                  </div>
+                )}
+
+                {/* Rejected cancel request notice */}
+                {cancelReqData?.status === 'rejected' && (
+                  <div style={{
+                    background: '#fef2f2', border: '1.5px solid #fecaca',
+                    borderRadius: 10, padding: '12px 14px', fontSize: 13,
+                  }}>
+                    <div style={{ fontWeight: 700, color: '#b91c1c', marginBottom: 4 }}>
+                      <i className="fas fa-times-circle me-2" />Yêu cầu hủy đã bị từ chối
+                    </div>
+                    {cancelReqData.admin_note && (
+                      <div style={{ color: '#6b7280', fontSize: 12 }}>
+                        Lý do: {cancelReqData.admin_note}
+                      </div>
+                    )}
+                    <div style={{ color: '#6b7280', fontSize: 12, marginTop: 4 }}>
+                      Bạn có thể gửi lại yêu cầu hoặc liên hệ hỗ trợ nếu cần thêm thông tin.
+                    </div>
+                  </div>
+                )}
+
+                {/* Approved cancel request — refund confirmed */}
+                {cancelReqData?.status === 'approved' && (
+                  <div style={{
+                    background: '#f0fdf4', border: '1.5px solid #bbf7d0',
+                    borderRadius: 10, padding: '12px 14px', fontSize: 13,
+                  }}>
+                    <div style={{ fontWeight: 700, color: '#15803d', marginBottom: 4 }}>
+                      <i className="fas fa-circle-check me-2" />Yêu cầu hủy đã được duyệt
+                    </div>
+                    <div style={{ color: '#166534', fontSize: 12 }}>
+                      Đơn hàng đã được hủy. Tiền hoàn sẽ được chuyển về tài khoản của bạn trong 3–5 ngày làm việc.
+                    </div>
+                    {cancelReqData.transaction_code && (
+                      <div style={{ marginTop: 6, color: '#15803d', fontWeight: 600, fontSize: 12 }}>
+                        <i className="fas fa-receipt me-1" />Mã GD hoàn tiền: <code>{cancelReqData.transaction_code}</code>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {canRequestCancel && (
+                  <button
+                    className="od-btn-full"
+                    style={{ background: '#fff7ed', border: '1.5px solid #fd7e14', color: '#b45309' }}
+                    onClick={() => setCancelReqOpen(true)}
+                  >
+                    <i className="fas fa-rotate-left me-2" />Yêu cầu hủy &amp; hoàn tiền
+                  </button>
+                )}
+
                 {canRequestReturn && (
                   <>
                     {/* Countdown cửa sổ hoàn trả */}
@@ -1203,6 +1323,65 @@ const OrderDetailPage: React.FC = () => {
                 {complaintLoading
                   ? <><span className="od-spin me-2" />Đang gửi...</>
                   : <><i className="fas fa-paper-plane me-2" />Gửi khiếu nại</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cancel Request Modal (VNPAY đã TT) ── */}
+      {cancelReqOpen && (
+        <div className="od-overlay" onClick={e => { if (e.target === e.currentTarget) setCancelReqOpen(false); }}>
+          <div className="od-modal">
+            <div className="od-modal-hd">
+              <div>
+                <div className="od-modal-title">
+                  <i className="fas fa-rotate-left me-2" style={{ color: '#fd7e14' }} />Yêu cầu hủy &amp; hoàn tiền
+                </div>
+                <div className="od-modal-sub">Đơn <strong>#{order.order_code}</strong> đã thanh toán VNPAY. Admin sẽ xử lý hoàn tiền thủ công.</div>
+              </div>
+              <button className="od-modal-x" onClick={() => setCancelReqOpen(false)}><i className="fas fa-times" /></button>
+            </div>
+            <div className="od-modal-bd">
+              <label className="od-modal-label">Lý do hủy <span style={{ color: '#dc2626' }}>*</span></label>
+              <textarea
+                className="od-textarea"
+                rows={3}
+                placeholder="Nhập lý do bạn muốn hủy đơn..."
+                value={cancelReqReason}
+                onChange={e => setCancelReqReason(e.target.value)}
+                maxLength={1000}
+              />
+              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>{cancelReqReason.length}/1000</div>
+
+              <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff7ed', borderRadius: 10, border: '1px solid #fed7aa' }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#b45309', marginBottom: 10 }}>
+                  <i className="fas fa-university me-2" />Thông tin tài khoản nhận hoàn tiền
+                </div>
+                <label className="od-modal-label">Ngân hàng</label>
+                <input className="od-textarea" style={{ minHeight: 38 }} placeholder="Vd: Vietcombank, MB Bank..." value={cancelReqBank.bank} onChange={e => setCancelReqBank(b => ({ ...b, bank: e.target.value }))} />
+                <label className="od-modal-label" style={{ marginTop: 8 }}>Tên chủ tài khoản</label>
+                <input className="od-textarea" style={{ minHeight: 38 }} placeholder="Nguyễn Văn A" value={cancelReqBank.accountName} onChange={e => setCancelReqBank(b => ({ ...b, accountName: e.target.value }))} />
+                <label className="od-modal-label" style={{ marginTop: 8 }}>Số tài khoản</label>
+                <input className="od-textarea" style={{ minHeight: 38 }} placeholder="0123456789" value={cancelReqBank.accountNumber} onChange={e => setCancelReqBank(b => ({ ...b, accountNumber: e.target.value }))} />
+              </div>
+
+              <div style={{ marginTop: 12, fontSize: 12, color: '#6c757d', background: '#f8f9fa', padding: '10px 12px', borderRadius: 8 }}>
+                <i className="fas fa-info-circle me-1" /> Sau khi gửi yêu cầu, chúng tôi sẽ liên hệ xác nhận và hoàn tiền trong <strong>3–5 ngày làm việc</strong>.
+              </div>
+            </div>
+            <div className="od-modal-ft">
+              <button className="od-modal-btn-no" onClick={() => setCancelReqOpen(false)} disabled={cancelReqLoading}>Đóng</button>
+              <button
+                className="od-modal-btn-yes"
+                style={{ background: '#fd7e14', borderColor: '#fd7e14' }}
+                onClick={handleCancelRequest}
+                disabled={cancelReqLoading}
+              >
+                {cancelReqLoading
+                  ? <><span className="od-spin me-2" />Đang gửi...</>
+                  : <><i className="fas fa-paper-plane me-2" />Gửi yêu cầu hủy</>
                 }
               </button>
             </div>

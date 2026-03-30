@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api\Client;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Client\Order\RequestReturnRequest;
 use App\Http\Resources\OrderResource;
+use App\Models\AdminNotification;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
 use App\Models\ProductReturn;
 use App\Models\ReturnEvidence;
+use App\Models\Voucher;
+use App\Models\VoucherUsage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -125,6 +128,24 @@ class OrderController extends Controller
                     ->whereIn('variant_id', $variantIds)
                     ->delete();
             }
+
+            // Hoàn trả voucher khi hủy đơn
+            if ($order->voucher_id) {
+                Voucher::where('id', $order->voucher_id)
+                    ->where('used_count', '>', 0)
+                    ->decrement('used_count');
+                VoucherUsage::where('voucher_id', $order->voucher_id)
+                    ->where('order_id', $order->id)
+                    ->delete();
+            }
+
+            // Admin notification
+            AdminNotification::notify(
+                'order_cancelled',
+                '❌ Khách hủy đơn hàng',
+                "#{$order->order_code} — {$user->fullname}: " . ($reason ?? 'Không có lý do'),
+                $order->id
+            );
         });
 
         return response()->json([
@@ -311,6 +332,24 @@ class OrderController extends Controller
                     ->whereIn('variant_id', $variantIds)
                     ->delete();
             }
+
+            // Hoàn trả voucher khi hủy đơn VNPAY
+            if ($order->voucher_id) {
+                Voucher::where('id', $order->voucher_id)
+                    ->where('used_count', '>', 0)
+                    ->decrement('used_count');
+                VoucherUsage::where('voucher_id', $order->voucher_id)
+                    ->where('order_id', $order->id)
+                    ->delete();
+            }
+
+            // Admin notification
+            AdminNotification::notify(
+                'order_cancelled',
+                '❌ Khách hủy đơn VNPAY (chưa thanh toán)',
+                "#{$order->order_code} — {$user->fullname}",
+                $order->id
+            );
         });
 
         return response()->json([
@@ -406,6 +445,14 @@ class OrderController extends Controller
                 'note' => 'Khách hàng yêu cầu hoàn trả: '.$reason,
                 'changed_by' => $user->id,
             ]);
+
+            // Admin notification
+            AdminNotification::notify(
+                'return_request',
+                '↩️ Yêu cầu hoàn trả',
+                "#{$order->order_code} — {$user->fullname}: {$reason}",
+                $order->id
+            );
 
             if (is_array($evidenceFiles) && count($evidenceFiles) > 0) {
                 foreach ($evidenceFiles as $file) {

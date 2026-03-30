@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Button, Avatar, Dropdown, Breadcrumb, theme } from 'antd';
+import { Layout, Menu, Button, Avatar, Dropdown, Breadcrumb, theme, Badge } from 'antd';
 import {
     DashboardOutlined,
     AppstoreOutlined,
@@ -19,10 +19,12 @@ import {
     FileTextOutlined,
     CommentOutlined,
     GiftOutlined,
+    CheckOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ToastContainer } from "react-toastify";
+import { useAdminNotifications } from '../../hooks/useAdminNotifications';
 
 const { Header, Sider, Content } = Layout;
 
@@ -100,10 +102,12 @@ const breadcrumbMap: Record<string, string> = {
 
 const AdminLayout: React.FC = () => {
     const [collapsed, setCollapsed] = useState(false);
+    const [notifOpen, setNotifOpen] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout, isLoading } = useAuth();
     const { token } = theme.useToken();
+    const { notifications, unreadCount, markAllRead, markRead } = useAdminNotifications();
 
     // Wait for localStorage hydration before protecting route
     if (isLoading) {
@@ -319,11 +323,109 @@ const AdminLayout: React.FC = () => {
 
                     {/* Right: actions */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Button
-                            type="text"
-                            icon={<BellOutlined />}
-                            style={{ width: 40, height: 40, color: '#495057' }}
-                        />
+                        {/* Notification Bell */}
+                        <Dropdown
+                            open={notifOpen}
+                            onOpenChange={setNotifOpen}
+                            trigger={['click']}
+                            placement="bottomRight"
+                            dropdownRender={() => (
+                                <div style={{
+                                    width: 360, background: '#fff', borderRadius: 12,
+                                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                    border: '1px solid #f0f0f0', overflow: 'hidden',
+                                }}>
+                                    {/* Header */}
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '14px 16px', borderBottom: '1px solid #f5f5f5',
+                                        background: '#fafafa',
+                                    }}>
+                                        <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>
+                                            🔔 Thông báo
+                                            {unreadCount > 0 && (
+                                                <span style={{
+                                                    marginLeft: 8, background: '#ff4d4f', color: '#fff',
+                                                    borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 700,
+                                                }}>{unreadCount}</span>
+                                            )}
+                                        </span>
+                                        {unreadCount > 0 && (
+                                            <button
+                                                onClick={markAllRead}
+                                                style={{
+                                                    background: 'none', border: 'none', cursor: 'pointer',
+                                                    color: '#0d6efd', fontSize: 12, fontWeight: 600, padding: '4px 8px',
+                                                    borderRadius: 6, transition: 'background 0.2s',
+                                                }}
+                                            >
+                                                <CheckOutlined /> Đánh dấu tất cả
+                                            </button>
+                                        )}
+                                    </div>
+                                    {/* List */}
+                                    <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                                        {notifications.length === 0 ? (
+                                            <div style={{ padding: '32px 16px', textAlign: 'center', color: '#adb5bd' }}>
+                                                <BellOutlined style={{ fontSize: 32, marginBottom: 8, display: 'block' }} />
+                                                Chưa có thông báo nào
+                                            </div>
+                                        ) : notifications.map(n => {
+                                            const typeColor: Record<string, string> = {
+                                                new_order: '#0d6efd',
+                                                order_cancelled: '#dc3545',
+                                                cancel_request: '#fd7e14',
+                                                return_request: '#6f42c1',
+                                                complaint: '#198754',
+                                            };
+                                            const color = typeColor[n.type] ?? '#495057';
+                                            return (
+                                                <div
+                                                    key={n.id}
+                                                    onClick={() => {
+                                                        if (!n.is_read) markRead(n.id);
+                                                        if (n.order_id) navigate(`/admin/orders/${n.order_id}`);
+                                                        setNotifOpen(false);
+                                                    }}
+                                                    style={{
+                                                        display: 'flex', gap: 10, padding: '12px 16px',
+                                                        background: n.is_read ? '#fff' : '#f0f6ff',
+                                                        borderBottom: '1px solid #f5f5f5',
+                                                        cursor: n.order_id ? 'pointer' : 'default',
+                                                        transition: 'background 0.15s',
+                                                    }}
+                                                >
+                                                    <div style={{
+                                                        width: 8, minWidth: 8, height: 8, borderRadius: '50%',
+                                                        background: n.is_read ? 'transparent' : color,
+                                                        marginTop: 6, flexShrink: 0,
+                                                    }} />
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontWeight: n.is_read ? 500 : 700, fontSize: 13, color: '#1a1a2e' }}>
+                                                            {n.title}
+                                                        </div>
+                                                        <div style={{ fontSize: 12, color: '#6c757d', marginTop: 2, lineHeight: 1.4 }}>
+                                                            {n.body}
+                                                        </div>
+                                                        <div style={{ fontSize: 11, color: '#adb5bd', marginTop: 4 }}>
+                                                            {new Date(n.created_at).toLocaleString('vi-VN')}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        >
+                            <Badge count={unreadCount} size="small" offset={[-2, 2]}>
+                                <Button
+                                    type="text"
+                                    icon={<BellOutlined />}
+                                    style={{ width: 40, height: 40, color: unreadCount > 0 ? '#0d6efd' : '#495057' }}
+                                />
+                            </Badge>
+                        </Dropdown>
                         <Button
                             type="text"
                             shape="default"

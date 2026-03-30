@@ -19,7 +19,9 @@ import {
     Breadcrumb,
     Select,
     Modal,
-    Divider
+    Divider,
+    Drawer,
+    Empty
 } from 'antd';
 import {
     ShoppingCartOutlined,
@@ -30,7 +32,10 @@ import {
     InfoCircleOutlined,
     PhoneOutlined,
     UserOutlined,
-    HomeOutlined, PlusOutlined
+    HomeOutlined, PlusOutlined,
+    GiftOutlined,
+    ClockCircleOutlined,
+    PercentageOutlined
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -79,6 +84,11 @@ const CheckoutPage: React.FC = () => {
     const [voucherCode, setVoucherCode] = useState('');
     const [applyingVoucher, setApplyingVoucher] = useState(false);
     const [appliedVoucher, setAppliedVoucher] = useState<any>(null);
+
+    // -- Voucher Drawer States --
+    const [voucherDrawerOpen, setVoucherDrawerOpen] = useState(false);
+    const [availableVouchers, setAvailableVouchers] = useState<any[]>([]);
+    const [loadingVouchers, setLoadingVouchers] = useState(false);
 
     // -- Location States --
     const [provinces, setProvinces] = useState<LocationData[]>([]);
@@ -178,18 +188,21 @@ const CheckoutPage: React.FC = () => {
         }
     };
 
-    const handleApplyVoucher = async () => {
-        if (!voucherCode) return;
+    const handleApplyVoucher = async (codeOverride?: string) => {
+        const code = codeOverride || voucherCode;
+        if (!code) return;
         setApplyingVoucher(true);
         try {
             const res = await axiosInstance.post('/client/checkout/check-voucher', {
-                code: voucherCode,
+                code,
                 order_value: subtotal,
                 items: displayItems.map(i => ({ variant_id: i.variantId, quantity: i.quantity }))
             });
             if (res.data.status === 'success') {
                 setAppliedVoucher(res.data.data);
+                setVoucherCode(res.data.data.code);
                 toast.success('Áp dụng mã giảm giá thành công!');
+                setVoucherDrawerOpen(false);
             }
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Mã giảm giá không hợp lệ');
@@ -197,6 +210,29 @@ const CheckoutPage: React.FC = () => {
         } finally {
             setApplyingVoucher(false);
         }
+    };
+
+    const fetchAvailableVouchers = async () => {
+        setLoadingVouchers(true);
+        try {
+            const res = await axiosInstance.get('/client/vouchers/available', {
+                params: { order_value: subtotal }
+            });
+            setAvailableVouchers(res.data.data || []);
+        } catch {
+            setAvailableVouchers([]);
+        } finally {
+            setLoadingVouchers(false);
+        }
+    };
+
+    const openVoucherDrawer = () => {
+        setVoucherDrawerOpen(true);
+        fetchAvailableVouchers();
+    };
+
+    const selectVoucher = (v: any) => {
+        handleApplyVoucher(v.code);
     };
 
     const onFinish = async (values: any) => {
@@ -476,9 +512,23 @@ const CheckoutPage: React.FC = () => {
 
                                         {/* Voucher Section */}
                                         <div className="mb-4">
-                                            <div className="d-flex align-items-center gap-2 mb-2">
-                                                <TagOutlined className="text-brand" />
-                                                <Text strong>Mã giảm giá</Text>
+                                            <div className="d-flex align-items-center justify-content-between mb-2">
+                                                <div className="d-flex align-items-center gap-2">
+                                                    <TagOutlined className="text-brand" />
+                                                    <Text strong>Mã giảm giá</Text>
+                                                </div>
+                                                {isAuthenticated && (
+                                                    <Button
+                                                        type="link"
+                                                        size="small"
+                                                        icon={<GiftOutlined />}
+                                                        onClick={openVoucherDrawer}
+                                                        className="text-brand fw-medium p-0"
+                                                        style={{ fontSize: 13 }}
+                                                    >
+                                                        Chọn voucher
+                                                    </Button>
+                                                )}
                                             </div>
                                             <div className="d-flex gap-2">
                                                 <Input
@@ -491,7 +541,7 @@ const CheckoutPage: React.FC = () => {
                                                 {appliedVoucher ? (
                                                     <Button onClick={() => { setAppliedVoucher(null); setVoucherCode(''); }} danger>Hủy</Button>
                                                 ) : (
-                                                    <Button type="primary" onClick={handleApplyVoucher} loading={applyingVoucher} className="bg-brand border-brand">Sử dụng</Button>
+                                                    <Button type="primary" onClick={() => handleApplyVoucher()} loading={applyingVoucher} className="bg-brand border-brand">Sử dụng</Button>
                                                 )}
                                             </div>
                                             {appliedVoucher && <div className="mt-2 text-success small fw-bold"><CheckCircleFilled /> Giảm ngay {formatVND(discountAmount)}</div>}
@@ -555,6 +605,124 @@ const CheckoutPage: React.FC = () => {
                 <Text type="secondary">Bạn có muốn lưu địa chỉ này vào sổ cá nhân cho lần mua sau không?</Text>
             </Modal>
 
+            {/* Voucher Drawer */}
+            <Drawer
+                title={
+                    <div className="d-flex align-items-center gap-2">
+                        <GiftOutlined style={{ color: '#F28B00', fontSize: 20 }} />
+                        <span className="fw-bold" style={{ fontSize: 16 }}>Chọn mã giảm giá</span>
+                    </div>
+                }
+                placement="right"
+                onClose={() => setVoucherDrawerOpen(false)}
+                open={voucherDrawerOpen}
+                width={420}
+                bodyStyle={{ padding: '16px', background: '#fafafa' }}
+            >
+                <Spin spinning={loadingVouchers}>
+                    {availableVouchers.length === 0 && !loadingVouchers ? (
+                        <Empty description="Hiện không có voucher nào khả dụng" />
+                    ) : (
+                        <div className="d-flex flex-column gap-3">
+                            {availableVouchers.map((v: any) => (
+                                <div
+                                    key={v.id}
+                                    className={`voucher-card-drawer ${!v.is_applicable ? 'disabled' : ''} ${appliedVoucher?.code === v.code ? 'selected' : ''}`}
+                                >
+                                    <div className="voucher-card-left">
+                                        <div className="voucher-discount-badge">
+                                            {v.discount_type === 'percent' ? (
+                                                <>
+                                                    <PercentageOutlined style={{ fontSize: 14 }} />
+                                                    <span className="voucher-discount-value">{v.discount_value}%</span>
+                                                </>
+                                            ) : (
+                                                <span className="voucher-discount-value" style={{ fontSize: 13 }}>
+                                                    {formatVND(v.discount_value)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="voucher-card-right">
+                                        <div className="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <div className="voucher-code-tag">{v.code}</div>
+                                                <div className="voucher-name mt-1">{v.name}</div>
+                                            </div>
+                                            {appliedVoucher?.code === v.code ? (
+                                                <Tag color="success" style={{ margin: 0, borderRadius: 4 }}>
+                                                    <CheckCircleFilled /> Đang dùng
+                                                </Tag>
+                                            ) : v.is_applicable ? (
+                                                <Button
+                                                    type="primary"
+                                                    size="small"
+                                                    onClick={() => selectVoucher(v)}
+                                                    loading={applyingVoucher}
+                                                    style={{
+                                                        background: '#F28B00', border: 'none', borderRadius: 6,
+                                                        fontWeight: 600, fontSize: 12, height: 28
+                                                    }}
+                                                >
+                                                    Áp dụng
+                                                </Button>
+                                            ) : null}
+                                        </div>
+                                        <div className="voucher-meta mt-2">
+                                            {v.min_order_amount > 0 && (
+                                                <div><TagOutlined /> Đơn tối thiểu {formatVND(v.min_order_amount)}</div>
+                                            )}
+                                            {v.max_discount && v.discount_type === 'percent' && (
+                                                <div>Giảm tối đa {formatVND(v.max_discount)}</div>
+                                            )}
+                                            <div>
+                                                <ClockCircleOutlined /> HSD: {new Date(v.end_date).toLocaleDateString('vi-VN')}
+                                            </div>
+                                            {v.remaining_uses !== null && (
+                                                <div>Còn {v.remaining_uses} lượt</div>
+                                            )}
+                                        </div>
+                                        {v.is_applicable && v.estimated_discount > 0 && (
+                                            <div className="voucher-estimated">
+                                                Tiết kiệm {formatVND(v.estimated_discount)}
+                                            </div>
+                                        )}
+                                        {!v.is_applicable && v.reason && (
+                                            <div className="voucher-reason">{v.reason}</div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </Spin>
+
+                <Divider style={{ margin: '20px 0 16px' }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>hoặc nhập mã</Text>
+                </Divider>
+                <div className="d-flex gap-2">
+                    <Input
+                        placeholder="Nhập mã voucher..."
+                        value={voucherCode}
+                        onChange={e => setVoucherCode(e.target.value.toUpperCase())}
+                        disabled={!!appliedVoucher}
+                        style={{ borderRadius: 8, height: 40 }}
+                    />
+                    {appliedVoucher ? (
+                        <Button onClick={() => { setAppliedVoucher(null); setVoucherCode(''); }} danger style={{ height: 40, borderRadius: 8 }}>Hủy</Button>
+                    ) : (
+                        <Button
+                            type="primary"
+                            onClick={() => handleApplyVoucher()}
+                            loading={applyingVoucher}
+                            style={{ background: '#F28B00', border: 'none', height: 40, borderRadius: 8, fontWeight: 600 }}
+                        >
+                            Dùng
+                        </Button>
+                    )}
+                </div>
+            </Drawer>
+
             <style>{`
                 .bg-canvas { background: #fafafa; }
                 .text-brand { color: #F28B00 !important; }
@@ -592,6 +760,48 @@ const CheckoutPage: React.FC = () => {
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
                 
                 @media (max-width: 991px) { .sticky-summary { position: static; } .title-page { font-size: 22px; } }
+
+                /* Voucher Drawer Cards */
+                .voucher-card-drawer {
+                    display: flex; border-radius: 12px; overflow: hidden;
+                    background: #fff; border: 1.5px solid #f0f0f0;
+                    transition: all 0.25s ease; cursor: default;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+                }
+                .voucher-card-drawer:hover { border-color: #F28B00; box-shadow: 0 4px 16px rgba(242,139,0,0.08); }
+                .voucher-card-drawer.selected { border-color: #F28B00; background: #fffcf5; }
+                .voucher-card-drawer.disabled { opacity: 0.55; pointer-events: none; }
+
+                .voucher-card-left {
+                    width: 80px; min-height: 100px; background: linear-gradient(135deg, #F28B00, #ff6b35);
+                    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+                    position: relative;
+                }
+                .voucher-card-left::after {
+                    content: ''; position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
+                    width: 16px; height: 16px; background: #fff; border-radius: 50%;
+                }
+
+                .voucher-discount-badge { color: #fff; text-align: center; font-weight: 700; }
+                .voucher-discount-value { display: block; font-size: 18px; line-height: 1.2; }
+
+                .voucher-card-right { flex: 1; padding: 12px 14px; }
+                .voucher-code-tag {
+                    display: inline-block; background: #fff3e0; color: #F28B00;
+                    font-weight: 700; font-size: 12px; padding: 2px 8px;
+                    border-radius: 4px; border: 1px dashed #F28B00; letter-spacing: 0.5px;
+                }
+                .voucher-name { font-size: 13px; font-weight: 600; color: #1a1a2e; line-height: 1.3; }
+                .voucher-meta { font-size: 11px; color: #888; display: flex; flex-direction: column; gap: 2px; }
+                .voucher-estimated {
+                    margin-top: 6px; font-size: 12px; font-weight: 600;
+                    color: #16a34a; background: #f0fdf4; padding: 3px 8px; border-radius: 4px;
+                    display: inline-block;
+                }
+                .voucher-reason {
+                    margin-top: 6px; font-size: 11px; color: #dc2626;
+                    background: #fef2f2; padding: 3px 8px; border-radius: 4px;
+                }
             `}</style>
         </div>
     );
