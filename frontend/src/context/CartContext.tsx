@@ -135,15 +135,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [isAuthenticated]);
 
     const addToCart = async (variantId: number, quantity: number = 1) => {
-        // Chặn thêm vào giỏ khi đang có đơn VNPAY chờ thanh toán
-        const pendingId = sessionStorage.getItem('vnpay_pending_order_id');
-        if (pendingId) {
-            toast.warning(
-                '⚠️ Bạn đang có đơn hàng chờ thanh toán VNPAY. Vui lòng thanh toán hoặc hủy đơn đó trước khi thêm sản phẩm mới.',
-                { autoClose: 4000 }
-            );
-            return;
-        }
         // Chống race condition: nếu đang gọi API cho variantId này thì bỏ qua
         if (addingRef.current.has(variantId)) return;
         addingRef.current.add(variantId);
@@ -225,13 +216,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updateQty = async (cartItemId: number, qty: number, variantId?: number) => {
-        // Chặn thay đổi khi đang có đơn VNPAY chờ thanh toán
-        const pendingId = sessionStorage.getItem('vnpay_pending_order_id');
-        if (pendingId) {
-            toast.warning('⚠️ Vui lòng xử lý đơn hàng VNPAY đang chờ trước khi thay đổi giỏ hàng.', { autoClose: 3000 });
-            return;
-        }
-
         if (qty <= 0) {
             await removeFromCart(cartItemId);
             return;

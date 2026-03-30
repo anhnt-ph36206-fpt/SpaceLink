@@ -106,16 +106,6 @@ const CheckoutPage: React.FC = () => {
     const isBuyNow = !!buyNowItem;
     const selectedCartItemIds: number[] | null = location.state?.selectedCartItemIds || null;
 
-    // Guard: nếu đang có đơn VNPAY chờ thanh toán → redirect về đơn đó
-    // Không áp dụng cho Buy Now (luồng mua riêng, không liên quan cart)
-    useEffect(() => {
-        if (isBuyNow) return;
-        const pendingOrderId = sessionStorage.getItem('vnpay_pending_order_id');
-        if (pendingOrderId) {
-            toast.warning('Bạn đang có đơn hàng VNPAY chờ thanh toán. Vui lòng xử lý đơn đó trước.');
-            navigate(`/orders/${pendingOrderId}`, { replace: true });
-        }
-    }, [isBuyNow, navigate]);
 
 
     const displayItems = useMemo(() => {

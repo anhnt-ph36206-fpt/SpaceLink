@@ -340,13 +340,6 @@ const ProductDetailPage: React.FC = () => {
     // ── Buy Now (Direct Checkout) ─────────────────────────────────────────
     const [isChecking, setIsChecking] = useState(false);
     const handleBuyNow = async () => {
-        // Chặn Mua Ngay khi đang có đơn VNPAY chờ thanh toán
-        const pendingId = sessionStorage.getItem('vnpay_pending_order_id');
-        if (pendingId) {
-            toast.warning('⚠️ Bạn đang có đơn hàng chờ thanh toán VNPAY. Vui lòng thanh toán hoặc hủy đơn đó trước khi mua hàng mới.');
-            return;
-        }
-
         if (!product || !selectedVariant) {
             toast.warning('Vui lòng chọn các thuộc tính sản phẩm!');
             return;

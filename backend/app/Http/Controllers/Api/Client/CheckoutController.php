@@ -291,10 +291,9 @@ class CheckoutController extends Controller
                 }
 
                 // 7. Xóa giỏ hàng (Guest hoặc User)
-                // VNPAY: KHÔNG xóa giỏ hàng ở đây — sẽ xóa sau khi thanh toán thành công qua IPN
-                // COD/Banking: xóa ngay vì thanh toán được xác nhận
-                $isVnpay = ($request->payment_method === 'vnpay');
-                if (! $request->boolean('is_buy_now') && ! $isVnpay) {
+                // Stock đã reserved khi user add to cart → xóa cart ngay khi order được tạo
+                // (bao gồm cả VNPAY — không cần chờ IPN vì stock đã được hold)
+                if (! $request->boolean('is_buy_now')) {
                     $cartQuery = Cart::query();
                     if ($user) {
                         $cartQuery->where('user_id', $user->id);
@@ -545,10 +544,7 @@ class CheckoutController extends Controller
                         $order->update(['payment_status' => 'paid']);
                         OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => $order->status, 'note' => 'Thanh toán VNPAY thành công. Mã GD: '.$inputData['vnp_TransactionNo']]);
 
-                        // Xóa giỏ hàng sau khi thanh toán VNPAY thành công
-                        if ($order->user_id) {
-                            Cart::where('user_id', $order->user_id)->delete();
-                        }
+                        // Cart đã được xóa tại CheckoutController khi tạo đơn → không cần xóa lại ở đây
                     } else {
                         $order->update(['payment_status' => 'unpaid']);
                         OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => $order->status, 'note' => 'Thanh toán VNPAY thất bại. Đơn vẫn ở trạng thái chưa thanh toán.']);
