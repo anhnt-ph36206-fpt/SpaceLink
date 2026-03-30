@@ -6,6 +6,8 @@ import { useCompare } from "../context/CompareContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useAuth } from "../context/AuthContext";
 import ProductCard from "../components/common/ProductCard";
+import ProductTechSpecs from "../components/product/ProductTechSpecs";
+import type { ProductSpecification } from "../components/product/ProductTechSpecs";
 import { toast } from "react-toastify";
 import { Spin } from "antd";
 import MDEditor from '@uiw/react-md-editor';
@@ -51,6 +53,7 @@ interface Product {
     brand?: { id: number; name: string };
     images?: ProductImage[];
     variants?: Variant[];
+    specifications?: ProductSpecification[];
 }
 
 // ─── Review Types ─────────────────────────────────────────────────────────
@@ -98,7 +101,7 @@ const ProductDetailPage: React.FC = () => {
     const [mainImg, setMainImg] = useState<string | null>(null);
     const [defaultMainImg, setDefaultMainImg] = useState<string | null>(null);
     const [qty, setQty] = useState(1);
-    const [activeTab, setActiveTab] = useState<'desc' | 'content' | 'specs' | 'reviews'>('desc');
+    const [activeTab, setActiveTab] = useState<'desc' | 'content' | 'specs' | 'tech_specs' | 'reviews'>('desc');
     const [relatedProducts, setRelatedProducts] = useState<{ id: string; name: string; image: string; price: number; oldPrice?: number; category?: string; rating?: number; isSale?: boolean; isNew?: boolean }[]>([]);
     const { isAuthenticated } = useAuth();
 
@@ -799,6 +802,15 @@ const ProductDetailPage: React.FC = () => {
                         )}
                         <li className="nav-item">
                             <button
+                                className={`nav-link ${activeTab === 'tech_specs' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('tech_specs')}
+                            >
+                                <i className="fas fa-list-ul me-1" />
+                                Thông số kỹ thuật
+                            </button>
+                        </li>
+                        <li className="nav-item">
+                            <button
                                 className={`nav-link ${activeTab === 'reviews' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('reviews')}
                             >
@@ -846,6 +858,10 @@ const ProductDetailPage: React.FC = () => {
                                 <tr><th>Tồn kho</th><td>{selectedVariant.quantity}</td></tr>
                             </tbody>
                         </table>
+                    )}
+
+                    {activeTab === 'tech_specs' && (
+                        <ProductTechSpecs specifications={product.specifications} />
                     )}
 
                     {/* ── Reviews Tab ────────────────────────────────── */}
