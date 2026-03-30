@@ -8,8 +8,9 @@ import {
 import {
     ArrowLeftOutlined, EditOutlined, ShoppingOutlined,
     ThunderboltOutlined, SaveOutlined, TagsOutlined,
-    BarChartOutlined, InfoCircleOutlined
+    BarChartOutlined, InfoCircleOutlined, ToolOutlined
 } from '@ant-design/icons';
+import ProductSpecifications from './ProductSpecifications';
 import MDEditor from '@uiw/react-md-editor';
 import { axiosInstance } from '../../../api/axios';
 import { productPrefix } from '../../../api/apiAdminPrefix';
@@ -375,6 +376,13 @@ const ProductDetail: React.FC = () => {
                                         <Descriptions.Item label="Meta Title">{product.name}</Descriptions.Item>
                                         <Descriptions.Item label="Meta Description">{product.description || 'N/A'}</Descriptions.Item>
                                     </Descriptions>
+                                )
+                            },
+                            {
+                                key: '4',
+                                label: <span><ToolOutlined />Thông số kỹ thuật</span>,
+                                children: (
+                                    <ProductSpecifications productId={product.id} />
                                 )
                             }
                         ]} />

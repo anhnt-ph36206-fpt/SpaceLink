@@ -36,6 +36,7 @@ import AdminAttributeGroupPage from "./pages/admin/attribute-groups/AdminAttribu
 import AdminBrandPage from './pages/admin/brands/AdminBrandPage';
 import AdminBannerPage from './pages/admin/banners/AdminBannerPage';
 import AdminNewsPage from './pages/admin/news/AdminNewsPage';
+import AdminSpecGroupPage from './pages/admin/specification-groups/AdminSpecGroupPage';
 import SearchPage from './components/home/SearchPage';
 import ComparePage from './pages/ComparePage';
 import WishlistPage from './pages/WishlistPage';
@@ -68,6 +69,7 @@ function App() {
                                 <Route path="banners" element={<AdminBannerPage />} />
                                 <Route path="news" element={<AdminNewsPage />} />
                                 <Route path="attribute-groups" element={<AdminAttributeGroupPage />} />
+                                <Route path="specification-groups" element={<AdminSpecGroupPage />} />
 
                                 <Route path="products">
                                     <Route index element={<ProductList />} />
