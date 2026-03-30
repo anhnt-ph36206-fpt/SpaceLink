@@ -17,11 +17,10 @@ const imgUrl = (path?: string) => {
 };
 
 const CartPage: React.FC = () => {
-    const { items, removeFromCart, updateQty, loading, updatingItems, refreshCart } = useCart();
+    const { items, removeFromCart, updateQty, loading, updatingItems } = useCart();
     const navigate = useNavigate();
 
-    // Kiểm tra xem có đơn hàng VNPAY đang chờ thanh toán không
-    // Dùng state thay vì đọc trực tiếp sessionStorage để có thể cập nhật động
+    // Chỉ dùng để hiển thị banner thông báo (không block)
     const [pendingOrderId, setPendingOrderId] = useState<string | null>(
         () => sessionStorage.getItem('vnpay_pending_order_id')
     );
@@ -34,7 +33,6 @@ const CartPage: React.FC = () => {
             .then(res => {
                 if (cancelled) return;
                 const order = res.data?.data ?? res.data;
-                // Nếu đơn không còn pending unpaid VNPAY → tự xóa sessionStorage
                 const stillPending = order &&
                     order.status === 'pending' &&
                     order.payment_status === 'unpaid' &&
@@ -42,13 +40,10 @@ const CartPage: React.FC = () => {
                 if (!stillPending) {
                     sessionStorage.removeItem('vnpay_pending_order_id');
                     setPendingOrderId(null);
-                    // Refresh cart vì backend đã có thể đã xóa items liên quan
-                    refreshCart();
                 }
             })
             .catch(() => {
                 if (cancelled) return;
-                // Đơn không tồn tại hoặc lỗi → xóa key giả
                 sessionStorage.removeItem('vnpay_pending_order_id');
                 setPendingOrderId(null);
             });
@@ -58,7 +53,6 @@ const CartPage: React.FC = () => {
     // -- Checkbox State --
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
-    // Sync selectedIds when items change (remove items that no longer exist)
     useEffect(() => {
         setSelectedIds(prev => {
             const existingIds = new Set(items.map(i => i.id));
@@ -68,7 +62,6 @@ const CartPage: React.FC = () => {
         });
     }, [items]);
 
-    // Auto-select all on first load
     useEffect(() => {
         if (items.length > 0 && selectedIds.size === 0) {
             setSelectedIds(new Set(items.map(i => i.id)));
@@ -94,24 +87,21 @@ const CartPage: React.FC = () => {
         });
     };
 
-    // Computed values for selected items
     const selectedItems = useMemo(() => items.filter(i => selectedIds.has(i.id)), [items, selectedIds]);
     const selectedTotalPrice = useMemo(() => selectedItems.reduce((s, i) => s + i.lineTotal, 0), [selectedItems]);
     const selectedTotalQty = useMemo(() => selectedItems.reduce((s, i) => s + i.quantity, 0), [selectedItems]);
 
     // -- State for Variant Switching --
     const [editingItem, setEditingItem] = useState<CartItem | null>(null);
-    const [selectedAttrs, setSelectedAttrs] = useState<Record<string, number>>({}); // groupName -> attrId
+    const [selectedAttrs, setSelectedAttrs] = useState<Record<string, number>>({});
     const [isUpdating, setIsUpdating] = useState(false);
 
-    // -- Delete selected --
     const handleDeleteSelected = async () => {
         for (const id of selectedIds) {
             await removeFromCart(id);
         }
     };
 
-    // Group available attributes for the editing item
     const attrGroups = useMemo(() => {
         if (!editingItem?.availableVariants) return [];
         const groupMap = new Map<string, any[]>();
@@ -161,11 +151,6 @@ const CartPage: React.FC = () => {
     };
 
     const handleCheckout = () => {
-        if (pendingOrderId) {
-            // Đang có đơn VNPAY chờ thanh toán → chuyển về đơn đó
-            navigate(`/orders/${pendingOrderId}`);
-            return;
-        }
         if (selectedItems.length === 0) return;
         navigate('/checkout', {
             state: {
@@ -205,10 +190,10 @@ const CartPage: React.FC = () => {
                 Giỏ hàng của tôi ({items.length})
             </h1>
 
-            {/* Banner cảnh báo đơn VNPAY đang chờ */}
+            {/* Banner thông báo đơn VNPAY đang chờ (chỉ informational, không block) */}
             {pendingOrderId && (
                 <Alert
-                    type="warning"
+                    type="info"
                     showIcon
                     icon={<WarningOutlined />}
                     className="mb-4"
@@ -220,14 +205,13 @@ const CartPage: React.FC = () => {
                     }
                     description={
                         <span>
-                            Đơn hàng đang ở trạng thái <strong>chờ thanh toán</strong>. Vui lòng thanh toán hoặc đổi phương thức trước khi đặt đơn mới.
-                            <br />
+                            Đơn hàng đang chờ thanh toán qua VNPAY.{' '}
                             <Button
                                 type="link"
-                                style={{ padding: 0, height: 'auto', color: '#F28B00', fontWeight: 600 }}
+                                style={{ padding: 0, height: 'auto', fontWeight: 600 }}
                                 onClick={() => navigate(`/orders/${pendingOrderId}`)}
                             >
-                                → Xem đơn hàng đang chờ
+                                → Xem đơn hàng
                             </Button>
                         </span>
                     }
@@ -238,14 +222,13 @@ const CartPage: React.FC = () => {
                 {/* Product List */}
                 <div className="col-lg-8">
                     <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
-                        {/* Header row: Select All + Delete Selected */}
+                        {/* Header row */}
                         <div className="px-3 py-2 d-flex align-items-center justify-content-between border-bottom bg-light">
                             <div className="d-flex align-items-center gap-2">
                                 <Checkbox
                                     checked={isAllSelected}
                                     indeterminate={isIndeterminate}
                                     onChange={toggleAll}
-                                    disabled={!!pendingOrderId}
                                 >
                                     <span className="fw-semibold text-dark" style={{ fontSize: 13 }}>
                                         Chọn tất cả ({items.length} sản phẩm)
@@ -253,27 +236,19 @@ const CartPage: React.FC = () => {
                                 </Checkbox>
                             </div>
                             {selectedIds.size > 0 && (
-                                pendingOrderId ? (
-                                    <Tooltip title="Vui lòng xử lý đơn hàng VNPAY đang chờ trước khi xóa sản phẩm">
-                                        <span className="text-muted small d-flex align-items-center gap-1" style={{ cursor: 'not-allowed', opacity: 0.5 }}>
-                                            <DeleteOutlined /> Xóa đã chọn ({selectedIds.size})
-                                        </span>
-                                    </Tooltip>
-                                ) : (
-                                    <Popconfirm
-                                        title={`Xóa ${selectedIds.size} sản phẩm đã chọn?`}
-                                        description="Thao tác này không thể hoàn tác."
-                                        okText="Xóa"
-                                        cancelText="Hủy"
-                                        okButtonProps={{ danger: true }}
-                                        onConfirm={handleDeleteSelected}
-                                    >
-                                        <button className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" style={{ borderRadius: 8, fontSize: 13 }}>
-                                            <DeleteOutlined />
-                                            Xóa đã chọn ({selectedIds.size})
-                                        </button>
-                                    </Popconfirm>
-                                )
+                                <Popconfirm
+                                    title={`Xóa ${selectedIds.size} sản phẩm đã chọn?`}
+                                    description="Thao tác này không thể hoàn tác."
+                                    okText="Xóa"
+                                    cancelText="Hủy"
+                                    okButtonProps={{ danger: true }}
+                                    onConfirm={handleDeleteSelected}
+                                >
+                                    <button className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" style={{ borderRadius: 8, fontSize: 13 }}>
+                                        <DeleteOutlined />
+                                        Xóa đã chọn ({selectedIds.size})
+                                    </button>
+                                </Popconfirm>
                             )}
                         </div>
 
@@ -288,7 +263,6 @@ const CartPage: React.FC = () => {
                                         <Checkbox
                                             checked={selectedIds.has(item.id)}
                                             onChange={() => toggleItem(item.id)}
-                                            disabled={!!pendingOrderId}
                                         />
                                     </div>
 
@@ -321,11 +295,11 @@ const CartPage: React.FC = () => {
 
                                         {/* Variant Selector Trigger */}
                                         <div className="mt-2">
-                                            <Tooltip title={pendingOrderId ? 'Xử lý đơn VNPAY đang chờ trước khi đổi phân loại' : 'Nhấn để đổi phân loại'}>
+                                            <Tooltip title="Nhấn để đổi phân loại">
                                                 <div
                                                     className="d-inline-flex align-items-center gap-1 px-2 py-1 rounded bg-light border text-muted small"
-                                                    style={{ cursor: pendingOrderId ? 'not-allowed' : 'pointer', opacity: pendingOrderId ? 0.5 : 1 }}
-                                                    onClick={() => !pendingOrderId && handleOpenEdit(item)}
+                                                    style={{ cursor: 'pointer' }}
+                                                    onClick={() => handleOpenEdit(item)}
                                                 >
                                                     <span className="text-truncate" style={{ maxWidth: 150 }}>
                                                         Phân loại: {item.attributes || 'Mặc định'}
@@ -347,11 +321,11 @@ const CartPage: React.FC = () => {
 
                                     {/* Qty */}
                                     <div className="d-flex flex-column align-items-end gap-2" style={{ width: 140 }}>
-                                        <div className={`input-group input-group-sm rounded-pill overflow-hidden border ${updatingItems.has(item.id) || pendingOrderId ? 'opacity-50' : ''}`}>
+                                        <div className={`input-group input-group-sm rounded-pill overflow-hidden border ${updatingItems.has(item.id) ? 'opacity-50' : ''}`}>
                                             <button
                                                 className="btn btn-light border-0 px-2"
                                                 onClick={() => updateQty(item.id, item.quantity - 1)}
-                                                disabled={item.quantity <= 1 || updatingItems.has(item.id) || !!pendingOrderId}
+                                                disabled={item.quantity <= 1 || updatingItems.has(item.id)}
                                             >
                                                 <MinusOutlined />
                                             </button>
@@ -365,7 +339,7 @@ const CartPage: React.FC = () => {
                                             <button
                                                 className="btn btn-light border-0 px-2"
                                                 onClick={() => updateQty(item.id, item.quantity + 1)}
-                                                disabled={item.quantity >= item.stock || updatingItems.has(item.id) || !!pendingOrderId}
+                                                disabled={item.quantity >= item.stock || updatingItems.has(item.id)}
                                             >
                                                 <PlusOutlined />
                                             </button>
@@ -377,16 +351,12 @@ const CartPage: React.FC = () => {
                                     </div>
 
                                     {/* Remove */}
-                                    <Tooltip title={pendingOrderId ? 'Xử lý đơn VNPAY đang chờ trước' : ''}>
-                                        <button
-                                            className="btn btn-link text-muted p-2"
-                                            onClick={() => !pendingOrderId && removeFromCart(item.id)}
-                                            style={{ cursor: pendingOrderId ? 'not-allowed' : 'pointer', opacity: pendingOrderId ? 0.4 : 1 }}
-                                            disabled={!!pendingOrderId}
-                                        >
-                                            <CloseOutlined />
-                                        </button>
-                                    </Tooltip>
+                                    <button
+                                        className="btn btn-link text-muted p-2"
+                                        onClick={() => removeFromCart(item.id)}
+                                    >
+                                        <CloseOutlined />
+                                    </button>
                                 </div>
                             ))}
                         </div>
@@ -420,24 +390,15 @@ const CartPage: React.FC = () => {
                                 <span className="text-danger fw-bold h4 mb-0">{formatVND(selectedTotalPrice)}</span>
                             </div>
 
-                            <Tooltip title={
-                                pendingOrderId
-                                    ? 'Vui lòng xử lý đơn hàng VNPAY đang chờ trước'
-                                    : selectedIds.size === 0 ? 'Vui lòng chọn ít nhất 1 sản phẩm' : ''
-                            }>
+                            <Tooltip title={selectedIds.size === 0 ? 'Vui lòng chọn ít nhất 1 sản phẩm' : ''}>
                                 <button
-                                    className="btn w-100 py-3 rounded-pill fw-bold"
+                                    className="btn w-100 py-3 rounded-pill fw-bold btn-primary"
                                     onClick={handleCheckout}
                                     disabled={selectedIds.size === 0}
-                                    style={{
-                                        fontSize: 16,
-                                        background: pendingOrderId ? '#F28B00' : undefined,
-                                        borderColor: pendingOrderId ? '#F28B00' : undefined,
-                                        color: pendingOrderId ? '#fff' : undefined,
-                                    }}
+                                    style={{ fontSize: 16 }}
                                 >
                                     <ShoppingCartOutlined className="me-2" />
-                                    {pendingOrderId ? 'XEM ĐƠN HÀNG CHỜ THANH TOÁN' : `THANH TOÁN (${selectedIds.size})`}
+                                    THANH TOÁN ({selectedIds.size})
                                 </button>
                             </Tooltip>
 
@@ -477,7 +438,6 @@ const CartPage: React.FC = () => {
             >
                 {editingItem && (
                     <div className="py-2">
-                        {/* Header Info Block */}
                         <div className="d-flex gap-3 mb-1">
                             <div style={{ width: 100, height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa', borderRadius: 12, border: '1px solid #eee', overflow: 'hidden' }}>
                                 <img
@@ -512,7 +472,6 @@ const CartPage: React.FC = () => {
 
                         <Divider style={{ margin: '16px 0' }} />
 
-                        {/* Attribute Selectors */}
                         {attrGroups.map(({ group, attrs }) => (
                             <div key={group} className="mb-4">
                                 <label className="fw-semibold mb-2 d-block text-uppercase small text-muted">{group}</label>
@@ -530,9 +489,8 @@ const CartPage: React.FC = () => {
                                         });
 
                                         return isColor ? (
-                                            <Tooltip title={attr.value}>
+                                            <Tooltip title={attr.value} key={attr.id}>
                                                 <button
-                                                    key={attr.id}
                                                     onClick={() => isAvailable && setSelectedAttrs(p => ({ ...p, [group]: attr.id }))}
                                                     style={{
                                                         width: 32, height: 32, borderRadius: 16,
@@ -573,21 +531,11 @@ const CartPage: React.FC = () => {
 
             <style>{`
                 .hover-primary:hover { color: #0d6efd !important; }
-                .hover-border-primary:hover { border-color: #0d6efd !important; color: #0d6efd !important; }
                 .cursor-pointer { cursor: pointer; }
-
-                .cart-item-row {
-                    transition: background 0.2s;
-                }
-                .cart-item-selected {
-                    background: #f0f6ff;
-                }
-                .cart-item-row:hover {
-                    background: #fafafa;
-                }
-                .cart-item-selected:hover {
-                    background: #e8f0fe;
-                }
+                .cart-item-row { transition: background 0.2s; }
+                .cart-item-selected { background: #f0f6ff; }
+                .cart-item-row:hover { background: #fafafa; }
+                .cart-item-selected:hover { background: #e8f0fe; }
             `}</style>
         </div>
     );
