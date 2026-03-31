@@ -13,11 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
 {
-    // Thời gian giữ hàng: 30 phút
-    private const RESERVATION_MINUTES = 30;
-
     // =========================================================================
-    // HELPER: Xác định context (User đã login hay Guest qua Session)
+    // HELPER: Xác định context (User đã login)
     // =========================================================================
     private function getContext(Request $request): array
     {
@@ -89,7 +86,7 @@ class CartController extends Controller
                         'image' => $v->image,
                         'attributes' => $v->attributes->map(fn($a) => [
                             'id' => $a->id,
-                            'group' => $a->attributeGroup?->name, // group name
+                            'group' => $a->attributeGroup?->name,
                             'value' => $a->value,
                             'color_code' => $a->color_code
                         ])
@@ -98,13 +95,13 @@ class CartController extends Controller
 
             return [
                 'cart_item_id'    => $item->id,
-                'product_id'      => $item->product_id,
-                'variant_id'      => $item->variant_id,
-                'product_name'    => $item->product?->name,
-                'product_slug'    => $item->product?->slug,
-                'variant_sku'     => $item->variant?->sku,
-                'variant_image'   => $item->variant?->image,
-                'variant_attrs'   => $item->variant?->attributes->map(fn($a) => [
+                'product_id'     => $item->product_id,
+                'variant_id'     => $item->variant_id,
+                'product_name'   => $item->product?->name,
+                'product_slug'   => $item->product?->slug,
+                'variant_sku'    => $item->variant?->sku,
+                'variant_image'  => $item->variant?->image,
+                'variant_attrs'  => $item->variant?->attributes->map(fn($a) => [
                     'id'   => $a->id,
                     'name' => $a->attributeGroup?->name,
                     'value' => $a->value,
@@ -113,12 +110,9 @@ class CartController extends Controller
                 'effective_price' => $effectivePrice,
                 'quantity'        => $item->quantity,
                 'line_total'      => $effectivePrice * $item->quantity,
-                // stock_available: với user item, tồn kho thực = DB quantity + phần đang hold trong giỏ này
-                // (vì khi add to cart đã trừ DB quantity rồi, nên cộng lại để frontend biết max có thể đặt)
-                // Guest item không trừ kho khi add, nên trả nguyên DB quantity
-                'stock_available' => ($item->variant?->quantity ?? 0) + ($item->user_id ? $item->quantity : 0),
+                // Lazy deduction: stock_available = DB quantity trực tiếp (không trừ kho khi add to cart)
+                'stock_available' => $item->variant?->quantity ?? 0,
                 'available_variants' => $availableVariants,
-                'reserved_until'  => $item->reserved_until,
             ];
         });
 
@@ -135,6 +129,7 @@ class CartController extends Controller
 
     // =========================================================================
     // 2. POST /api/client/cart/add — Thêm sản phẩm vào giỏ
+    // Lazy deduction: CHỈ validate stock, KHÔNG trừ kho
     // =========================================================================
     public function addToCart(AddToCartRequest $request)
     {
@@ -149,19 +144,6 @@ class CartController extends Controller
 
         try {
             $result = DB::transaction(function () use ($request, $ctx) {
-                // Backend guard: chặn thêm vào giỏ nếu user đang có đơn VNPAY chưa thanh toán
-                if ($ctx['user_id']) {
-                    $hasPendingVnpay = \App\Models\Order::where('user_id', $ctx['user_id'])
-                        ->where('status', 'pending')
-                        ->where('payment_method', 'vnpay')
-                        ->where('payment_status', 'unpaid')
-                        ->exists();
-
-                    if ($hasPendingVnpay) {
-                        throw new \Exception('Bạn đang có đơn hàng VNPAY chưa thanh toán. Vui lòng thanh toán hoặc hủy đơn đó trước.', 422);
-                    }
-                }
-
                 // Lock variant để chống race condition
                 $variant = ProductVariant::where('id', $request->variant_id)
                     ->where('is_active', true)
@@ -172,7 +154,7 @@ class CartController extends Controller
                     throw new \Exception('Biến thể sản phẩm không còn hoạt động hoặc không tồn tại.', 404);
                 }
 
-                // Kiểm tra tồn kho (sau khi đã lock row)
+                // Kiểm tra tồn kho (validate only — KHÔNG trừ kho)
                 if ($variant->quantity < $request->quantity) {
                     throw new \Exception("Sản phẩm chỉ còn {$variant->quantity} trong kho.", 409);
                 }
@@ -188,7 +170,6 @@ class CartController extends Controller
                 }
 
                 $existingItem = $query->lockForUpdate()->first();
-                $reservedUntil = $ctx['user_id'] ? now()->addMinutes(self::RESERVATION_MINUTES) : null;
 
                 if ($existingItem) {
                     $newQty = $existingItem->quantity + $request->quantity;
@@ -196,37 +177,21 @@ class CartController extends Controller
                         throw new \Exception("Số lượng vượt quá tồn kho (còn {$variant->quantity}).", 409);
                     }
 
-                    // Tính số lượng tăng thêm (để trừ thêm vào tồn kho)
-                    $addedQty = $newQty - $existingItem->quantity;
-
-                    // Chỉ trừ tồn kho cho user đã đăng nhập
-                    if ($ctx['user_id'] && $addedQty > 0) {
-                        $variant->decrement('quantity', $addedQty);
-                        // Trừ tồn kho product tổng
-                        Product::where('id', $variant->product_id)->decrement('quantity', $addedQty);
-                    }
-
+                    // Lazy deduction: KHÔNG trừ kho — chỉ cập nhật cart quantity
                     $existingItem->update([
-                        'quantity'       => $newQty,
-                        'reserved_until' => $reservedUntil,
+                        'quantity' => $newQty,
                     ]);
                     $existingItem->load(['product', 'variant']);
                     return ['action' => 'updated', 'item' => $existingItem];
                 }
 
-                // Chỉ trừ tồn kho cho user đã đăng nhập
-                if ($ctx['user_id']) {
-                    $variant->decrement('quantity', $request->quantity);
-                    Product::where('id', $variant->product_id)->decrement('quantity', $request->quantity);
-                }
-
+                // Lazy deduction: KHÔNG trừ kho — chỉ tạo cart item
                 $newItem = Cart::create([
-                    'user_id'        => $ctx['user_id'],
-                    'session_id'     => $ctx['user_id'] ? null : $ctx['session_id'],
-                    'product_id'     => $variant->product_id,
-                    'variant_id'     => $request->variant_id,
-                    'quantity'       => $request->quantity,
-                    'reserved_until' => $reservedUntil,
+                    'user_id'    => $ctx['user_id'],
+                    'session_id' => $ctx['user_id'] ? null : $ctx['session_id'],
+                    'product_id' => $variant->product_id,
+                    'variant_id' => $request->variant_id,
+                    'quantity'   => $request->quantity,
                 ]);
 
                 $newItem->load(['product', 'variant']);
@@ -252,6 +217,7 @@ class CartController extends Controller
 
     // =========================================================================
     // 3. PUT /api/client/cart/update/{cart_item_id} — Cập nhật số lượng
+    // Lazy deduction: CHỈ validate stock, KHÔNG trừ/hoàn kho
     // =========================================================================
     public function updateQuantity(UpdateCartRequest $request, int $cart_item_id)
     {
@@ -267,22 +233,7 @@ class CartController extends Controller
                     throw new \Exception('Không có quyền truy cập.', 403);
                 }
 
-                // Chặn thay đổi nếu variant đang thuộc đơn VNPAY chưa thanh toán
-                if (!is_null($cartItem->user_id) && $cartItem->variant_id) {
-                    $hasPendingVnpay = \App\Models\Order::where('user_id', $cartItem->user_id)
-                        ->where('status', 'pending')
-                        ->where('payment_method', 'vnpay')
-                        ->where('payment_status', 'unpaid')
-                        ->whereHas('items', fn ($q) => $q->where('variant_id', $cartItem->variant_id))
-                        ->exists();
-
-                    if ($hasPendingVnpay) {
-                        throw new \Exception('Không thể thay đổi giỏ hàng khi đang có đơn VNPAY chờ thanh toán.', 422);
-                    }
-                }
-
                 $ctx = $this->getContext($request);
-                $isUserOwned = !is_null($cartItem->user_id);
                 $newVariantId = $request->variant_id ?? $cartItem->variant_id;
                 $newQuantity  = $request->quantity;
 
@@ -297,29 +248,9 @@ class CartController extends Controller
                     throw new \Exception('Biến thể không hợp lệ hoặc đã bị vô hiệu hóa.', 400);
                 }
 
-                // Nếu là user item, tính lại tồn kho
-                // Công thức: tồn kho hiện tại + qty cũ (đã hold) - qty mới
-                if ($isUserOwned && $newVariantId == $cartItem->variant_id) {
-                    $oldQty = $cartItem->quantity;
-                    $diff = $newQuantity - $oldQty; // dương = cần giữ thêm, âm = hoàn lại một phần
-                    $availableForUser = $variant->quantity + $oldQty; // thực tế còn có thể dùng
-
-                    if ($newQuantity > $availableForUser) {
-                        throw new \Exception("Sản phẩm chỉ còn {$availableForUser} trong kho.", 409);
-                    }
-
-                    // Áp dụng diff vào tồn kho
-                    if ($diff > 0) {
-                        $variant->decrement('quantity', $diff);
-                        Product::where('id', $cartItem->product_id)->decrement('quantity', $diff);
-                    } elseif ($diff < 0) {
-                        $variant->increment('quantity', abs($diff));
-                        Product::where('id', $cartItem->product_id)->increment('quantity', abs($diff));
-                    }
-                } else {
-                    if ($variant->quantity < $newQuantity) {
-                        throw new \Exception("Sản phẩm chỉ còn {$variant->quantity} trong kho.", 409);
-                    }
+                // Lazy deduction: chỉ validate stock, KHÔNG trừ/hoàn kho
+                if ($variant->quantity < $newQuantity) {
+                    throw new \Exception("Sản phẩm chỉ còn {$variant->quantity} trong kho.", 409);
                 }
 
                 // Nếu thay đổi variant_id → kiểm tra merge
@@ -338,15 +269,9 @@ class CartController extends Controller
                     $alreadyInCart = $query->first();
 
                     if ($alreadyInCart) {
-                        // Hoàn lại tồn kho của item cũ (nếu là user)
-                        if ($isUserOwned) {
-                            $variant->increment('quantity', $cartItem->quantity);
-                            Product::where('id', $cartItem->product_id)->increment('quantity', $cartItem->quantity);
-                        }
                         $totalNewQty = min($alreadyInCart->quantity + $newQuantity, $variant->quantity);
                         $alreadyInCart->update([
-                            'quantity'       => $totalNewQty,
-                            'reserved_until' => $isUserOwned ? now()->addMinutes(self::RESERVATION_MINUTES) : null,
+                            'quantity' => $totalNewQty,
                         ]);
                         $cartItem->delete();
                         return ['merged' => true, 'item' => $alreadyInCart->load(['product', 'variant'])];
@@ -354,9 +279,8 @@ class CartController extends Controller
                 }
 
                 $cartItem->update([
-                    'variant_id'     => $newVariantId,
-                    'quantity'       => $newQuantity,
-                    'reserved_until' => $isUserOwned ? now()->addMinutes(self::RESERVATION_MINUTES) : null,
+                    'variant_id' => $newVariantId,
+                    'quantity'   => $newQuantity,
                 ]);
                 return ['merged' => false, 'item' => $cartItem->fresh(['product', 'variant'])];
             });
@@ -377,11 +301,12 @@ class CartController extends Controller
 
     // =========================================================================
     // 4. DELETE /api/client/cart/remove/{cart_item_id} — Xóa 1 item
+    // Lazy deduction: KHÔNG hoàn kho (vì chưa trừ)
     // =========================================================================
     public function remove(Request $request, int $cart_item_id)
     {
         try {
-            $result = DB::transaction(function () use ($request, $cart_item_id) {
+            DB::transaction(function () use ($request, $cart_item_id) {
                 $cartItem = Cart::lockForUpdate()->find($cart_item_id);
 
                 if (!$cartItem) {
@@ -392,32 +317,8 @@ class CartController extends Controller
                     throw new \Exception('Không có quyền xóa.', 403);
                 }
 
-                // Hoàn lại tồn kho CHỈ khi item thuộc user (đã trừ kho lúc add)
-                // VÀ variant này KHÔNG thuộc đơn VNPAY đang chờ thanh toán.
-                // Nếu có pending VNPAY order → SKIP hoàn kho ở đây;
-                // cancel() sẽ hoàn kho khi user hủy đơn.
-                if (!is_null($cartItem->user_id) && $cartItem->variant_id) {
-                    $hasPendingVnpay = \App\Models\Order::where('user_id', $cartItem->user_id)
-                        ->where('status', 'pending')
-                        ->where('payment_method', 'vnpay')
-                        ->where('payment_status', 'unpaid')
-                        ->whereHas('items', fn ($q) => $q->where('variant_id', $cartItem->variant_id))
-                        ->exists();
-
-                    if (!$hasPendingVnpay) {
-                        // Không có pending VNPAY → hoàn kho bình thường
-                        $variant = ProductVariant::lockForUpdate()->find($cartItem->variant_id);
-                        if ($variant) {
-                            $variant->increment('quantity', $cartItem->quantity);
-                        }
-                        Product::where('id', $cartItem->product_id)->increment('quantity', $cartItem->quantity);
-                    }
-                    // Có pending VNPAY → không hoàn kho; cancel() sẽ xử lý
-                }
-                // Guest item: không hoàn kho vì chưa trừ kho lúc thêm vào giỏ
-
+                // Lazy deduction: KHÔNG hoàn kho — stock chưa bị trừ khi add to cart
                 $cartItem->delete();
-                return true;
             });
 
             return response()->json(['status' => 'success', 'message' => 'Đã xóa sản phẩm khỏi giỏ hàng.']);
@@ -428,8 +329,10 @@ class CartController extends Controller
         }
     }
 
+
     // =========================================================================
     // 5. DELETE /api/client/cart/clear — Xóa toàn bộ giỏ hàng
+    // Lazy deduction: KHÔNG hoàn kho (vì chưa trừ)
     // =========================================================================
     public function clear(Request $request)
     {
@@ -449,21 +352,8 @@ class CartController extends Controller
             $query->where('session_id', $ctx['session_id'])->whereNull('user_id');
         }
 
-        // Hoàn lại tồn kho nếu là user
-        if ($ctx['user_id']) {
-            DB::transaction(function () use ($query) {
-                $items = (clone $query)->with('variant')->get();
-                foreach ($items as $item) {
-                    if ($item->variant_id && $item->variant) {
-                        $item->variant->increment('quantity', $item->quantity);
-                    }
-                    Product::where('id', $item->product_id)->increment('quantity', $item->quantity);
-                }
-                $query->delete();
-            });
-        } else {
-            $deleted = $query->delete();
-        }
+        // Lazy deduction: KHÔNG hoàn kho — chỉ xóa cart items
+        $query->delete();
 
         return response()->json([
             'status'  => 'success',
@@ -489,7 +379,6 @@ class CartController extends Controller
         }
 
         // Case 3: User đã login nhưng item là guest item có cùng session (chưa được merge)
-        // Cho phép user xóa item của chính họ trước khi merge
         if ($ctx['user_id'] && is_null($cartItem->user_id) && $ctx['session_id'] && $cartItem->session_id == $ctx['session_id']) {
             return true;
         }
@@ -499,6 +388,7 @@ class CartController extends Controller
 
     // =========================================================================
     // 6. POST /api/client/cart/merge — Gộp giỏ hàng Guest → User sau khi login
+    // Lazy deduction: KHÔNG trừ kho khi merge
     // =========================================================================
     public function merge(Request $request)
     {
@@ -537,33 +427,20 @@ class CartController extends Controller
                 $maxStock = $variant ? $variant->quantity : PHP_INT_MAX;
 
                 if ($existingUserItem) {
-                    $newQty = min($existingUserItem->quantity + $guestItem->quantity, $maxStock + $existingUserItem->quantity);
-                    $addedQty = $newQty - $existingUserItem->quantity;
+                    $newQty = min($existingUserItem->quantity + $guestItem->quantity, $maxStock);
 
-                    // Trừ tồn kho cho phần gộp thêm
-                    if ($addedQty > 0 && $variant) {
-                        $variant->decrement('quantity', $addedQty);
-                        Product::where('id', $guestItem->product_id)->decrement('quantity', $addedQty);
-                    }
-
+                    // Lazy deduction: KHÔNG trừ kho khi merge
                     $existingUserItem->update([
-                        'quantity'       => $newQty,
-                        'reserved_until' => now()->addMinutes(self::RESERVATION_MINUTES),
+                        'quantity' => $newQty,
                     ]);
                     $guestItem->delete();
                 } else {
-                    // Chuyển quyền sở hữu sang user, bắt đầu hold
+                    // Chuyển quyền sở hữu sang user
+                    // Lazy deduction: KHÔNG trừ kho
                     $guestItem->update([
-                        'user_id'        => $user->id,
-                        'session_id'     => null,
-                        'reserved_until' => now()->addMinutes(self::RESERVATION_MINUTES),
+                        'user_id'    => $user->id,
+                        'session_id' => null,
                     ]);
-
-                    // Trừ tồn kho cho guest items được merge vào user
-                    if ($variant) {
-                        $variant->decrement('quantity', $guestItem->quantity);
-                        Product::where('id', $guestItem->product_id)->decrement('quantity', $guestItem->quantity);
-                    }
                     $merged++;
                 }
             }
@@ -578,22 +455,18 @@ class CartController extends Controller
 
     // =========================================================================
     // 7. POST /api/client/cart/release-expired — Giải phóng giỏ hàng hết hạn (internal/scheduler)
+    // Lazy deduction: Chỉ xóa cart items, KHÔNG hoàn kho
     // =========================================================================
     public function releaseExpiredReservations(): void
     {
         $expired = Cart::whereNotNull('user_id')
             ->whereNotNull('reserved_until')
             ->where('reserved_until', '<', now())
-            ->with('variant')
             ->get();
 
         DB::transaction(function () use ($expired) {
             foreach ($expired as $item) {
-                $variant = ProductVariant::lockForUpdate()->find($item->variant_id);
-                if ($variant) {
-                    $variant->increment('quantity', $item->quantity);
-                }
-                Product::where('id', $item->product_id)->increment('quantity', $item->quantity);
+                // Lazy deduction: KHÔNG hoàn kho — stock chưa bị trừ
                 $item->delete();
             }
         });

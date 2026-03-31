@@ -55,6 +55,7 @@ interface ClientOrder {
   voucher_code?: string;
   voucher_discount?: number;
   note?: string;
+  admin_note?: string;
   cancelled_reason?: string;
   cancelled_at?: string;
   tracking_code?: string;
@@ -88,7 +89,7 @@ const RETURN_WINDOW_DAYS = 7;   // cửa sổ hoàn trả kể từ khi complete
 const daysSince = (dateStr: string | undefined): number => {
   if (!dateStr) return 0;
   const then = new Date(dateStr).getTime();
-  const now  = Date.now();
+  const now = Date.now();
   return Math.floor((now - then) / 86_400_000);
 };
 
@@ -590,7 +591,7 @@ const OrderDetailPage: React.FC = () => {
   const canConfirmReceived = order.status === 'delivered';
 
   // ── Logic hoàn trả và deadline ───────────────────────────────────
-  const daysLeft    = returnDaysLeft(order);
+  const daysLeft = returnDaysLeft(order);
   const returnExpired = daysLeft <= 0;            // hết hạn 7 ngày
 
   // Nếu delivered: countdown từ delivered_at (3 ngày tự động hoàn thành)
@@ -598,10 +599,13 @@ const OrderDetailPage: React.FC = () => {
     ? Math.max(0, AUTO_COMPLETE_DAYS - daysSince(order.delivered_at))
     : null;
 
+  const hasReviewedItem = order.items?.some(item => item.is_reviewed) ?? false;
+
   const canRequestReturn =
     ['delivered', 'completed'].includes(order.status) &&
     !returnExpired &&                              // Chưa hết 7 ngày
-    (!order.product_return || order.product_return.status === 'rejected');
+    (!order.product_return || order.product_return.status === 'rejected') &&
+    !hasReviewedItem;
 
   // Số ngày còn lại để hiển thị (chỉ show khi đang trong cửa sổ)
   const showReturnCountdown =
@@ -794,6 +798,42 @@ const OrderDetailPage: React.FC = () => {
                 {order.status === 'cancelled' && order.cancelled_at && (
                   <div className="od-cancelled-time">{order.cancelled_at}</div>
                 )}
+
+                {/* Thông báo đặc biệt: đơn bị hủy do hết hàng */}
+                {order.status === 'cancelled' && order.cancelled_reason && (
+                  order.cancelled_reason.toLowerCase().includes('tồn kho') ||
+                  order.cancelled_reason.toLowerCase().includes('hết hàng')
+                ) && (
+                  <div style={{
+                    marginTop: 10, padding: '10px 14px', background: '#fff7ed',
+                    border: '1px solid #fed7aa', borderRadius: 8, fontSize: 13, color: '#92400e'
+                  }}>
+                    <i className="fas fa-info-circle" style={{ marginRight: 6 }} />
+                    Rất tiếc, sản phẩm trong đơn hàng của bạn đã hết hàng do có người đặt mua trước.
+                    Nếu bạn đã thanh toán, shop sẽ liên hệ hoàn tiền trong thời gian sớm nhất.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Cảnh báo VNPAY paid nhưng hết hàng — chờ admin xử lý ── */}
+          {order.status === 'pending' && order.payment_status === 'paid' && order.admin_note &&
+            order.admin_note.includes('HẾT HÀNG') && (
+            <div style={{
+              background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 12,
+              padding: '14px 18px', marginBottom: 18, fontSize: 13,
+              display: 'flex', gap: 12, alignItems: 'flex-start'
+            }}>
+              <i className="fas fa-exclamation-triangle" style={{ color: '#d97706', fontSize: 18, marginTop: 2 }} />
+              <div>
+                <div style={{ fontWeight: 700, color: '#92400e', marginBottom: 4 }}>
+                  Thông báo: Một số sản phẩm trong đơn hàng đã hết hàng
+                </div>
+                <div style={{ color: '#78350f' }}>
+                  Đơn hàng của bạn đã thanh toán thành công qua VNPAY, tuy nhiên một số sản phẩm
+                  đã hết hàng do có người mua trước. Shop sẽ liên hệ bạn để xử lý hoàn tiền.
+                </div>
               </div>
             </div>
           )}
@@ -862,19 +902,19 @@ const OrderDetailPage: React.FC = () => {
                         <div className="od-item-qty">{formatVND(item.price)} × {item.quantity}</div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                         <div className="od-item-total">{formatVND(item.total)}</div>
-                         {order.status === 'completed' && (
-                            <button
-                              className="od-btn-review-sm"
-                              disabled={item.is_reviewed}
-                              onClick={() => {
-                                setReviewItem(item);
-                                setReviewOpen(true);
-                              }}
-                            >
-                              {item.is_reviewed ? <><i className="fas fa-check me-1" />Đã đánh giá</> : 'Đánh giá'}
-                            </button>
-                         )}
+                        <div className="od-item-total">{formatVND(item.total)}</div>
+                        {order.status === 'completed' && (
+                          <button
+                            className="od-btn-review-sm"
+                            disabled={item.is_reviewed}
+                            onClick={() => {
+                              setReviewItem(item);
+                              setReviewOpen(true);
+                            }}
+                          >
+                            {item.is_reviewed ? <><i className="fas fa-check me-1" />Đã đánh giá</> : 'Đánh giá'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1184,18 +1224,34 @@ const OrderDetailPage: React.FC = () => {
                   </>
                 )}
 
-                {/* Hết hạn hoàn trả */}
-                {returnExpired && ['delivered', 'completed'].includes(order.status) &&
-                  !order.product_return && (
-                  <div style={{
-                    background: '#f8fafc', border: '1.5px solid #e2e8f0',
-                    borderRadius: 10, padding: '8px 12px',
-                    fontSize: 12, color: '#64748b',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                  }}>
-                    <i className="fas fa-lock" />
-                    Đã qua {RETURN_WINDOW_DAYS} ngày — không thể yêu cầu hoàn trả
-                  </div>
+                {/* Hết hạn hoàn trả hoặc đã đánh giá */}
+                {['delivered', 'completed'].includes(order.status) && !order.product_return && (
+                  <>
+                    {returnExpired && !hasReviewedItem && (
+                      <div style={{
+                        background: '#f8fafc', border: '1.5px solid #e2e8f0',
+                        borderRadius: 10, padding: '8px 12px',
+                        fontSize: 12, color: '#64748b',
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        marginTop: 8
+                      }}>
+                        <i className="fas fa-lock" />
+                        Đã qua {RETURN_WINDOW_DAYS} ngày — không thể yêu cầu hoàn trả
+                      </div>
+                    )}
+                    {hasReviewedItem && (
+                      <div style={{
+                        background: '#f8fafc', border: '1.5px solid #e2e8f0',
+                        borderRadius: 10, padding: '8px 12px',
+                        fontSize: 12, color: '#64748b',
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        marginTop: 8
+                      }}>
+                        <i className="fas fa-lock" />
+                        Không thể yêu cầu trả hàng do đơn hàng đã được đánh giá
+                      </div>
+                    )}
+                  </>
                 )}
                 {['confirmed', 'processing', 'shipping'].includes(order.status) && (
                   <div className="od-lock-hint">
@@ -1223,7 +1279,7 @@ const OrderDetailPage: React.FC = () => {
                           }}>
                             {existingComplaint.status === 'pending' ? 'Chờ xử lý' :
                               existingComplaint.status === 'processing' ? 'Đang xử lý' :
-                              existingComplaint.status === 'resolved' ? 'Đã giải quyết' : 'Từ chối'}
+                                existingComplaint.status === 'resolved' ? 'Đã giải quyết' : 'Từ chối'}
                           </span>
                         </div>
                         <div style={{ color: '#334155' }}>{existingComplaint.subject}</div>

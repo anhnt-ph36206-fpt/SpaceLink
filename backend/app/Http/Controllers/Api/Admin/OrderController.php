@@ -11,6 +11,7 @@ use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Voucher;
 use App\Models\VoucherUsage;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,9 @@ use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
+    // Trạng thái đã trừ kho (dùng để quyết định có hoàn kho khi cancel không)
+    private const STOCK_DEDUCTED_STATUSES = ['confirmed', 'processing', 'shipping', 'delivered', 'completed'];
+
     private const VALID_STATUS_TRANSITIONS_ADMIN = [
         'pending' => ['confirmed', 'cancelled'],
         'confirmed' => ['processing', 'cancelled'],
@@ -104,6 +108,7 @@ class OrderController extends Controller
 
     // =========================================================================
     // PATCH /api/admin/orders/{id}/status — Cập nhật trạng thái
+    // Lazy deduction: TRỪ KHO khi confirmed, HOÀN KHO khi cancel (nếu đã trừ)
     // =========================================================================
     public function updateStatus(UpdateOrderStatusRequest $request, string $id): JsonResponse
     {
@@ -112,9 +117,7 @@ class OrderController extends Controller
         $newStatus = $request->status;
         $admin = $request->user();
 
-        // `completed`/`returned` là các trạng thái do phía khác điều khiển:
-        // - completed: chỉ khách xác nhận nhận hàng
-        // - returned: client tạo yêu cầu hoàn trả, admin duyệt/từ chối qua endpoint riêng
+        // `completed`/`returned` là các trạng thái do phía khác điều khiển
         if ($newStatus === 'completed') {
             return response()->json([
                 'status' => 'error',
@@ -137,89 +140,125 @@ class OrderController extends Controller
             ], 422);
         }
 
-        $order = DB::transaction(function () use ($order, $oldStatus, $newStatus, $admin, $request) {
-            // Build update payload
-            $updateData = ['status' => $newStatus];
+        try {
+            $order = DB::transaction(function () use ($order, $oldStatus, $newStatus, $admin, $request) {
+                // Build update payload
+                $updateData = ['status' => $newStatus];
 
-            // Ghi timestamp tương ứng với trạng thái mới
-            $tsField = self::STATUS_TIMESTAMPS[$newStatus] ?? null;
-            if ($tsField && ! $order->{ $tsField}) {
-                $updateData[$tsField] = now();
-            }
+                // Ghi timestamp tương ứng với trạng thái mới
+                $tsField = self::STATUS_TIMESTAMPS[$newStatus] ?? null;
+                if ($tsField && ! $order->{ $tsField}) {
+                    $updateData[$tsField] = now();
+                }
 
-            // Xử lý riêng khi hủy đơn
-            if ($newStatus === 'cancelled') {
-                $updateData['cancelled_reason'] = $request->cancelled_reason;
-                $updateData['cancelled_by'] = $admin->id;
+                // ===================================================================
+                // Lazy deduction: TRỪ KHO khi xác nhận đơn (pending → confirmed)
+                // ===================================================================
+                if ($newStatus === 'confirmed') {
+                    $stockErrors = [];
+                    foreach ($order->items()->with('variant')->get() as $item) {
+                        if (! $item->variant_id) continue;
 
-                // Khôi phục tồn kho: variant + product
-                $variantIdsInOrder = [];
-                foreach ($order->items()->with('variant')->get() as $item) {
-                    if ($item->variant_id && $item->variant) {
-                        $item->variant->increment('quantity', $item->quantity);
-                        $variantIdsInOrder[] = $item->variant_id;
+                        $variant = ProductVariant::where('id', $item->variant_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if (! $variant || $variant->quantity < $item->quantity) {
+                            $available = $variant ? $variant->quantity : 0;
+                            $stockErrors[] = "{$item->product_name} (cần {$item->quantity}, còn {$available})";
+                            continue;
+                        }
+
+                        // Trừ kho variant
+                        $variant->decrement('quantity', $item->quantity);
+                        // Trừ kho product tổng
+                        Product::where('id', $item->product_id)
+                            ->where('quantity', '>=', $item->quantity)
+                            ->decrement('quantity', $item->quantity);
                     }
-                    Product::where('id', $item->product_id)
-                        ->increment('quantity', $item->quantity);
+
+                    // Nếu có sản phẩm hết hàng → không cho confirm
+                    if (! empty($stockErrors)) {
+                        throw new \Exception(
+                            'Không thể xác nhận đơn vì tồn kho không đủ: ' . implode(', ', $stockErrors)
+                        );
+                    }
                 }
 
-                // Xóa cart items liên quan để tránh double-restore
-                // (CartController cũng restore stock khi user xóa cart item thủ công)
-                if ($order->user_id && count($variantIdsInOrder) > 0) {
-                    \App\Models\Cart::where('user_id', $order->user_id)
-                        ->whereIn('variant_id', $variantIdsInOrder)
-                        ->delete();
+                // ===================================================================
+                // Xử lý khi hủy đơn
+                // ===================================================================
+                if ($newStatus === 'cancelled') {
+                    $updateData['cancelled_reason'] = $request->cancelled_reason;
+                    $updateData['cancelled_by'] = $admin->id;
+
+                    // Lazy deduction: CHỈ hoàn kho nếu đơn đã confirmed+ (stock đã bị trừ)
+                    if (in_array($oldStatus, self::STOCK_DEDUCTED_STATUSES, true)) {
+                        foreach ($order->items()->with('variant')->get() as $item) {
+                            if ($item->variant_id && $item->variant) {
+                                $item->variant->increment('quantity', $item->quantity);
+                            }
+                            Product::where('id', $item->product_id)
+                                ->increment('quantity', $item->quantity);
+                        }
+                    }
+                    // Đơn pending bị cancel → KHÔNG hoàn kho (vì chưa trừ)
+
+                    // Hoàn trả voucher khi admin hủy đơn
+                    if ($order->voucher_id) {
+                        Voucher::where('id', $order->voucher_id)
+                            ->where('used_count', '>', 0)
+                            ->decrement('used_count');
+                        VoucherUsage::where('voucher_id', $order->voucher_id)
+                            ->where('order_id', $order->id)
+                            ->delete();
+                    }
                 }
 
-                // Hoàn trả voucher khi admin hủy đơn
-                if ($order->voucher_id) {
-                    Voucher::where('id', $order->voucher_id)
-                        ->where('used_count', '>', 0)
-                        ->decrement('used_count');
-                    VoucherUsage::where('voucher_id', $order->voucher_id)
-                        ->where('order_id', $order->id)
-                        ->delete();
+
+                // Thông tin vận chuyển (khi chuyển sang shipping)
+                if ($request->filled('tracking_code')) {
+                    $updateData['tracking_code'] = $request->tracking_code;
                 }
-            }
+                if ($request->filled('shipping_partner')) {
+                    $updateData['shipping_partner'] = $request->shipping_partner;
+                }
+                if ($request->filled('estimated_delivery')) {
+                    $updateData['estimated_delivery'] = $request->estimated_delivery;
+                }
 
+                // Ghi admin note nếu có
+                if ($request->filled('note')) {
+                    $updateData['admin_note'] = $request->note;
+                }
 
-            // Thông tin vận chuyển (khi chuyển sang shipping)
-            if ($request->filled('tracking_code')) {
-                $updateData['tracking_code'] = $request->tracking_code;
-            }
-            if ($request->filled('shipping_partner')) {
-                $updateData['shipping_partner'] = $request->shipping_partner;
-            }
-            if ($request->filled('estimated_delivery')) {
-                $updateData['estimated_delivery'] = $request->estimated_delivery;
-            }
+                $order->update($updateData);
 
-            // Ghi admin note nếu có
-            if ($request->filled('note')) {
-                $updateData['admin_note'] = $request->note;
-            }
+                // Ghi lịch sử chuyển trạng thái
+                OrderStatusHistory::create([
+                    'order_id' => $order->id,
+                    'from_status' => $oldStatus,
+                    'to_status' => $newStatus,
+                    'note' => $request->note,
+                    'changed_by' => $admin->id,
+                ]);
 
-            $order->update($updateData);
+                $order->load(['user:id,fullname,email', 'items', 'statusHistory']);
 
-            // Ghi lịch sử chuyển trạng thái
-            OrderStatusHistory::create([
-                'order_id' => $order->id,
-                'from_status' => $oldStatus,
-                'to_status' => $newStatus,
-                'note' => $request->note,
-                'changed_by' => $admin->id,
+                return $order;
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => "Đã cập nhật trạng thái đơn hàng từ \"{$oldStatus}\" → \"{$newStatus}\".",
+                'data' => new OrderResource($order),
             ]);
-
-            $order->load(['user:id,fullname,email', 'items', 'statusHistory']);
-
-            return $order;
-        });
-
-        return response()->json([
-            'status' => true,
-            'message' => "Đã cập nhật trạng thái đơn hàng từ \"{$oldStatus}\" → \"{$newStatus}\".",
-            'data' => new OrderResource($order),
-        ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 409);
+        }
     }
 
     // =========================================================================
@@ -276,6 +315,15 @@ class OrderController extends Controller
                 $productReturn->status = 'refunded';
                 $productReturn->refund_amount = $newPaymentStatus === 'refunded' ? $order->total_amount : $productReturn->refund_amount;
                 $productReturn->save();
+
+                // Lazy deduction: Hoàn kho khi refund (vì stock đã bị trừ khi confirmed/paid)
+                foreach ($order->items()->with('variant')->get() as $item) {
+                    if ($item->variant_id && $item->variant) {
+                        $item->variant->increment('quantity', $item->quantity);
+                    }
+                    Product::where('id', $item->product_id)
+                        ->increment('quantity', $item->quantity);
+                }
             }
         });
 

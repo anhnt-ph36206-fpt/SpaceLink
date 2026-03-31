@@ -301,6 +301,7 @@ const AdminOrderDetailPage: React.FC = () => {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [statusForm] = Form.useForm();
   const [savingStatus, setSavingStatus] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentForm] = Form.useForm();
@@ -342,6 +343,7 @@ const AdminOrderDetailPage: React.FC = () => {
   const openStatusModal = () => {
     if (!order) return;
     statusForm.resetFields();
+    setStatusError(null);
     const nextStatuses = VALID_TRANSITIONS[order.status] ?? [];
     if (nextStatuses.length === 1) {
       statusForm.setFieldsValue({
@@ -354,6 +356,7 @@ const AdminOrderDetailPage: React.FC = () => {
 
   const handleStatusSave = async () => {
     if (!order) return;
+    setStatusError(null);
     try {
       const values = await statusForm.validateFields();
       setSavingStatus(true);
@@ -364,7 +367,8 @@ const AdminOrderDetailPage: React.FC = () => {
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string; errors?: { status?: string[] } } } };
       const msg = error?.response?.data?.message ?? error?.response?.data?.errors?.status?.[0] ?? 'Có lỗi xảy ra';
-      message.error(msg);
+      // Hiển thị lỗi TRONG modal để admin thấy rõ
+      setStatusError(msg);
     } finally {
       setSavingStatus(false);
     }
@@ -580,6 +584,26 @@ const AdminOrderDetailPage: React.FC = () => {
             {order.status === 'delivered' && (
               <span style={{ marginLeft: 8, color: '#7c3aed' }}>— Đợi khách bấm "Đã nhận hàng" để tự động hoàn thành.</span>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Admin Note cảnh báo hết hàng (VNPAY đã TT nhưng stock hết) ── */}
+      {order.admin_note && order.admin_note.includes('HẾT HÀNG') && (
+        <div style={{
+          background: '#fef2f2', border: '2px solid #fca5a5', borderRadius: 12,
+          padding: '14px 18px', marginBottom: 18, fontSize: 13,
+          display: 'flex', gap: 12, alignItems: 'flex-start'
+        }}>
+          <WarningOutlined style={{ color: '#dc2626', fontSize: 20, marginTop: 2 }} />
+          <div>
+            <div style={{ fontWeight: 700, color: '#dc2626', fontSize: 15, marginBottom: 4 }}>
+              ⚠️ CẦN XỬ LÝ: Sản phẩm đã hết hàng sau khi thanh toán VNPAY
+            </div>
+            <div style={{ color: '#991b1b' }}>{order.admin_note}</div>
+            <div style={{ color: '#6b7280', marginTop: 6, fontSize: 12 }}>
+              Khách đã thanh toán qua VNPAY nhưng tồn kho không đủ. Vui lòng liên hệ khách hàng để hoàn tiền hoặc hủy đơn.
+            </div>
           </div>
         </div>
       )}
@@ -1046,6 +1070,19 @@ const AdminOrderDetailPage: React.FC = () => {
           )}
         </div>
 
+        {statusError && (
+          <div style={{
+            background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 10,
+            padding: '12px 16px', marginBottom: 16, color: '#991b1b', fontSize: 13,
+            display: 'flex', gap: 10, alignItems: 'flex-start'
+          }}>
+            <WarningOutlined style={{ color: '#dc2626', fontSize: 18, marginTop: 1 }} />
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 2, color: '#dc2626' }}>Không thể cập nhật trạng thái</div>
+              <div>{statusError}</div>
+            </div>
+          </div>
+        )}
         <Form form={statusForm} layout="vertical">
           <Form.Item name="status" label="Trạng thái mới" rules={[{ required: true, message: 'Chọn trạng thái' }]}>
             <Select

@@ -6,6 +6,8 @@ import { useCompare } from "../context/CompareContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useAuth } from "../context/AuthContext";
 import ProductCard from "../components/common/ProductCard";
+import ProductTechSpecs from "../components/product/ProductTechSpecs";
+import type { ProductSpecification } from "../components/product/ProductTechSpecs";
 import { toast } from "react-toastify";
 import { Spin } from "antd";
 import MDEditor from '@uiw/react-md-editor';
@@ -51,6 +53,7 @@ interface Product {
     brand?: { id: number; name: string };
     images?: ProductImage[];
     variants?: Variant[];
+    specifications?: ProductSpecification[];
 }
 
 // ─── Review Types ─────────────────────────────────────────────────────────
@@ -98,7 +101,7 @@ const ProductDetailPage: React.FC = () => {
     const [mainImg, setMainImg] = useState<string | null>(null);
     const [defaultMainImg, setDefaultMainImg] = useState<string | null>(null);
     const [qty, setQty] = useState(1);
-    const [activeTab, setActiveTab] = useState<'desc' | 'content' | 'specs' | 'reviews'>('desc');
+    const [activeTab, setActiveTab] = useState<'desc' | 'content' | 'specs' | 'tech_specs' | 'reviews'>('desc');
     const [relatedProducts, setRelatedProducts] = useState<{ id: string; name: string; image: string; price: number; oldPrice?: number; category?: string; rating?: number; isSale?: boolean; isNew?: boolean }[]>([]);
     const { isAuthenticated } = useAuth();
 
@@ -126,7 +129,7 @@ const ProductDetailPage: React.FC = () => {
                 setReviewLastPage(res.data.data?.last_page ?? 1);
                 setReviewStats(res.data.stats ?? { average_rating: 0, total_reviews: 0 });
             })
-            .catch(() => {})
+            .catch(() => { })
             .finally(() => setReviewsLoading(false));
     };
 
@@ -203,7 +206,7 @@ const ProductDetailPage: React.FC = () => {
                         isNew: p.is_featured,
                     }))
             );
-        }).catch(() => {});
+        }).catch(() => { });
     }, [product]);
 
     // ── Fetch ──────────────────────────────────────────────────────────
@@ -340,13 +343,6 @@ const ProductDetailPage: React.FC = () => {
     // ── Buy Now (Direct Checkout) ─────────────────────────────────────────
     const [isChecking, setIsChecking] = useState(false);
     const handleBuyNow = async () => {
-        // Chặn Mua Ngay khi đang có đơn VNPAY chờ thanh toán
-        const pendingId = sessionStorage.getItem('vnpay_pending_order_id');
-        if (pendingId) {
-            toast.warning('⚠️ Bạn đang có đơn hàng chờ thanh toán VNPAY. Vui lòng thanh toán hoặc hủy đơn đó trước khi mua hàng mới.');
-            return;
-        }
-
         if (!product || !selectedVariant) {
             toast.warning('Vui lòng chọn các thuộc tính sản phẩm!');
             return;
@@ -510,8 +506,8 @@ const ProductDetailPage: React.FC = () => {
                             <h1 className="h2 fw-bold mb-2">{product.name}</h1>
 
                             {product.description && (
-                                <div 
-                                    data-color-mode="light" 
+                                <div
+                                    data-color-mode="light"
                                     className="mb-3 description-preview text-muted"
                                     style={{ fontSize: '14.5px', lineHeight: '1.6' }}
                                 >
@@ -577,7 +573,7 @@ const ProductDetailPage: React.FC = () => {
                                                     key={attr.id}
                                                     className="btn btn-sm"
                                                     style={{
-                                                        borderRadius: 8, 
+                                                        borderRadius: 8,
                                                         fontWeight: isSelected ? 700 : 400,
                                                         opacity: isAvailable ? 1 : 0.4,
                                                         cursor: isAvailable ? 'pointer' : 'not-allowed',
@@ -613,11 +609,11 @@ const ProductDetailPage: React.FC = () => {
 
                             <div className="d-flex align-items-center gap-3 pt-4 border-top mt-4 flex-wrap">
                                 {/* Qty picker - Premium Styled */}
-                                <div 
-                                    className="d-flex align-items-center" 
-                                    style={{ 
-                                        height: 48, 
-                                        border: '1px solid #dee2e6', 
+                                <div
+                                    className="d-flex align-items-center"
+                                    style={{
+                                        height: 48,
+                                        border: '1px solid #dee2e6',
                                         borderRadius: 12,
                                         overflow: 'hidden',
                                         background: '#fff'
@@ -718,9 +714,9 @@ const ProductDetailPage: React.FC = () => {
                                     return (
                                         <button
                                             className={`btn flex-grow-1 d-flex align-items-center justify-content-center transition-all`}
-                                            style={{ 
-                                                borderRadius: 12, 
-                                                fontWeight: 600, 
+                                            style={{
+                                                borderRadius: 12,
+                                                fontWeight: 600,
                                                 fontSize: 14,
                                                 height: 44,
                                                 border: inCompare ? '2px solid #ffc107' : '2px solid #edeff2',
@@ -736,7 +732,7 @@ const ProductDetailPage: React.FC = () => {
                                         </button>
                                     );
                                 })()}
-                                
+
                                 {(() => {
                                     const pid = String(product.id);
                                     const inWishlist = isInWishlist(pid);
@@ -799,6 +795,15 @@ const ProductDetailPage: React.FC = () => {
                         )}
                         <li className="nav-item">
                             <button
+                                className={`nav-link ${activeTab === 'tech_specs' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('tech_specs')}
+                            >
+                                <i className="fas fa-list-ul me-1" />
+                                Thông số kỹ thuật
+                            </button>
+                        </li>
+                        <li className="nav-item">
+                            <button
                                 className={`nav-link ${activeTab === 'reviews' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('reviews')}
                             >
@@ -848,6 +853,10 @@ const ProductDetailPage: React.FC = () => {
                         </table>
                     )}
 
+                    {activeTab === 'tech_specs' && (
+                        <ProductTechSpecs specifications={product.specifications} />
+                    )}
+
                     {/* ── Reviews Tab ────────────────────────────────── */}
                     {activeTab === 'reviews' && (
                         <div>
@@ -858,14 +867,14 @@ const ProductDetailPage: React.FC = () => {
                                         {reviewStats.average_rating > 0 ? reviewStats.average_rating.toFixed(1) : '—'}
                                     </div>
                                     <div className="d-flex gap-1 justify-content-center my-1">
-                                        {[1,2,3,4,5].map(s => (
+                                        {[1, 2, 3, 4, 5].map(s => (
                                             <i key={s} className={`fas fa-star ${s <= Math.round(reviewStats.average_rating) ? 'text-warning' : 'text-muted'}`} style={{ fontSize: 18 }} />
                                         ))}
                                     </div>
                                     <div className="text-muted small">{reviewStats.total_reviews} đánh giá</div>
                                 </div>
                                 <div className="col">
-                                    {[5,4,3,2,1].map(star => {
+                                    {[5, 4, 3, 2, 1].map(star => {
                                         const count = reviews.filter(r => r.rating === star).length;
                                         const pct = reviewStats.total_reviews > 0 ? Math.round((count / reviewStats.total_reviews) * 100) : 0;
                                         return (
@@ -900,7 +909,7 @@ const ProductDetailPage: React.FC = () => {
                                     <div>
                                         {/* Star picker */}
                                         <div className="d-flex gap-1 mb-3">
-                                            {[1,2,3,4,5].map(s => (
+                                            {[1, 2, 3, 4, 5].map(s => (
                                                 <i
                                                     key={s}
                                                     className={`fas fa-star ${s <= (hoverRating || writeRating) ? 'text-warning' : 'text-muted'}`}
@@ -964,7 +973,7 @@ const ProductDetailPage: React.FC = () => {
                                                 <div>
                                                     <div className="fw-bold" style={{ fontSize: 14 }}>{review.user?.fullname ?? 'Ẩn danh'}</div>
                                                     <div className="d-flex gap-1 align-items-center">
-                                                        {[1,2,3,4,5].map(s => (
+                                                        {[1, 2, 3, 4, 5].map(s => (
                                                             <i key={s} className={`fas fa-star small ${s <= review.rating ? 'text-warning' : 'text-muted'}`} />
                                                         ))}
                                                         <span className="text-muted ms-2" style={{ fontSize: 12 }}>
