@@ -19,6 +19,9 @@ use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
+    // Trạng thái đã trừ kho (dùng để quyết định có hoàn kho khi cancel không)
+    private const STOCK_DEDUCTED_STATUSES = ['confirmed', 'processing', 'shipping', 'delivered', 'completed'];
+
     // =========================================================================
     // GET /api/client/orders — Danh sách đơn hàng của user hiện tại
     // =========================================================================
@@ -69,6 +72,7 @@ class OrderController extends Controller
 
     // =========================================================================
     // POST /api/client/orders/{id}/cancel — Hủy đơn hàng (chỉ khi pending)
+    // Lazy deduction: CHỈ hoàn kho nếu đơn đã confirmed+ (stock đã bị trừ)
     // =========================================================================
     public function cancel(Request $request, string $id)
     {
@@ -94,18 +98,7 @@ class OrderController extends Controller
         $reason = $request->input('reason', 'Khách hàng tự hủy.');
 
         DB::transaction(function () use ($order, $user, $reason) {
-            // Hoàn lại tồn kho từ order_items — luôn đúng cho mọi loại đơn
-            // COD: cart đã bị xóa tại checkout (không hoàn kho), cancel hoàn từ đây ✓
-            // VNPAY: CartController.remove() được chặn khi có pending order nên không double-restore ✓
-            $variantIds = [];
-            foreach ($order->items()->with('variant')->get() as $item) {
-                if ($item->variant_id && $item->variant) {
-                    $item->variant->increment('quantity', $item->quantity);
-                    $variantIds[] = $item->variant_id;
-                }
-                Product::where('id', $item->product_id)
-                    ->increment('quantity', $item->quantity);
-            }
+            // Lazy deduction: Đơn pending → stock CHƯA bị trừ → KHÔNG cần hoàn kho
 
             $order->update([
                 'status'           => 'cancelled',
@@ -121,13 +114,6 @@ class OrderController extends Controller
                 'note'        => $reason,
                 'changed_by'  => $user->id,
             ]);
-
-            // Xóa cart items (idempotent — an toàn dù đã xóa hay chưa)
-            if (count($variantIds) > 0) {
-                \App\Models\Cart::where('user_id', $user->id)
-                    ->whereIn('variant_id', $variantIds)
-                    ->delete();
-            }
 
             // Hoàn trả voucher khi hủy đơn
             if ($order->voucher_id) {
@@ -221,7 +207,7 @@ class OrderController extends Controller
             ], 422);
         }
 
-        // Tái sử dụng đú ng logic hash của VNPAY trong CheckoutController
+        // Tái sử dụng logic hash của VNPAY trong CheckoutController
         $vnp_TmnCode = config('vnpay.vnp_TmnCode');
         $vnp_HashSecret = config('vnpay.vnp_HashSecret');
         $vnp_Url = config('vnpay.vnp_Url');
@@ -268,7 +254,7 @@ class OrderController extends Controller
 
     // =========================================================================
     // POST /api/client/orders/{id}/cancel-vnpay — Hủy đơn VNPAY chưa thanh toán
-    // Được gọi từ frontend khi user bấm Hủy trên trang VNPAY
+    // Lazy deduction: KHÔNG hoàn kho (stock chưa bị trừ vì VNPAY chưa TT)
     // =========================================================================
     public function cancelUnpaidVnpay(Request $request, string $id): JsonResponse
     {
@@ -288,7 +274,7 @@ class OrderController extends Controller
             ], 422);
         }
 
-        // Bảo vệ: không hủy nếu đã cancelled hoặc đã paid
+        // Bảo vệ: không hủy nếu đã cancelled hoặc đã có trạng thái khác
         if (in_array($order->status, ['cancelled', 'completed', 'shipping', 'delivered'])) {
             return response()->json([
                 'status' => 'error',
@@ -312,26 +298,7 @@ class OrderController extends Controller
                 'changed_by'  => $user->id,
             ]);
 
-            // Hoàn lại tồn kho từ order_items
-            // CartController.remove() đã được chặn khi có pending VNPAY order
-            // nên không xảy ra double-restore ở đây
-            $variantIds = [];
-            foreach ($order->items as $item) {
-                if ($item->variant_id) {
-                    \App\Models\ProductVariant::where('id', $item->variant_id)
-                        ->increment('quantity', $item->quantity);
-                    $variantIds[] = $item->variant_id;
-                }
-                Product::where('id', $item->product_id)
-                    ->increment('quantity', $item->quantity);
-            }
-
-            // Xóa cart items (idempotent)
-            if (count($variantIds) > 0) {
-                \App\Models\Cart::where('user_id', $user->id)
-                    ->whereIn('variant_id', $variantIds)
-                    ->delete();
-            }
+            // Lazy deduction: KHÔNG hoàn kho — stock chưa bị trừ (VNPAY chưa thanh toán)
 
             // Hoàn trả voucher khi hủy đơn VNPAY
             if ($order->voucher_id) {
@@ -354,7 +321,7 @@ class OrderController extends Controller
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Đã hủy đơn hàng. Tồn kho đã được hoàn lại.',
+            'message' => 'Đã hủy đơn hàng thành công.',
         ]);
     }
 
@@ -383,7 +350,6 @@ class OrderController extends Controller
         }
 
         // ── Kiểm tra thời hạn hoàn trả 7 ngày ──────────────────────────────
-        // Tính từ: completed_at (nếu completed) hoặc delivered_at (nếu vẫn delivered)
         $RETURN_WINDOW_DAYS = 7;
         $referenceDate = $order->completed_at ?? $order->delivered_at;
 
@@ -435,7 +401,7 @@ class OrderController extends Controller
                 $productReturn = ProductReturn::create($refundData);
             }
 
-            // Đặt trạng thái đơn = returned để UI chuyển sang luồng hoàn trả (client chỉ "yêu cầu", admin sẽ duyệt/từ chối)
+            // Đặt trạng thái đơn = returned
             $order->update(['status' => 'returned']);
 
             OrderStatusHistory::create([
@@ -517,9 +483,6 @@ class OrderController extends Controller
                 'note'        => 'Khách hàng đổi phương thức thanh toán từ VNPAY sang COD.',
                 'changed_by'  => $user->id,
             ]);
-
-            // Xóa giỏ hàng — đơn đã xác nhận COD, không cần giữ cart nữa
-            \App\Models\Cart::where('user_id', $user->id)->delete();
         });
 
         return response()->json([

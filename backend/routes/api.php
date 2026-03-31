@@ -67,10 +67,10 @@ Route::get('/products/compare', [ProductController::class, 'compare']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 
 // --- Cart (Legacy) ---
-Route::get('/cart', [ClientCartController::class, 'index']);
-Route::post('/cart/add', [ClientCartController::class, 'addToCart']);
-Route::put('/cart/update/{id}', [ClientCartController::class, 'updateQuantity']);
-Route::delete('/cart/remove/{id}', [ClientCartController::class, 'remove']);
+Route::get('/cart', [CartController::class, 'index']);
+Route::post('/cart/add', [CartController::class, 'addToCart']);
+Route::put('/cart/update/{id}', [CartController::class, 'updateQuantity']);
+Route::delete('/cart/remove/{id}', [CartController::class, 'remove']);
 
 // --- Reviews & News (Public) ---
 Route::get('/products/{id}/reviews', [ClientReviewController::class, 'productReviews']);

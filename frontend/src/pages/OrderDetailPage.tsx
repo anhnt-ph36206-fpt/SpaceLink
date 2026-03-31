@@ -55,6 +55,7 @@ interface ClientOrder {
   voucher_code?: string;
   voucher_discount?: number;
   note?: string;
+  admin_note?: string;
   cancelled_reason?: string;
   cancelled_at?: string;
   tracking_code?: string;
@@ -797,6 +798,42 @@ const OrderDetailPage: React.FC = () => {
                 {order.status === 'cancelled' && order.cancelled_at && (
                   <div className="od-cancelled-time">{order.cancelled_at}</div>
                 )}
+
+                {/* Thông báo đặc biệt: đơn bị hủy do hết hàng */}
+                {order.status === 'cancelled' && order.cancelled_reason && (
+                  order.cancelled_reason.toLowerCase().includes('tồn kho') ||
+                  order.cancelled_reason.toLowerCase().includes('hết hàng')
+                ) && (
+                  <div style={{
+                    marginTop: 10, padding: '10px 14px', background: '#fff7ed',
+                    border: '1px solid #fed7aa', borderRadius: 8, fontSize: 13, color: '#92400e'
+                  }}>
+                    <i className="fas fa-info-circle" style={{ marginRight: 6 }} />
+                    Rất tiếc, sản phẩm trong đơn hàng của bạn đã hết hàng do có người đặt mua trước.
+                    Nếu bạn đã thanh toán, shop sẽ liên hệ hoàn tiền trong thời gian sớm nhất.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Cảnh báo VNPAY paid nhưng hết hàng — chờ admin xử lý ── */}
+          {order.status === 'pending' && order.payment_status === 'paid' && order.admin_note &&
+            order.admin_note.includes('HẾT HÀNG') && (
+            <div style={{
+              background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 12,
+              padding: '14px 18px', marginBottom: 18, fontSize: 13,
+              display: 'flex', gap: 12, alignItems: 'flex-start'
+            }}>
+              <i className="fas fa-exclamation-triangle" style={{ color: '#d97706', fontSize: 18, marginTop: 2 }} />
+              <div>
+                <div style={{ fontWeight: 700, color: '#92400e', marginBottom: 4 }}>
+                  Thông báo: Một số sản phẩm trong đơn hàng đã hết hàng
+                </div>
+                <div style={{ color: '#78350f' }}>
+                  Đơn hàng của bạn đã thanh toán thành công qua VNPAY, tuy nhiên một số sản phẩm
+                  đã hết hàng do có người mua trước. Shop sẽ liên hệ bạn để xử lý hoàn tiền.
+                </div>
               </div>
             </div>
           )}

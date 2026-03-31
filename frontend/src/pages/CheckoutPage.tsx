@@ -283,11 +283,19 @@ const CheckoutPage: React.FC = () => {
                 sessionStorage.setItem('vnpay_pending_order_id', String(orderData.order_id));
             }
             toast.info('Đang chuyển hướng đến cổng thanh toán...');
+
+            // Thay thế URL /checkout trong history bằng trang chi tiết đơn hàng
+            // Khi user bấm Back từ trang VNPAY → sẽ vào trang chi tiết đơn hàng thay vì checkout
+            window.history.replaceState(null, '', `/orders/${orderData.order_id}`);
+
             window.location.href = orderData.payment_url;
             return;
         }
 
         toast.success('Đặt hàng thành công!');
+        // Thay thế URL /checkout trong history bằng trang chủ
+        // Khi user bấm Back từ trang success → về trang chủ thay vì checkout
+        window.history.replaceState(null, '', '/');
         navigate(`/order/success/${orderCode}`, { state: { order: orderData } });
     };
 
