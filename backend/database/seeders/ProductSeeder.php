@@ -33,7 +33,7 @@ class ProductSeeder extends Seeder
             ['name' => 'Tai nghe Sony WH-1000XM5', 'price' => 8990000, 'sale_price' => 7990000, 'category' => 'Tai nghe', 'brand' => 'Sony', 'featured' => false],
             ['name' => 'Tai nghe Xiaomi Buds 4',  'price' => 1290000, 'sale_price' => null,   'category' => 'Tai nghe', 'brand' => 'Xiaomi', 'featured' => false],
             ['name' => 'Ốp lưng iPhone 15',    'price' => 350000,   'sale_price' => 299000,   'category' => 'Phụ kiện', 'brand' => null,     'featured' => false],
-            ['name' => 'Đồng hồ thông minh Galaxy Watch 6', 'price' => 7990000, 'sale_price' => 6990000, 'category' => 'Đồng hồ', 'brand' => 'Samsung', 'featured' => false],
+            ['name' => 'Đồng hồ thông minh Galaxy Watch 6', 'price' => 7990000, 'sale_price' => 6990000, 'category' => 'Đồng hồ thông minh', 'brand' => 'Samsung', 'featured' => false],
         ];
 
         foreach ($products as $i => $p) {
