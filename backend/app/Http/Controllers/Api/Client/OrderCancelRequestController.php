@@ -35,7 +35,11 @@ class OrderCancelRequestController extends Controller
             ], 422);
         }
 
-        if (! in_array($order->status, ['pending', 'confirmed'], true)) {
+        // Cho phép: đơn VNPAY paid + (pending/confirmed) HOẶC (cancelled vì hết hàng)
+        $isStockCancelled = $order->status === 'cancelled'
+            && $order->cancelled_reason === 'out_of_stock_after_payment';
+
+        if (! $isStockCancelled && ! in_array($order->status, ['pending', 'confirmed'], true)) {
             return response()->json([
                 'status'  => 'error',
                 'message' => "Không thể yêu cầu hủy đơn đang ở trạng thái \"{$order->status}\".",
@@ -60,7 +64,7 @@ class OrderCancelRequestController extends Controller
             'refund_account_number'=> 'nullable|string|max:50',
         ]);
 
-        DB::transaction(function () use ($order, $user, $request) {
+        DB::transaction(function () use ($order, $user, $request, $isStockCancelled) {
             OrderCancelRequest::create([
                 'order_id'              => $order->id,
                 'user_id'               => $user->id,
@@ -71,11 +75,15 @@ class OrderCancelRequestController extends Controller
                 'status'                => 'pending',
             ]);
 
+            $note = $isStockCancelled
+                ? 'Khách gửi thông tin ngân hàng hoàn tiền (đơn hủy vì hết hàng): ' . $request->reason
+                : 'Khách hàng gửi yêu cầu hủy đơn đã thanh toán VNPAY: ' . $request->reason;
+
             OrderStatusHistory::create([
                 'order_id'    => $order->id,
                 'from_status' => $order->status,
                 'to_status'   => $order->status,
-                'note'        => 'Khách hàng gửi yêu cầu hủy đơn đã thanh toán VNPAY: ' . $request->reason,
+                'note'        => $note,
                 'changed_by'  => $user->id,
             ]);
 
