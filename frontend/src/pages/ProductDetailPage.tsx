@@ -10,6 +10,8 @@ import ProductTechSpecs from "../components/product/ProductTechSpecs";
 import type { ProductSpecification } from "../components/product/ProductTechSpecs";
 import ProductReviews from "../components/product/ProductReviews";
 import type { ReviewStats } from "../components/product/ProductReviews";
+import ProductDescription from "../components/product/ProductDescription";
+import ProductContent from "../components/product/ProductContent";
 import { toast } from "react-toastify";
 import { Spin } from "antd";
 import MDEditor from '@uiw/react-md-editor';
@@ -87,7 +89,7 @@ const ProductDetailPage: React.FC = () => {
     const [mainImg, setMainImg] = useState<string | null>(null);
     const [defaultMainImg, setDefaultMainImg] = useState<string | null>(null);
     const [qty, setQty] = useState(1);
-    const [activeTab, setActiveTab] = useState<'desc' | 'content' | 'specs' | 'tech_specs' | 'reviews'>('desc');
+    const [activeTab, setActiveTab] = useState<'desc' | 'content' | 'tech_specs' | 'reviews'>('desc');
     const [relatedProducts, setRelatedProducts] = useState<{ id: string; name: string; image: string; price: number; oldPrice?: number; category?: string; rating?: number; isSale?: boolean; isNew?: boolean }[]>([]);
 
     // ── Reviews state ──────────────────────────────────────────────────
@@ -693,16 +695,7 @@ const ProductDetailPage: React.FC = () => {
                                 Nội dung chi tiết
                             </button>
                         </li>
-                        {selectedVariant && (
-                            <li className="nav-item">
-                                <button
-                                    className={`nav-link ${activeTab === 'specs' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('specs')}
-                                >
-                                    Thông số biến thể
-                                </button>
-                            </li>
-                        )}
+
                         <li className="nav-item">
                             <button
                                 className={`nav-link ${activeTab === 'tech_specs' ? 'active' : ''}`}
@@ -724,44 +717,12 @@ const ProductDetailPage: React.FC = () => {
                     </ul>
 
                     {activeTab === 'desc' && (
-                        <div data-color-mode="light" style={{ padding: '8px 0' }}>
-                            {product.description
-                                ? <MDEditor.Markdown source={product.description} />
-                                : <p className="text-muted">Chưa có mô tả.</p>
-                            }
-                        </div>
+                        <ProductDescription description={product.description} />
                     )}
                     {activeTab === 'content' && (
-                        <div data-color-mode="light" style={{ padding: '8px 0' }}>
-                            {product.content
-                                ? <MDEditor.Markdown source={product.content} />
-                                : <p className="text-muted">Chưa có nội dung chi tiết.</p>
-                            }
-                        </div>
+                        <ProductContent content={product.content} />
                     )}
-                    {activeTab === 'specs' && selectedVariant && (
-                        <table className="table table-bordered w-auto">
-                            <tbody>
-                                {selectedVariant.sku && (
-                                    <tr><th>SKU</th><td>{selectedVariant.sku}</td></tr>
-                                )}
-                                {selectedVariant.attributes.map(a => (
-                                    <tr key={a.id}>
-                                        <th>{a.group || 'Thuộc tính'}</th>
-                                        <td>
-                                            {a.color_code && (
-                                                <span
-                                                    style={{ width: 16, height: 16, borderRadius: '50%', background: a.color_code, display: 'inline-block', marginRight: 8, border: '1px solid #ccc' }}
-                                                />
-                                            )}
-                                            {a.value}
-                                        </td>
-                                    </tr>
-                                ))}
-                                <tr><th>Tồn kho</th><td>{selectedVariant.quantity}</td></tr>
-                            </tbody>
-                        </table>
-                    )}
+
 
                     {activeTab === 'tech_specs' && (
                         <ProductTechSpecs specifications={product.specifications} />
