@@ -116,7 +116,6 @@ Route::prefix('client')->name('client.')->group(function () {
         Route::post('checkout/vnpay', [CheckoutController::class, 'createVnpayPayment']);
         Route::post('/checkout', [CheckoutController::class, 'checkout']);
         Route::post('/checkout/check-voucher', [CheckoutController::class, 'checkVoucher']);
-        Route::post('/checkout/verify-vnpay-payment', [CheckoutController::class, 'verifyVnpayPayment']);
 
         // Đơn hàng của client
         Route::get('/orders', [ClientOrderController::class, 'index']);

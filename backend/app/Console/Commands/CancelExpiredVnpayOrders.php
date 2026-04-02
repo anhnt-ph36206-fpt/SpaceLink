@@ -34,12 +34,16 @@ class CancelExpiredVnpayOrders extends Command
         $count = 0;
         foreach ($orders as $order) {
             \Illuminate\Support\Facades\DB::transaction(function () use ($order, &$count, $expireMinutes) {
-                // Lazy deduction: đơn pending CHƯA trừ kho → KHÔNG hoàn kho
+                // Hoàn tồn kho variant + product
                 $variantIds = [];
                 foreach ($order->items as $item) {
                     if ($item->variant_id) {
+                        \App\Models\ProductVariant::where('id', $item->variant_id)
+                            ->increment('quantity', $item->quantity);
                         $variantIds[] = $item->variant_id;
                     }
+                    \App\Models\Product::where('id', $item->product_id)
+                        ->increment('quantity', $item->quantity);
                 }
 
                 // Xóa Voucher Usage nếu có

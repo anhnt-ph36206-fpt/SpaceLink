@@ -799,100 +799,11 @@ const OrderDetailPage: React.FC = () => {
                   <div className="od-cancelled-time">{order.cancelled_at}</div>
                 )}
 
-                {/* Thông báo + form ngân hàng: đơn bị hủy do hết hàng sau thanh toán VNPAY */}
-                {order.status === 'cancelled' && order.cancelled_reason === 'out_of_stock_after_payment'
-                  && order.payment_status === 'paid' && (
-                  <div style={{
-                    marginTop: 12, padding: '16px 18px', background: '#fff7ed',
-                    border: '1.5px solid #fed7aa', borderRadius: 12, fontSize: 13
-                  }}>
-                    <div style={{ fontWeight: 700, color: '#92400e', marginBottom: 8 }}>
-                      <i className="fas fa-exclamation-triangle me-2" />
-                      Đơn hàng đã bị hủy vì sản phẩm hết hàng sau khi thanh toán
-                    </div>
-                    <div style={{ color: '#78350f', marginBottom: 12 }}>
-                      Chúng tôi sẽ hoàn tiền sau khi bạn cung cấp thông tin ngân hàng bên dưới.
-                    </div>
-
-                    {/* Nếu chưa có cancel request → hiện form */}
-                    {!cancelReqData ? (
-                      <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: 14 }}>
-                        <div style={{ fontWeight: 600, color: '#166534', marginBottom: 10 }}>
-                          <i className="fas fa-university me-2" />Nhập thông tin ngân hàng để nhận hoàn tiền
-                        </div>
-                        <div style={{ marginBottom: 8 }}>
-                          <label style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Tên ngân hàng *</label>
-                          <input className="od-input" placeholder="VD: Vietcombank, MB Bank..."
-                            value={cancelReqBank.bank}
-                            onChange={e => setCancelReqBank(p => ({ ...p, bank: e.target.value }))}
-                          />
-                        </div>
-                        <div style={{ marginBottom: 8 }}>
-                          <label style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Tên chủ tài khoản *</label>
-                          <input className="od-input" placeholder="VD: NGUYEN VAN A"
-                            value={cancelReqBank.accountName}
-                            onChange={e => setCancelReqBank(p => ({ ...p, accountName: e.target.value }))}
-                          />
-                        </div>
-                        <div style={{ marginBottom: 10 }}>
-                          <label style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Số tài khoản *</label>
-                          <input className="od-input" placeholder="VD: 0123456789"
-                            value={cancelReqBank.accountNumber}
-                            onChange={e => setCancelReqBank(p => ({ ...p, accountNumber: e.target.value }))}
-                          />
-                        </div>
-                        <button
-                          className="od-btn-confirm-modal"
-                          disabled={cancelReqLoading || !cancelReqBank.bank.trim() || !cancelReqBank.accountName.trim() || !cancelReqBank.accountNumber.trim()}
-                          onClick={async () => {
-                            setCancelReqLoading(true);
-                            try {
-                              await axiosInstance.post(`/client/orders/${order.id}/cancel-request`, {
-                                reason: 'Hệ thống hủy: Sản phẩm hết hàng sau thanh toán VNPAY',
-                                refund_bank: cancelReqBank.bank,
-                                refund_account_name: cancelReqBank.accountName,
-                                refund_account_number: cancelReqBank.accountNumber,
-                              });
-                              showToast('Đã gửi thông tin hoàn tiền thành công!', 'success');
-                              setCancelReqBank({ bank: '', accountName: '', accountNumber: '' });
-                              fetchOrder();
-                            } catch (err: unknown) {
-                              const e = err as { response?: { data?: { message?: string } } };
-                              showToast(e?.response?.data?.message ?? 'Có lỗi xảy ra.', 'error');
-                            } finally {
-                              setCancelReqLoading(false);
-                            }
-                          }}
-                          style={{ width: '100%' }}
-                        >
-                          {cancelReqLoading ? 'Đang gửi...' : 'Gửi thông tin hoàn tiền'}
-                        </button>
-                      </div>
-                    ) : (
-                      /* Nếu đã có cancel request → hiện trạng thái */
-                      <div style={{
-                        background: cancelReqData.status === 'pending' ? '#fffbeb' : cancelReqData.status === 'approved' ? '#f0fdf4' : '#fef2f2',
-                        border: '1px solid',
-                        borderColor: cancelReqData.status === 'pending' ? '#fde68a' : cancelReqData.status === 'approved' ? '#86efac' : '#fecaca',
-                        borderRadius: 10, padding: 14
-                      }}>
-                        <div style={{ fontWeight: 600, marginBottom: 6 }}>
-                          <i className={`fas ${cancelReqData.status === 'pending' ? 'fa-clock' : cancelReqData.status === 'approved' ? 'fa-check-circle' : 'fa-times-circle'} me-2`} />
-                          Yêu cầu hoàn tiền: {cancelReqData.status === 'pending' ? 'Đang chờ xử lý' : cancelReqData.status === 'approved' ? 'Đã duyệt — đang hoàn tiền' : 'Đã từ chối'}
-                        </div>
-                        {cancelReqData.admin_note && (
-                          <div style={{ fontSize: 13, color: '#6b7280' }}>Ghi chú admin: {cancelReqData.admin_note}</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Thông báo chung: đơn hủy vì hết hàng (KHÔNG phải out_of_stock_after_payment) */}
-                {order.status === 'cancelled' && order.cancelled_reason
-                  && order.cancelled_reason !== 'out_of_stock_after_payment'
-                  && (order.cancelled_reason.toLowerCase().includes('tồn kho') || order.cancelled_reason.toLowerCase().includes('hết hàng'))
-                  && (
+                {/* Thông báo đặc biệt: đơn bị hủy do hết hàng */}
+                {order.status === 'cancelled' && order.cancelled_reason && (
+                  order.cancelled_reason.toLowerCase().includes('tồn kho') ||
+                  order.cancelled_reason.toLowerCase().includes('hết hàng')
+                ) && (
                   <div style={{
                     marginTop: 10, padding: '10px 14px', background: '#fff7ed',
                     border: '1px solid #fed7aa', borderRadius: 8, fontSize: 13, color: '#92400e'

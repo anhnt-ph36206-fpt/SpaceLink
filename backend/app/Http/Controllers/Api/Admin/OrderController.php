@@ -157,16 +157,11 @@ class OrderController extends Controller
                 if ($newStatus === 'confirmed') {
                     $stockErrors = [];
                     foreach ($order->items()->with('variant')->get() as $item) {
-                        if (! $item->variant_id) {
-                            \Log::info("[STOCK] Item #{$item->id} ({$item->product_name}) has NO variant_id — SKIPPED");
-                            continue;
-                        }
+                        if (! $item->variant_id) continue;
 
                         $variant = ProductVariant::where('id', $item->variant_id)
                             ->lockForUpdate()
                             ->first();
-
-                        \Log::info("[STOCK] Item #{$item->id}: variant_id={$item->variant_id}, need={$item->quantity}, available=" . ($variant ? $variant->quantity : 'NULL'));
 
                         if (! $variant || $variant->quantity < $item->quantity) {
                             $available = $variant ? $variant->quantity : 0;
@@ -176,15 +171,10 @@ class OrderController extends Controller
 
                         // Trừ kho variant
                         $variant->decrement('quantity', $item->quantity);
-                        \Log::info("[STOCK] DECREMENTED variant #{$variant->id}: {$variant->quantity} (after decrement)");
-
-                        // Sync kho product = tổng kho các variant
-                        $product = Product::find($item->product_id);
-                        if ($product) {
-                            $newQty = ProductVariant::where('product_id', $product->id)->sum('quantity');
-                            $product->update(['quantity' => $newQty]);
-                            \Log::info("[STOCK] SYNCED product #{$product->id}: qty={$newQty}");
-                        }
+                        // Trừ kho product tổng
+                        Product::where('id', $item->product_id)
+                            ->where('quantity', '>=', $item->quantity)
+                            ->decrement('quantity', $item->quantity);
                     }
 
                     // Nếu có sản phẩm hết hàng → không cho confirm
@@ -208,11 +198,8 @@ class OrderController extends Controller
                             if ($item->variant_id && $item->variant) {
                                 $item->variant->increment('quantity', $item->quantity);
                             }
-                            // Sync product.quantity = tổng variant
-                            $p = Product::find($item->product_id);
-                            if ($p) {
-                                $p->update(['quantity' => ProductVariant::where('product_id', $p->id)->sum('quantity')]);
-                            }
+                            Product::where('id', $item->product_id)
+                                ->increment('quantity', $item->quantity);
                         }
                     }
                     // Đơn pending bị cancel → KHÔNG hoàn kho (vì chưa trừ)
@@ -334,11 +321,8 @@ class OrderController extends Controller
                     if ($item->variant_id && $item->variant) {
                         $item->variant->increment('quantity', $item->quantity);
                     }
-                    // Sync product.quantity = tổng variant
-                    $p = Product::find($item->product_id);
-                    if ($p) {
-                        $p->update(['quantity' => ProductVariant::where('product_id', $p->id)->sum('quantity')]);
-                    }
+                    Product::where('id', $item->product_id)
+                        ->increment('quantity', $item->quantity);
                 }
             }
         });
