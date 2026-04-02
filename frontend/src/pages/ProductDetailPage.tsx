@@ -614,7 +614,6 @@ const ProductDetailPage: React.FC = () => {
                                                 price: displayPrice,
                                                 oldPrice: discountPct > 0 ? originalPrice : undefined,
                                                 category: product.category?.name,
-                                                categoryId: product.category?.id,
                                                 rating: undefined,
                                             });
                                             if (!success) {
@@ -731,9 +730,9 @@ const ProductDetailPage: React.FC = () => {
 
                     {/* ── Reviews Tab ────────────────────────────────── */}
                     {activeTab === 'reviews' && (
-                        <ProductReviews
-                            productId={id!}
-                            onStatsChange={setReviewStats}
+                        <ProductReviews 
+                            productId={id!} 
+                            onStatsChange={setReviewStats} 
                         />
                     )}
                 </div>
