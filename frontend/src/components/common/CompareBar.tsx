@@ -66,11 +66,11 @@ const CSS = `
 
 .cb-slot-empty {
     width: 180px; height: 110px; background: #fff;
-    border: 1.5px dashed #d70018; border-radius: 8px;
+    border: 1.5px dashed #ff7a00; border-radius: 8px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
     cursor: pointer; transition: background 0.2s;
 }
-.cb-slot-empty:hover { background: #fdf2f2; }
+.cb-slot-empty:hover { background: #fff7ed; }
 .cb-slot-plus {
     width: 28px; height: 28px; border: 1.5px solid #94a3b8; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
@@ -88,10 +88,10 @@ const CSS = `
 }
 .cb-btn-outline:hover { background: #f8f9fa; }
 .cb-btn-primary {
-    padding: 10px 24px; background: #d70018; color: #fff; border: none; border-radius: 6px;
+    padding: 10px 24px; background: #ff7a00; color: #fff; border: none; border-radius: 6px;
     font-size: 13.5px; font-weight: 700; cursor: pointer; transition: background 0.2s;
 }
-.cb-btn-primary:hover { background: #b90014; }
+.cb-btn-primary:hover { background: #e66e00; }
 .cb-btn-primary:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
 
 /* -- Inline Popup -- */
@@ -111,7 +111,7 @@ const CSS = `
     padding: 12px 14px 12px 42px; outline: none; font-size: 14px;
     transition: border-color 0.2s;
 }
-.cb-popup-search input:focus { border-color: #d70018; }
+.cb-popup-search input:focus { border-color: #ff7a00; }
 .cb-popup-list { max-height: 480px; overflow-y: auto; padding: 0 8px 16px; }
 .cb-popup-list::-webkit-scrollbar { width: 6px; }
 .cb-popup-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -129,29 +129,29 @@ const CSS = `
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cb-item-price-row { display: flex; align-items: baseline; gap: 8px; }
-.cb-item-price { color: #d70018; font-weight: 700; font-size: 14px; }
+.cb-item-price { color: #ff7a00; font-weight: 700; font-size: 14px; }
 .cb-item-oldprice { color: #94a3b8; text-decoration: line-through; font-size: 12px; }
 
 .cb-item-btn {
-    padding: 8px 18px; background: #ffe5e5; color: #d70018;
+    padding: 8px 18px; background: #ffedd5; color: #ea580c;
     border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
     cursor: pointer; transition: background 0.2s; white-space: nowrap;
 }
-.cb-item-btn:hover { background: #fcd5d5; }
+.cb-item-btn:hover { background: #fed7aa; }
 .cb-item-btn.added { background: #f1f5f9; color: #94a3b8; cursor: default; }
 
 .cb-popup-more { text-align: center; padding: 10px 20px; }
 .cb-popup-more-btn {
-    border: 1px solid #d70018; background: #fff; color: #d70018;
+    border: 1px solid #ff7a00; background: #fff; color: #ff7a00;
     border-radius: 20px; padding: 8px 32px; font-size: 13.5px; font-weight: 500;
     cursor: pointer; transition: background 0.2s; width: 200px;
 }
-.cb-popup-more-btn:hover { background: #fdf2f2; }
+.cb-popup-more-btn:hover { background: #fff7ed; }
 
 .cb-empty { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
 .cb-loading { text-align: center; padding: 40px; }
 .cb-spinner {
-    width: 28px; height: 28px; border: 3px solid #f1f5f9; border-top-color: #d70018;
+    width: 28px; height: 28px; border: 3px solid #f1f5f9; border-top-color: #ff7a00;
     border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto;
 }
 @keyframes spin { to { transform: rotate(360deg); } }

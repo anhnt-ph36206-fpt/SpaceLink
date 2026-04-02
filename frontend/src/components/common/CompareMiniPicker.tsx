@@ -76,14 +76,14 @@ const CSS = `
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 36px;
 }
 .cb-card-oldprice { font-size: 12px; color: #94a3b8; margin-bottom: 2px; }
-.cb-card-price { font-size: 13px; font-weight: 700; color: #d70018; margin-bottom: 12px; }
+.cb-card-price { font-size: 13px; font-weight: 700; color: #ff7a00; margin-bottom: 12px; }
 
 .cb-card-btn {
-    background: #d70018; color: #fff; padding: 8px; border-radius: 6px; font-size: 12.5px;
+    background: #ff7a00; color: #fff; padding: 8px; border-radius: 6px; font-size: 12.5px;
     font-weight: 600; text-align: center; border: none; cursor: pointer; margin-top: auto;
     transition: background 0.2s; display: flex; justify-content: center; align-items: center; gap: 4px;
 }
-.cb-card-btn:hover { background: #b90014; }
+.cb-card-btn:hover { background: #e66e00; }
 .cb-card-btn.added { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
 
 .cb-empty { grid-column: 1 / -1; text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
