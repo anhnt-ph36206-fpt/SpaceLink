@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Client;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CheckoutRequest;
 use App\Models\AdminNotification;
+use App\Models\UserNotification;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -767,6 +768,28 @@ class CheckoutController extends Controller
         });
 
         $order->refresh();
+
+        // Thông báo cho khách
+        if ($order->user_id) {
+            if ($stockDepleted) {
+                UserNotification::notify(
+                    $order->user_id,
+                    'order_cancelled',
+                    '❌ Đơn hàng đã bị hủy do hết hàng',
+                    "Đơn #{$order->order_code} đã được thanh toán nhưng sản phẩm đã hết hàng. Vui lòng gửi yêu cầu hoàn tiền.",
+                    $order->id
+                );
+            } else {
+                UserNotification::notify(
+                    $order->user_id,
+                    'payment_success',
+                    '💳 Thanh toán VNPAY thành công',
+                    "Đơn #{$order->order_code} đã thanh toán thành công. Đơn hàng đang chờ shop xác nhận.",
+                    $order->id
+                );
+            }
+        }
+
         return $stockDepleted;
     }
 

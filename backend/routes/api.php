@@ -146,6 +146,11 @@ Route::prefix('client')->name('client.')->group(function () {
         Route::get('/wishlist', [ClientWishlistController::class, 'index']);
         Route::post('/wishlist', [ClientWishlistController::class, 'store']);
         Route::delete('/wishlist/{id}', [ClientWishlistController::class, 'destroy']);
+
+        // Notifications (client)
+        Route::get('/notifications', [\App\Http\Controllers\Api\Client\UserNotificationController::class, 'index']);
+        Route::patch('/notifications/read-all', [\App\Http\Controllers\Api\Client\UserNotificationController::class, 'readAll']);
+        Route::patch('/notifications/{id}/read', [\App\Http\Controllers\Api\Client\UserNotificationController::class, 'read']);
     });
 });
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Client\Order\RequestReturnRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\AdminNotification;
+use App\Models\UserNotification;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
@@ -178,6 +179,15 @@ class OrderController extends Controller
                 'changed_by' => $user->id,
             ]);
         });
+
+        // Thông báo cho khách
+        UserNotification::notify(
+            $user->id,
+            'order_completed',
+            '🎉 Đơn hàng hoàn tất',
+            "Đơn #{$order->order_code} đã được xác nhận hoàn tất. Cảm ơn bạn đã mua hàng!",
+            $order->id
+        );
 
         return response()->json([
             'status' => 'success',

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { useUserNotifications } from '../../hooks/useUserNotifications';
 import { axiosInstance } from '../../api/axios';
 
 const formatVND = (v: number) =>
@@ -21,6 +22,9 @@ const Header: React.FC = () => {
     const { user, logout } = useAuth();
     const { totalItems } = useCart();
     const { totalItems: totalWishlistItems } = useWishlist();
+    const { notifications, unreadCount, markAllRead, markRead } = useUserNotifications(!!user);
+    const [notifOpen, setNotifOpen] = useState(false);
+    const notifRef = useRef<HTMLDivElement>(null);
 
 
     // --- STATE CHO TÌM KIẾM ---
@@ -71,6 +75,9 @@ const Header: React.FC = () => {
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
                 setShowSuggestions(false);
+            }
+            if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+                setNotifOpen(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
@@ -284,6 +291,123 @@ const Header: React.FC = () => {
                                     </span>
                                 </div>
                             </Link>
+
+                            {/* 🔔 Notification Bell */}
+                            {user && (
+                                <div className="position-relative me-4" ref={notifRef}>
+                                    <button
+                                        className="btn p-0 border-0 bg-transparent position-relative"
+                                        onClick={() => setNotifOpen(!notifOpen)}
+                                        title="Thông báo"
+                                        id="client-notification-bell"
+                                    >
+                                        <i className={`fas fa-bell fa-2x ${unreadCount > 0 ? 'text-primary' : 'text-muted'}`}
+                                           style={{ transition: 'color 0.2s' }} />
+                                        {unreadCount > 0 && (
+                                            <span
+                                                className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                                style={{ fontSize: '10px', border: '2px solid #fff', minWidth: 18 }}
+                                            >
+                                                {unreadCount > 99 ? '99+' : unreadCount}
+                                            </span>
+                                        )}
+                                    </button>
+
+                                    {notifOpen && (
+                                        <div
+                                            className="position-absolute shadow-lg bg-white border"
+                                            style={{
+                                                top: 'calc(100% + 12px)', right: 0, width: 370, borderRadius: 14,
+                                                zIndex: 9999, overflow: 'hidden',
+                                                animation: 'fadeInDown 0.2s ease',
+                                            }}
+                                        >
+                                            {/* Header */}
+                                            <div className="d-flex align-items-center justify-content-between px-3 py-2"
+                                                 style={{ borderBottom: '1px solid #f0f0f0', background: '#fafbfc' }}>
+                                                <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>
+                                                    🔔 Thông báo
+                                                    {unreadCount > 0 && (
+                                                        <span style={{
+                                                            marginLeft: 8, background: '#ff4d4f', color: '#fff',
+                                                            borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 700,
+                                                        }}>{unreadCount}</span>
+                                                    )}
+                                                </span>
+                                                {unreadCount > 0 && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); markAllRead(); }}
+                                                        className="btn btn-sm p-0 border-0 bg-transparent"
+                                                        style={{ color: '#0d6efd', fontSize: 12, fontWeight: 600 }}
+                                                    >
+                                                        <i className="fas fa-check-double me-1" /> Đọc tất cả
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* Notification List */}
+                                            <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                                                {notifications.length === 0 ? (
+                                                    <div className="text-center py-5" style={{ color: '#adb5bd' }}>
+                                                        <i className="fas fa-bell-slash" style={{ fontSize: 32, display: 'block', marginBottom: 8 }} />
+                                                        Chưa có thông báo nào
+                                                    </div>
+                                                ) : notifications.map(n => {
+                                                    const typeIcon: Record<string, string> = {
+                                                        order_confirmed: '✅', order_processing: '📦', order_shipping: '🚚',
+                                                        order_delivered: '📬', order_cancelled: '❌', order_completed: '🎉',
+                                                        return_approved: '✅', return_rejected: '❌', payment_refunded: '💰',
+                                                        cancel_approved: '✅', cancel_rejected: '❌', payment_success: '💳',
+                                                    };
+                                                    const icon = typeIcon[n.type] ?? '📋';
+                                                    return (
+                                                        <div
+                                                            key={n.id}
+                                                            onClick={() => {
+                                                                if (!n.is_read) markRead(n.id);
+                                                                if (n.order_id) navigate(`/order/${n.order_id}`);
+                                                                setNotifOpen(false);
+                                                            }}
+                                                            className="notif-item"
+                                                            style={{
+                                                                display: 'flex', gap: 10, padding: '12px 16px',
+                                                                background: n.is_read ? '#fff' : '#f0f6ff',
+                                                                borderBottom: '1px solid #f5f5f5',
+                                                                cursor: n.order_id ? 'pointer' : 'default',
+                                                                transition: 'background 0.15s',
+                                                            }}
+                                                            onMouseEnter={e => (e.currentTarget.style.background = n.is_read ? '#f8f9fa' : '#e8f0fe')}
+                                                            onMouseLeave={e => (e.currentTarget.style.background = n.is_read ? '#fff' : '#f0f6ff')}
+                                                        >
+                                                            <span style={{ fontSize: 18, flexShrink: 0, marginTop: 2 }}>{icon}</span>
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <div style={{
+                                                                    fontWeight: n.is_read ? 500 : 700, fontSize: 13,
+                                                                    color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                                }}>{n.title}</div>
+                                                                <div style={{
+                                                                    fontSize: 12, color: '#6c757d', marginTop: 2,
+                                                                    lineHeight: 1.4, display: '-webkit-box',
+                                                                    WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                                                                }}>{n.content}</div>
+                                                                <div style={{ fontSize: 11, color: '#adb5bd', marginTop: 4 }}>
+                                                                    {new Date(n.created_at).toLocaleString('vi-VN')}
+                                                                </div>
+                                                            </div>
+                                                            {!n.is_read && (
+                                                                <span style={{
+                                                                    width: 8, height: 8, borderRadius: '50%',
+                                                                    background: '#0d6efd', flexShrink: 0, marginTop: 6,
+                                                                }} />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <Link to="/cart" className="d-flex align-items-center text-muted text-decoration-none">
                                 <div className="position-relative">

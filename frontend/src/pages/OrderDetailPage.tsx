@@ -81,16 +81,43 @@ interface ClientOrder {
   };
 }
 
-// ── Cầu hình thời đạn ──────────────────────────────────────────
-const AUTO_COMPLETE_DAYS = 3;   // delivered → completed sau N ngày
+// ── Cầu hình thời gian ──────────────────────────────────────────
+const AUTO_COMPLETE_HOURS = 1;  // delivered → completed sau N giờ
 const RETURN_WINDOW_DAYS = 7;   // cửa sổ hoàn trả kể từ khi completed
 
-/** Tính số ngày giữa 2 đốc thức (bựng Math.floor, làm tròn xuống) */
+/**
+ * Parse ngày từ API (format DD-MM-YYYY HH:mm:ss) sang Date object.
+ * API trả về format 'd-m-Y H:i:s' (PHP) → JS cần convert sang ISO.
+ */
+const parseApiDate = (dateStr: string | undefined): Date | null => {
+  if (!dateStr) return null;
+  // Thử parse trực tiếp (ISO format: 2026-04-02 08:00:00)
+  const direct = new Date(dateStr);
+  if (!isNaN(direct.getTime())) {
+    // Kiểm tra xem có phải DD-MM-YYYY không (tháng > 12 = chắc chắn DD-MM)
+    const parts = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})\s+(.*)$/);
+    if (parts) {
+      // Format: DD-MM-YYYY HH:mm:ss → convert sang YYYY-MM-DD
+      const [, dd, mm, yyyy, time] = parts;
+      return new Date(`${yyyy}-${mm}-${dd} ${time}`);
+    }
+    return direct;
+  }
+  return null;
+};
+
+/** Tính số ngày giữa 2 thời điểm */
 const daysSince = (dateStr: string | undefined): number => {
-  if (!dateStr) return 0;
-  const then = new Date(dateStr).getTime();
-  const now = Date.now();
-  return Math.floor((now - then) / 86_400_000);
+  const d = parseApiDate(dateStr);
+  if (!d) return 0;
+  return Math.floor((Date.now() - d.getTime()) / 86_400_000);
+};
+
+/** Tính số phút đã trôi qua kể từ một thời điểm */
+const minutesSince = (dateStr: string | undefined): number => {
+  const d = parseApiDate(dateStr);
+  if (!d) return 0;
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 60_000));
 };
 
 /** Trả về số ngày còn lại trong cửa sổ hoàn trả (dương = còn, 0 = đúng ngày, âm = hết hạn) */
@@ -594,9 +621,9 @@ const OrderDetailPage: React.FC = () => {
   const daysLeft = returnDaysLeft(order);
   const returnExpired = daysLeft <= 0;            // hết hạn 7 ngày
 
-  // Nếu delivered: countdown từ delivered_at (3 ngày tự động hoàn thành)
-  const daysUntilAutoComplete = order.status === 'delivered'
-    ? Math.max(0, AUTO_COMPLETE_DAYS - daysSince(order.delivered_at))
+  // Nếu delivered: countdown từ delivered_at (1 tiếng tự động hoàn thành)
+  const minutesUntilAutoComplete = order.status === 'delivered'
+    ? Math.max(0, AUTO_COMPLETE_HOURS * 60 - minutesSince(order.delivered_at))
     : null;
 
   const hasReviewedItem = order.items?.some(item => item.is_reviewed) ?? false;
@@ -750,14 +777,16 @@ const OrderDetailPage: React.FC = () => {
                   <div className="od-cta-title">Bạn đã nhận được hàng chưa?</div>
                   <div className="od-cta-sub">
                     Đơn vị vận chuyển báo đã giao hàng thành công. Nhấn xác nhận để hoàn tất giao dịch.
-                    {daysUntilAutoComplete !== null && daysUntilAutoComplete > 0 && (
+                    {minutesUntilAutoComplete !== null && minutesUntilAutoComplete > 0 && (
                       <span style={{ color: '#b45309', marginLeft: 6 }}>
-                        (Tự động hoàn thành sau <strong>{daysUntilAutoComplete}</strong> ngày)
+                        (Tự động hoàn thành sau <strong>{minutesUntilAutoComplete >= 60
+                          ? `${Math.floor(minutesUntilAutoComplete / 60)} giờ ${minutesUntilAutoComplete % 60} phút`
+                          : `${minutesUntilAutoComplete} phút`}</strong>)
                       </span>
                     )}
-                    {daysUntilAutoComplete === 0 && (
+                    {minutesUntilAutoComplete === 0 && (
                       <span style={{ color: '#b91c1c', marginLeft: 6 }}>
-                        (Sắp được tự động hoàn thành hôm nay)
+                        (Sắp được tự động hoàn thành)
                       </span>
                     )}
                   </div>

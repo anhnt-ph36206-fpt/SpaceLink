@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminNotification;
+use App\Models\UserNotification;
 use App\Models\Order;
 use App\Models\OrderCancelRequest;
 use App\Models\OrderStatusHistory;
@@ -141,6 +142,17 @@ class AdminNotificationController extends Controller
             ]);
         });
 
+        // Thông báo cho khách
+        if ($order->user_id) {
+            UserNotification::notify(
+                $order->user_id,
+                'cancel_approved',
+                '✅ Yêu cầu hủy đơn đã được duyệt',
+                "Đơn #{$order->order_code} đã được duyệt hủy và hoàn tiền." . ($request->transaction_code ? " Mã GD: {$request->transaction_code}" : ''),
+                $order->id
+            );
+        }
+
         return response()->json([
             'status'  => 'success',
             'message' => 'Đã duyệt yêu cầu hủy. Đơn hàng đã được hủy và tồn kho đã hoàn lại.',
@@ -168,6 +180,18 @@ class AdminNotificationController extends Controller
             'processed_by' => $admin->id,
             'processed_at' => now(),
         ]);
+
+        // Thông báo cho khách
+        $order = Order::find($orderId);
+        if ($order && $order->user_id) {
+            UserNotification::notify(
+                $order->user_id,
+                'cancel_rejected',
+                '❌ Yêu cầu hủy đơn bị từ chối',
+                "Yêu cầu hủy đơn #{$order->order_code} đã bị từ chối. Lý do: {$request->admin_note}",
+                $order->id
+            );
+        }
 
         return response()->json([
             'status'  => 'success',

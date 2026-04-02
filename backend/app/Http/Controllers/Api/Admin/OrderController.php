@@ -12,6 +12,7 @@ use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\UserNotification;
 use App\Models\Voucher;
 use App\Models\VoucherUsage;
 use Illuminate\Http\JsonResponse;
@@ -231,6 +232,13 @@ class OrderController extends Controller
                     }
                 }
 
+                // ===================================================================
+                // COD: tự động paid khi delivered (khách trả tiền khi nhận hàng)
+                // ===================================================================
+                if ($newStatus === 'delivered' && $order->payment_method === 'cod' && $order->payment_status !== 'paid') {
+                    $updateData['payment_status'] = 'paid';
+                }
+
 
                 // Thông tin vận chuyển (khi chuyển sang shipping)
                 if ($request->filled('tracking_code')) {
@@ -260,6 +268,23 @@ class OrderController extends Controller
                 ]);
 
                 $order->load(['user:id,fullname,email', 'items', 'statusHistory']);
+
+                // ===================================================================
+                // Gửi thông báo cho khách hàng khi thay đổi trạng thái
+                // ===================================================================
+                if ($order->user_id) {
+                    $notifMap = [
+                        'confirmed'  => ['order_confirmed',  '✅ Đơn hàng đã được xác nhận',  "Đơn #{$order->order_code} đã được shop xác nhận và đang chuẩn bị hàng."],
+                        'processing' => ['order_processing', '📦 Đơn hàng đang được đóng gói', "Đơn #{$order->order_code} đang được đóng gói để giao cho đơn vị vận chuyển."],
+                        'shipping'   => ['order_shipping',   '🚚 Đơn hàng đang vận chuyển',   "Đơn #{$order->order_code} đã được giao cho đơn vị vận chuyển."],
+                        'delivered'  => ['order_delivered',  '📬 Đơn hàng đã giao thành công', "Đơn #{$order->order_code} đã được giao thành công. Hãy xác nhận nếu bạn đã nhận được hàng!"],
+                        'cancelled'  => ['order_cancelled',  '❌ Đơn hàng đã bị hủy',         "Đơn #{$order->order_code} đã bị hủy. Lý do: " . ($request->cancelled_reason ?? 'Admin hủy đơn')],
+                    ];
+                    if (isset($notifMap[$newStatus])) {
+                        [$type, $title, $body] = $notifMap[$newStatus];
+                        UserNotification::notify($order->user_id, $type, $title, $body, $order->id);
+                    }
+                }
 
                 return $order;
             });
@@ -346,6 +371,18 @@ class OrderController extends Controller
             }
         });
 
+        // Thông báo cho khách khi hoàn tiền
+        if (in_array($newPaymentStatus, ['refunded', 'partial_refund'], true) && $order->user_id) {
+            $label = $newPaymentStatus === 'refunded' ? 'toàn bộ' : 'một phần';
+            UserNotification::notify(
+                $order->user_id,
+                'payment_refunded',
+                "💰 Đã hoàn tiền {$label} cho đơn hàng",
+                "Đơn #{$order->order_code} đã được hoàn tiền {$label}.",
+                $order->id
+            );
+        }
+
         return response()->json([
             'status' => true,
             'message' => "Đã cập nhật thanh toán thành \"{$newPaymentStatus}\".",
@@ -395,6 +432,17 @@ class OrderController extends Controller
         });
 
         $order->load(['productReturn.evidences']);
+
+        // Thông báo cho khách
+        if ($order->user_id) {
+            UserNotification::notify(
+                $order->user_id,
+                'return_approved',
+                '✅ Yêu cầu hoàn trả đã được duyệt',
+                "Yêu cầu hoàn trả cho đơn #{$order->order_code} đã được admin duyệt. Chờ xử lý hoàn tiền.",
+                $order->id
+            );
+        }
 
         return response()->json([
             'status' => true,
@@ -453,6 +501,17 @@ class OrderController extends Controller
         });
 
         $order->load(['productReturn.evidences']);
+
+        // Thông báo cho khách
+        if ($order->user_id) {
+            UserNotification::notify(
+                $order->user_id,
+                'return_rejected',
+                '❌ Yêu cầu hoàn trả bị từ chối',
+                "Yêu cầu hoàn trả cho đơn #{$order->order_code} đã bị từ chối. Lý do: {$reason}",
+                $order->id
+            );
+        }
 
         return response()->json([
             'status' => true,
