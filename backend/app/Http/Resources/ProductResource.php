@@ -20,10 +20,7 @@ class ProductResource extends JsonResource
             'sale_price' => $this->sale_price !== null ? (float) $this->sale_price : null,
             // effective_price: giá hiệu lực để frontend không phải tự tính COALESCE
             'effective_price' => (float) ($this->sale_price ?? $this->price),
-            // quantity: ưu tiên tổng kho từ variants (chính xác), fallback product.quantity
-            'quantity' => $this->relationLoaded('variants')
-                ? $this->variants->sum('quantity')
-                : $this->quantity,
+            'quantity' => $this->quantity,
             'sold_count' => (int) ($this->sold_count ?? 0),
             'view_count' => $this->view_count,
             'is_featured' => (bool) $this->is_featured,

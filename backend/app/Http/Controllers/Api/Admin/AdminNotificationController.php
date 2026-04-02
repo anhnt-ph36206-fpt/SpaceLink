@@ -99,33 +99,20 @@ class AdminNotificationController extends Controller
                 'processed_at'     => now(),
             ]);
 
-            // 2. Xử lý đơn hàng
-            $wasConfirmed = in_array($order->status, ['confirmed', 'processing', 'shipping', 'delivered', 'completed'], true);
-            $isStockCancelled = $order->status === 'cancelled'
-                && $order->cancelled_reason === 'out_of_stock_after_payment';
-
+            // 2. Hủy đơn, hoàn kho
             $order->update([
                 'status'           => 'cancelled',
                 'payment_status'   => 'refunded',
-                'cancelled_reason' => $isStockCancelled
-                    ? 'out_of_stock_after_payment'  // Giữ nguyên lý do gốc
-                    : 'Admin duyệt yêu cầu hủy sau thanh toán VNPAY.',
+                'cancelled_reason' => 'Admin duyệt yêu cầu hủy sau thanh toán VNPAY.',
                 'cancelled_by'     => $admin->id,
-                'cancelled_at'     => $order->cancelled_at ?? now(),
+                'cancelled_at'     => now(),
             ]);
 
-            // CHỈ hoàn kho nếu đơn đã confirmed+ (stock đã bị trừ)
-            // Đơn cancelled vì out_of_stock_after_payment → chưa trừ kho → KHÔNG hoàn
-            if ($wasConfirmed) {
-                foreach ($order->items as $item) {
-                    if ($item->variant_id && $item->variant) {
-                        $item->variant->increment('quantity', $item->quantity);
-                    }
-                    $p = Product::find($item->product_id);
-                    if ($p) {
-                        $p->update(['quantity' => \App\Models\ProductVariant::where('product_id', $p->id)->sum('quantity')]);
-                    }
+            foreach ($order->items as $item) {
+                if ($item->variant_id && $item->variant) {
+                    $item->variant->increment('quantity', $item->quantity);
                 }
+                Product::where('id', $item->product_id)->increment('quantity', $item->quantity);
             }
 
             // 3. KHÔNG hoàn voucher (đơn đã paid = đã dùng dịch vụ)

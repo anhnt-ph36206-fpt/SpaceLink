@@ -7,7 +7,6 @@ export interface CompareProduct {
     price: number;
     oldPrice?: number;
     category?: string;
-    categoryId?: number;
     rating?: number;
     isSale?: boolean;
     isNew?: boolean;
