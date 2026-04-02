@@ -202,8 +202,11 @@ class OrderController extends Controller
                     $updateData['cancelled_reason'] = $request->cancelled_reason;
                     $updateData['cancelled_by'] = $admin->id;
 
+                    $isVnpayPaid = $order->payment_method === 'vnpay' && $order->payment_status === 'paid';
+
                     // Lazy deduction: CHỈ hoàn kho nếu đơn đã confirmed+ (stock đã bị trừ)
-                    if (in_array($oldStatus, self::STOCK_DEDUCTED_STATUSES, true)) {
+                    // HOẶC đơn VNPAY đã thanh toán (vì IPN của VNPAY đã tự động trừ kho)
+                    if (in_array($oldStatus, self::STOCK_DEDUCTED_STATUSES, true) || $isVnpayPaid) {
                         foreach ($order->items()->with('variant')->get() as $item) {
                             if ($item->variant_id && $item->variant) {
                                 $item->variant->increment('quantity', $item->quantity);

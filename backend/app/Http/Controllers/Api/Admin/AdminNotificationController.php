@@ -101,6 +101,7 @@ class AdminNotificationController extends Controller
 
             // 2. Xử lý đơn hàng
             $wasConfirmed = in_array($order->status, ['confirmed', 'processing', 'shipping', 'delivered', 'completed'], true);
+            $isVnpayPaid = $order->payment_method === 'vnpay' && $order->payment_status === 'paid';
             $isStockCancelled = $order->status === 'cancelled'
                 && $order->cancelled_reason === 'out_of_stock_after_payment';
 
@@ -114,9 +115,10 @@ class AdminNotificationController extends Controller
                 'cancelled_at'     => $order->cancelled_at ?? now(),
             ]);
 
-            // CHỈ hoàn kho nếu đơn đã confirmed+ (stock đã bị trừ)
+            // Hoàn kho nếu đơn đã confirmed+ (stock đã bị trừ)
+            // HOẶC đơn VNPAY ĐÃ THANH TOÁN (vì IPN của VNPAY đã tự động trừ kho)
             // Đơn cancelled vì out_of_stock_after_payment → chưa trừ kho → KHÔNG hoàn
-            if ($wasConfirmed) {
+            if (($wasConfirmed || $isVnpayPaid) && !$isStockCancelled) {
                 foreach ($order->items as $item) {
                     if ($item->variant_id && $item->variant) {
                         $item->variant->increment('quantity', $item->quantity);
