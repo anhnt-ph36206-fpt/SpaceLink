@@ -154,8 +154,11 @@ class OrderController extends Controller
 
                 // ===================================================================
                 // Lazy deduction: TRỪ KHO khi xác nhận đơn (pending → confirmed)
+                // NGOẠI TRỪ: Đơn VNPAY đã thanh toán (vì đã trừ kho trong IPN)
                 // ===================================================================
-                if ($newStatus === 'confirmed') {
+                $isVnpayPaid = $order->payment_method === 'vnpay' && $order->payment_status === 'paid';
+
+                if ($newStatus === 'confirmed' && !$isVnpayPaid) {
                     $stockErrors = [];
                     foreach ($order->items()->with('variant')->get() as $item) {
                         if (! $item->variant_id) {

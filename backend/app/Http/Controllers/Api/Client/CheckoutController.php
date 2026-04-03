@@ -686,70 +686,14 @@ class CheckoutController extends Controller
                 'note' => 'Thanh toán VNPAY thành công. Mã GD: ' . $transactionNo,
             ]);
 
-            // 2. Kiểm tra stock
-            $orderItems = $freshOrder->items()->with('variant')->get();
-            $stockIssues = [];
+            // 1.5. Kiểm tra nếu kho đã bị trừ (do admin xác nhận đơn trước khi IPN tới)
+            $isStockAlreadyDeducted = in_array($freshOrder->status, ['confirmed', 'processing', 'shipping', 'delivered', 'completed'], true);
 
-            foreach ($orderItems as $item) {
-                if (!$item->variant_id) continue;
+            if (!$isStockAlreadyDeducted) {
+                // 2. Kiểm tra stock
+                $orderItems = $freshOrder->items()->with('variant')->get();
+                $stockIssues = [];
 
-                $variant = ProductVariant::where('id', $item->variant_id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if (!$variant || $variant->quantity < $item->quantity) {
-                    $stockIssues[] = [
-                        'product_name' => $item->product_name,
-                        'variant_id' => $item->variant_id,
-                        'needed' => $item->quantity,
-                        'available' => $variant ? $variant->quantity : 0,
-                    ];
-                }
-            }
-
-            if (!empty($stockIssues)) {
-                // =====================================================
-                // HẾT HÀNG → Cancel đơn + đánh dấu cần hoàn tiền
-                // =====================================================
-                $stockDepleted = true;
-                $issueDetails = collect($stockIssues)->map(function ($issue) {
-                    return "{$issue['product_name']} (cần {$issue['needed']}, còn {$issue['available']})";
-                })->implode(', ');
-
-                $freshOrder->update([
-                    'status' => 'cancelled',
-                    'cancelled_at' => now(),
-                    'cancelled_reason' => 'out_of_stock_after_payment',
-                    'admin_note' => 'HẾT HÀNG SAU THANH TOÁN VNPAY: ' . $issueDetails . '. Cần hoàn tiền cho khách.',
-                ]);
-
-                OrderStatusHistory::create([
-                    'order_id' => $freshOrder->id,
-                    'from_status' => 'pending',
-                    'to_status' => 'cancelled',
-                    'note' => 'Hệ thống tự động hủy: sản phẩm đã hết hàng trong lúc khách thanh toán VNPAY. ' . $issueDetails,
-                ]);
-
-                // Hoàn trả voucher nếu có
-                if ($freshOrder->voucher_id) {
-                    Voucher::where('id', $freshOrder->voucher_id)
-                        ->where('used_count', '>', 0)
-                        ->decrement('used_count');
-                    VoucherUsage::where('voucher_id', $freshOrder->voucher_id)
-                        ->where('order_id', $freshOrder->id)
-                        ->delete();
-                }
-
-                AdminNotification::notify(
-                    'stock_issue_vnpay',
-                    '⚠️ VNPAY đã thanh toán nhưng hết hàng — cần hoàn tiền',
-                    "Đơn #{$freshOrder->order_code}: {$issueDetails}. Đơn đã tự động hủy, cần xử lý hoàn tiền cho khách.",
-                    $freshOrder->id
-                );
-            } else {
-                // =====================================================
-                // ĐỦ STOCK → Trừ kho bình thường
-                // =====================================================
                 foreach ($orderItems as $item) {
                     if (!$item->variant_id) continue;
 
@@ -757,11 +701,72 @@ class CheckoutController extends Controller
                         ->lockForUpdate()
                         ->first();
 
-                    if ($variant) {
-                        $variant->decrement('quantity', $item->quantity);
-                        Product::where('id', $item->product_id)
-                            ->where('quantity', '>=', $item->quantity)
-                            ->decrement('quantity', $item->quantity);
+                    if (!$variant || $variant->quantity < $item->quantity) {
+                        $stockIssues[] = [
+                            'product_name' => $item->product_name,
+                            'variant_id' => $item->variant_id,
+                            'needed' => $item->quantity,
+                            'available' => $variant ? $variant->quantity : 0,
+                        ];
+                    }
+                }
+
+                if (!empty($stockIssues)) {
+                    // =====================================================
+                    // HẾT HÀNG → Cancel đơn + đánh dấu cần hoàn tiền
+                    // =====================================================
+                    $stockDepleted = true;
+                    $issueDetails = collect($stockIssues)->map(function ($issue) {
+                        return "{$issue['product_name']} (cần {$issue['needed']}, còn {$issue['available']})";
+                    })->implode(', ');
+
+                    $freshOrder->update([
+                        'status' => 'cancelled',
+                        'cancelled_at' => now(),
+                        'cancelled_reason' => 'out_of_stock_after_payment',
+                        'admin_note' => 'HẾT HÀNG SAU THANH TOÁN VNPAY: ' . $issueDetails . '. Cần hoàn tiền cho khách.',
+                    ]);
+
+                    OrderStatusHistory::create([
+                        'order_id' => $freshOrder->id,
+                        'from_status' => 'pending',
+                        'to_status' => 'cancelled',
+                        'note' => 'Hệ thống tự động hủy: sản phẩm đã hết hàng trong lúc khách thanh toán VNPAY. ' . $issueDetails,
+                    ]);
+
+                    // Hoàn trả voucher nếu có
+                    if ($freshOrder->voucher_id) {
+                        Voucher::where('id', $freshOrder->voucher_id)
+                            ->where('used_count', '>', 0)
+                            ->decrement('used_count');
+                        VoucherUsage::where('voucher_id', $freshOrder->voucher_id)
+                            ->where('order_id', $freshOrder->id)
+                            ->delete();
+                    }
+
+                    AdminNotification::notify(
+                        'stock_issue_vnpay',
+                        '⚠️ VNPAY đã thanh toán nhưng hết hàng — cần hoàn tiền',
+                        "Đơn #{$freshOrder->order_code}: {$issueDetails}. Đơn đã tự động hủy, cần xử lý hoàn tiền cho khách.",
+                        $freshOrder->id
+                    );
+                } else {
+                    // =====================================================
+                    // ĐỦ STOCK → Trừ kho bình thường
+                    // =====================================================
+                    foreach ($orderItems as $item) {
+                        if (!$item->variant_id) continue;
+
+                        $variant = ProductVariant::where('id', $item->variant_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($variant) {
+                            $variant->decrement('quantity', $item->quantity);
+                            Product::where('id', $item->product_id)
+                                ->where('quantity', '>=', $item->quantity)
+                                ->decrement('quantity', $item->quantity);
+                        }
                     }
                 }
             }

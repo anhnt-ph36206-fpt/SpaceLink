@@ -82,7 +82,7 @@ interface ClientOrder {
 }
 
 // ── Cầu hình thời gian ──────────────────────────────────────────
-const AUTO_COMPLETE_HOURS = 1;  // delivered → completed sau N giờ
+const AUTO_COMPLETE_MINUTES = 2;  // delivered → completed sau N phút
 const RETURN_WINDOW_DAYS = 7;   // cửa sổ hoàn trả kể từ khi completed
 
 /**
@@ -621,9 +621,9 @@ const OrderDetailPage: React.FC = () => {
   const daysLeft = returnDaysLeft(order);
   const returnExpired = daysLeft <= 0;            // hết hạn 7 ngày
 
-  // Nếu delivered: countdown từ delivered_at (1 tiếng tự động hoàn thành)
+  // Nếu delivered: countdown từ delivered_at (2 phút tự động hoàn thành)
   const minutesUntilAutoComplete = order.status === 'delivered'
-    ? Math.max(0, AUTO_COMPLETE_HOURS * 60 - minutesSince(order.delivered_at))
+    ? Math.max(0, AUTO_COMPLETE_MINUTES - minutesSince(order.delivered_at))
     : null;
 
   const hasReviewedItem = order.items?.some(item => item.is_reviewed) ?? false;

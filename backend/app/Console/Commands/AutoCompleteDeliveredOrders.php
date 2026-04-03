@@ -20,14 +20,14 @@ class AutoCompleteDeliveredOrders extends Command
     protected $signature   = 'orders:auto-complete-delivered';
     protected $description = 'Tự động hoàn thành ("completed") các đơn đã giao hàng ("delivered") sau 1 tiếng.';
 
-    /** Số giờ tự động hoàn tất kể từ delivered_at */
-    private const HOURS_THRESHOLD = 1;
+    /** Số phút tự động hoàn tất kể từ delivered_at */
+    private const MINUTES_THRESHOLD = 2;
 
     public function handle(): void
     {
-        $cutoff = now()->subHours(self::HOURS_THRESHOLD);
+        $cutoff = now()->subMinutes(self::MINUTES_THRESHOLD);
 
-        // Lấy đơn: status=delivered VÀ delivered_at cách đây ít nhất 1 tiếng
+        // Lấy đơn: status=delivered VÀ delivered_at cách đây ít nhất N phút
         $orders = Order::where('status', 'delivered')
             ->whereNotNull('delivered_at')
             ->where('delivered_at', '<=', $cutoff)
@@ -51,7 +51,7 @@ class AutoCompleteDeliveredOrders extends Command
                 'order_id'   => $order->id,
                 'from_status'=> 'delivered',
                 'to_status'  => 'completed',
-                'note'       => 'Hệ thống tự động hoàn thành sau ' . self::HOURS_THRESHOLD . ' tiếng giao hàng.',
+                'note'       => 'Hệ thống tự động hoàn thành sau ' . self::MINUTES_THRESHOLD . ' phút giao hàng.',
                 'changed_by' => null,
             ]);
 
@@ -61,7 +61,7 @@ class AutoCompleteDeliveredOrders extends Command
                     $order->user_id,
                     'order_completed',
                     '🎉 Đơn hàng đã hoàn tất',
-                    "Đơn #{$order->order_code} đã được hệ thống tự động xác nhận hoàn tất sau " . self::HOURS_THRESHOLD . " tiếng giao hàng.",
+                    "Đơn #{$order->order_code} đã được hệ thống tự động xác nhận hoàn tất sau " . self::MINUTES_THRESHOLD . " phút giao hàng.",
                     $order->id
                 );
             }
