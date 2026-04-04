@@ -180,6 +180,7 @@ Route::get('payment/vnpay-ipn', [\App\Http\Controllers\Api\Client\CheckoutContro
 // ========================================================================
 Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->group(function () {
 
+    Route::delete('categories/{category}/force', [AdminCategoryController::class, 'forceDelete']);
     Route::apiResource('categories', AdminCategoryController::class);
     Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class);
     Route::apiResource('attribute-groups', AdminAttributeGroupController::class);

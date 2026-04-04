@@ -32,6 +32,8 @@ class CategoryResource extends JsonResource
 
             'description' => $this->description,
             'parent_id'   => $this->parent_id,
+            'is_active'   => (bool) $this->is_active,
+            'products_count' => $this->whenCounted('products'),
 
             // Bọc parent vào Resource để đồng nhất format trả về
             // Chỉ xuất hiện khi relationship được Eager Load
