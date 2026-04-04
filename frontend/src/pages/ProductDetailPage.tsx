@@ -130,6 +130,12 @@ const ProductDetailPage: React.FC = () => {
                 const p: Product = res.data.data;
                 setProduct(p);
 
+                // Fetch review stats immediately to show on the tab before it's clicked
+                axiosInstance.get(`/products/${id}/reviews`, { params: { per_page: 1 } })
+                    .then(r => {
+                        if (r.data?.stats) setReviewStats(r.data.stats);
+                    }).catch(() => {});
+
                 // Set default image
                 const primary = p.images?.find(i => i.is_primary) || p.images?.[0];
                 const defaultUrl = imgUrl(primary);
