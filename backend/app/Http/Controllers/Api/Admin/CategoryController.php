@@ -22,6 +22,7 @@ class CategoryController extends Controller
     {
         $query = Category::withTrashed(false)   // Không lấy soft-deleted
                          ->with('parent')        // Eager load parent, tránh N+1
+                         ->withCount('products')
                          ->orderBy('display_order', 'asc')
                          ->orderBy('id', 'asc');
 
@@ -61,6 +62,7 @@ class CategoryController extends Controller
     {
         // Admin xem được cả inactive — không filter is_active
         $category = Category::with(['parent', 'children'])
+                            ->withCount('products')
                             ->findOrFail($id);
 
         return new CategoryResource($category);
@@ -116,12 +118,53 @@ class CategoryController extends Controller
     // =========================================================================
     public function destroy(string $id): JsonResponse
     {
-        $category = Category::findOrFail($id);
+        $category = Category::withCount('products')->findOrFail($id);
+        
+        if ($category->products_count > 0) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Không thể xóa (ẩn) danh mục đang chứa sản phẩm.'
+            ], 400);
+        }
+
         $category->delete(); // SoftDelete: set deleted_at, không xóa hẳn
 
         return response()->json([
             'status'  => true,
-            'message' => 'Xóa danh mục thành công.',
+            'message' => 'Đã ẩn danh mục thành công.',
+        ]);
+    }
+
+    // =========================================================================
+    // DELETE /api/admin/categories/{id}/force
+    // =========================================================================
+    public function forceDelete(string $id): JsonResponse
+    {
+        $category = Category::withCount(['products', 'children'])->withTrashed()->findOrFail($id);
+        
+        if ($category->products_count > 0) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Không thể xóa vĩnh viễn danh mục đang chứa sản phẩm.'
+            ], 400);
+        }
+
+        if ($category->children_count > 0) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Không thể xóa vĩnh viễn danh mục đang chứa danh mục con.'
+            ], 400);
+        }
+
+        if ($category->image) {
+            Storage::disk('public')->delete($category->image);
+        }
+        
+        $category->forceDelete();
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Xóa vĩnh viễn danh mục thành công.',
         ]);
     }
 }

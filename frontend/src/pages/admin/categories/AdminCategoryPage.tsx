@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
     Table, Button, Modal, Form, Input, Switch, Space, Tag,
-    Typography, Popconfirm, Card, Row, Col, Select, Avatar, Upload, type UploadFile,
+    Typography, Card, Row, Col, Select, Avatar, Upload, type UploadFile,
+    Alert, Spin
 } from 'antd';
 import {
     PlusOutlined, EditOutlined, DeleteOutlined,
@@ -11,7 +12,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { axiosInstance } from "../../../api/axios.ts";
 import { toast } from "react-toastify";
 import type { UploadProps } from 'antd';
-import { categoryPrefix } from "../../../api/apiAdminPrefix.ts";
+import { categoryPrefix, productPrefix } from "../../../api/apiAdminPrefix.ts";
 
 const { Title, Text } = Typography;
 
@@ -35,6 +36,7 @@ interface Category {
     image?: string | null;
     description?: string | null;
     is_active?: boolean;
+    products_count?: number;
     children?: Category[];
 }
 
@@ -51,6 +53,12 @@ const AdminCategoryPage: React.FC = () => {
     const [parentId, setParentId] = useState<number | undefined>(undefined);
 
     const [fileList, setFileList] = useState<UploadFile[]>([]);
+
+    const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+    const [categoryProductCount, setCategoryProductCount] = useState<number | null>(null);
+    const [transferCategoryId, setTransferCategoryId] = useState<number | undefined>();
+    const [isTransferring, setIsTransferring] = useState(false);
 
     const fetchCategories = async (params?: {
         search?: string;
@@ -216,11 +224,62 @@ const AdminCategoryPage: React.FC = () => {
 
     const handleDelete = async (id: number) => {
         try {
-            await axiosInstance.delete(`${categoryPrefix}/${id}`);
-            toast.success('Đã xóa');
+            await axiosInstance.delete(`${categoryPrefix}/${id}/force`);
+            toast.success('Đã xóa vĩnh viễn');
+            setDeleteModalVisible(false);
             fetchCategories();
         } catch (error: any) {
-            toast.error(error.message || "Xóa thất bại");
+            toast.error(error?.response?.data?.message || error.message || "Xóa thất bại");
+        }
+    };
+
+    const openDeleteModal = async (item: Category) => {
+        setCategoryToDelete(item);
+        setDeleteModalVisible(true);
+        setCategoryProductCount(item.products_count || 0);
+        setTransferCategoryId(undefined);
+        setIsTransferring(false);
+    };
+
+    const handleSoftDelete = async () => {
+        if (!categoryToDelete) return;
+        try {
+            await axiosInstance.delete(`${categoryPrefix}/${categoryToDelete.id}`);
+            toast.success('Đã ẩn danh mục thành công (Soft delete)');
+            setDeleteModalVisible(false);
+            fetchCategories();
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Có lỗi xảy ra khi ẩn');
+        }
+    };
+
+    const handleTransferAndDelete = async () => {
+        if (!categoryToDelete || !transferCategoryId) return;
+        setIsTransferring(true);
+        try {
+            const res = await axiosInstance.get(productPrefix, { params: { category_id: categoryToDelete.id, all: 1 } });
+            const products = res.data?.data || [];
+
+            let successTransfer = 0;
+            for (const prod of products) {
+                const fd = new FormData();
+                fd.append('category_id', String(transferCategoryId));
+                fd.append('_method', 'PUT');
+                await axiosInstance.post(`${productPrefix}/${prod.id}`, fd).then(() => successTransfer++).catch(() => null);
+            }
+
+            await axiosInstance.delete(`${categoryPrefix}/${categoryToDelete.id}/force`);
+            if (products.length > 0 && successTransfer < products.length) {
+                toast.warning(`Đã xóa danh mục nhưng chỉ chuyển được ${successTransfer}/${products.length} sản phẩm do thiếu dữ liệu.`);
+            } else {
+                toast.success('Đã chuyển sản phẩm và xóa danh mục');
+            }
+            setDeleteModalVisible(false);
+            fetchCategories();
+        } catch (e: any) {
+            toast.error('Có lỗi xảy ra khi thực hiện');
+        } finally {
+            setIsTransferring(false);
         }
     };
 
@@ -298,14 +357,7 @@ const AdminCategoryPage: React.FC = () => {
                         icon={<EditOutlined />}
                         onClick={() => openEdit(r)}
                     />
-                    <Popconfirm
-                        title="Xóa danh mục?"
-                        onConfirm={() => handleDelete(r.id)}
-                        okText="Xóa"
-                        cancelText="Hủy"
-                    >
-                        <Button danger size="small" icon={<DeleteOutlined />} />
-                    </Popconfirm>
+                    <Button danger size="small" icon={<DeleteOutlined />} onClick={() => openDeleteModal(r)} />
                 </Space>
             ),
         },
@@ -485,6 +537,135 @@ const AdminCategoryPage: React.FC = () => {
                         </Upload>
                     </Form.Item>
                 </Form>
+            </Modal>
+
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                            width: 32, height: 32, borderRadius: 8,
+                            background: '#ffe5e5', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <DeleteOutlined style={{ color: '#ff4d4f', fontSize: 16 }} />
+                        </div>
+                        <span>Xóa Danh Mục</span>
+                    </div>
+                }
+                open={deleteModalVisible}
+                onCancel={() => setDeleteModalVisible(false)}
+                footer={null}
+                width={550}
+            >
+                {isTransferring ? (
+                    <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                        <Spin size="large" />
+                        <div style={{ marginTop: 16, color: '#666' }}>
+                            Đang chuyển sản phẩm và xóa danh mục...
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ marginTop: 16 }}>
+                        <div style={{ marginBottom: 20, fontSize: 15 }}>
+                            Bạn đang thao tác với danh mục: <strong style={{ color: '#1a1a2e' }}>{categoryToDelete?.name}</strong>
+                        </div>
+
+                        {categoryProductCount !== null && categoryProductCount > 0 && (
+                            <Alert
+                                type="warning"
+                                showIcon
+                                message={<strong>Danh mục này đang có {categoryProductCount} sản phẩm</strong>}
+                                description="Để đảm bảo toàn vẹn dữ liệu, hệ thống không cho phép xóa tĩnh danh mục đang chứa sản phẩm. Vui lòng chọn 1 trong 2 phương án bên dưới:"
+                                style={{ marginBottom: 24, borderRadius: 8 }}
+                            />
+                        )}
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            {/* Option 1: Soft Delete */}
+                            <Card
+                                size="small"
+                                hoverable
+                                style={{ borderColor: '#0d6efd', background: '#f8fbff', borderRadius: 10 }}
+                                bodyStyle={{ padding: 16 }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                                    <div style={{ flex: 1, minWidth: 200 }}>
+                                        <div style={{ fontWeight: 700, color: '#0d6efd', fontSize: 15, marginBottom: 4 }}>
+                                            👻 Ẩn danh mục (Soft Delete)
+                                        </div>
+                                        <div style={{ fontSize: 13, color: '#444' }}>
+                                            Chuẩn production: Danh mục được ẩn khỏi trang Khách, nhưng vẫn giữ nguyên dữ liệu gốc để tra cứu sau này.
+                                        </div>
+                                    </div>
+                                    <Button type="primary" onClick={handleSoftDelete} style={{ borderRadius: 8, background: '#0d6efd' }}>
+                                        Tiến hành Ẩn
+                                    </Button>
+                                </div>
+                            </Card>
+
+                            {/* Option 2: Transfer & Delete */}
+                            {categoryProductCount !== null && categoryProductCount > 0 && (
+                                <Card size="small" hoverable style={{ borderColor: '#e9ecef', borderRadius: 10 }} bodyStyle={{ padding: 16 }}>
+                                    <div style={{ fontWeight: 700, color: '#2b2b2b', fontSize: 15, marginBottom: 4 }}>
+                                        🔁 Chuyển sang danh mục khác rồi Xóa
+                                    </div>
+                                    <div style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>
+                                        Các sản phẩm sẽ được tự động chuyển sang danh mục mới được chỉ định, sau đó danh mục hiện tại sẽ bị xóa vĩnh viễn.
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                        <Select
+                                            style={{ flex: 1, minWidth: 200 }}
+                                            placeholder="-- Chọn danh mục đích để chuyển đến --"
+                                            options={filterParentOptions.filter(o => o.value !== categoryToDelete?.id)}
+                                            value={transferCategoryId}
+                                            onChange={setTransferCategoryId}
+                                        />
+                                        <Button
+                                            type="default"
+                                            disabled={!transferCategoryId}
+                                            onClick={handleTransferAndDelete}
+                                            style={{ borderRadius: 8 }}
+                                        >
+                                            Chuyển & Xóa
+                                        </Button>
+                                    </div>
+                                </Card>
+                            )}
+
+                            {/* Option 3: Hard Delete */}
+                            <Card
+                                size="small"
+                                hoverable
+                                style={{
+                                    borderColor: categoryProductCount ? '#f5f5f5' : '#ff4d4f',
+                                    opacity: categoryProductCount ? 0.6 : 1,
+                                    borderRadius: 10
+                                }}
+                                bodyStyle={{ padding: 16 }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                                    <div style={{ flex: 1, minWidth: 200 }}>
+                                        <div style={{ fontWeight: 700, color: categoryProductCount ? '#999' : '#ff4d4f', fontSize: 15, marginBottom: 4 }}>
+                                            ❌ Xóa vĩnh viễn (Hard Delete)
+                                        </div>
+                                        <div style={{ fontSize: 13, color: '#666' }}>
+                                            {categoryProductCount
+                                                ? "Tính năng bị khóa. Vui lòng chuyển sản phẩm đi nơi khác để được phép xóa vĩnh viễn."
+                                                : "Hệ thống sẽ xóa vĩnh viễn danh mục này và không thể khôi phục."}
+                                        </div>
+                                    </div>
+                                    <Button
+                                        danger
+                                        disabled={!!categoryProductCount}
+                                        onClick={() => categoryToDelete && handleDelete(categoryToDelete.id)}
+                                        style={{ borderRadius: 8 }}
+                                    >
+                                        Xóa ngay
+                                    </Button>
+                                </div>
+                            </Card>
+                        </div>
+                    </div>
+                )}
             </Modal>
         </div>
     );
