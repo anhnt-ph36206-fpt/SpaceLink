@@ -365,7 +365,7 @@ const Header: React.FC = () => {
                                                             key={n.id}
                                                             onClick={() => {
                                                                 if (!n.is_read) markRead(n.id);
-                                                                if (n.order_id) navigate(`/order/${n.order_id}`);
+                                                                if (n.order_id) navigate(`/orders/${n.order_id}`);
                                                                 setNotifOpen(false);
                                                             }}
                                                             className="notif-item"

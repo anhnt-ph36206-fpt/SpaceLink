@@ -106,12 +106,14 @@ class AdminNotificationController extends Controller
             $isStockCancelled = $order->status === 'cancelled'
                 && $order->cancelled_reason === 'out_of_stock_after_payment';
 
+            $newPaymentStatus = $order->payment_status === 'paid' ? 'refunded' : $order->payment_status;
+
             $order->update([
                 'status'           => 'cancelled',
-                'payment_status'   => 'refunded',
+                'payment_status'   => $newPaymentStatus,
                 'cancelled_reason' => $isStockCancelled
                     ? 'out_of_stock_after_payment'  // Giữ nguyên lý do gốc
-                    : 'Admin duyệt yêu cầu hủy sau thanh toán VNPAY.',
+                    : 'Admin duyệt yêu cầu hủy.',
                 'cancelled_by'     => $admin->id,
                 'cancelled_at'     => $order->cancelled_at ?? now(),
             ]);

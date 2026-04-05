@@ -27,22 +27,17 @@ class OrderCancelRequestController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Bạn không có quyền thực hiện thao tác này.'], 403);
         }
 
-        // Chỉ áp dụng cho đơn VNPAY đã thanh toán + đang pending
-        if ($order->payment_method !== 'vnpay' || $order->payment_status !== 'paid') {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Chỉ có thể gửi yêu cầu hủy cho đơn VNPAY đã thanh toán. Với đơn COD hoặc chưa thanh toán, hãy dùng chức năng Hủy đơn trực tiếp.',
-            ], 422);
-        }
-
         // Cho phép: đơn VNPAY paid + (pending/confirmed) HOẶC (cancelled vì hết hàng)
         $isStockCancelled = $order->status === 'cancelled'
             && $order->cancelled_reason === 'out_of_stock_after_payment';
 
-        if (! $isStockCancelled && ! in_array($order->status, ['pending', 'confirmed'], true)) {
+        $isVnpayPaidPending = $order->payment_method === 'vnpay' && $order->payment_status === 'paid' && $order->status === 'pending';
+        $isConfirmed = $order->status === 'confirmed';
+
+        if (! $isStockCancelled && ! $isVnpayPaidPending && ! $isConfirmed) {
             return response()->json([
                 'status'  => 'error',
-                'message' => "Không thể yêu cầu hủy đơn đang ở trạng thái \"{$order->status}\".",
+                'message' => 'Bạn không thể gửi yêu cầu hủy đơn cho trạng thái hiện tại. Nếu đơn ở trạng thái Chờ xác nhận (COD/Chưa TT), vui lòng dùng chức năng Hủy trực tiếp.',
             ], 422);
         }
 

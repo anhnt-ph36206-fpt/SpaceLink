@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart, type CartItem } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { axiosInstance } from '../api/axios';
+import { toast } from 'react-toastify';
 import { Modal, Button, Spin, Tag, Tooltip, Divider, Typography, Checkbox, Popconfirm, Alert } from 'antd';
 import { ShoppingOutlined, CloseOutlined, InfoCircleOutlined, SwapOutlined, MinusOutlined, PlusOutlined, CheckCircleOutlined, ExclamationCircleOutlined, DeleteOutlined, ShoppingCartOutlined, WarningOutlined } from '@ant-design/icons';
 
@@ -18,6 +20,7 @@ const imgUrl = (path?: string) => {
 
 const CartPage: React.FC = () => {
     const { items, removeFromCart, updateQty, loading, updatingItems } = useCart();
+    const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
     // Chỉ dùng để hiển thị banner thông báo (không block)
@@ -151,6 +154,11 @@ const CartPage: React.FC = () => {
     };
 
     const handleCheckout = () => {
+        if (!isAuthenticated) {
+            toast.warning('Vui lòng đăng nhập để tiến hành thanh toán!');
+            return;
+        }
+
         if (selectedItems.length === 0) return;
         navigate('/checkout', {
             state: {

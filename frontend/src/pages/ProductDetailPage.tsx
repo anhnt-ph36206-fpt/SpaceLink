@@ -4,6 +4,7 @@ import { axiosInstance } from "../api/axios";
 import { useCart } from "../context/CartContext";
 import { useCompare } from "../context/CompareContext";
 import { useWishlist } from "../context/WishlistContext";
+import { useAuth } from "../context/AuthContext";
 
 import ProductCard from "../components/common/ProductCard";
 import ProductTechSpecs from "../components/product/ProductTechSpecs";
@@ -81,6 +82,7 @@ const ProductDetailPage: React.FC = () => {
     const { addToCart } = useCart();
     const { addToCompare, removeFromCompare, isInCompare, compareList } = useCompare();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+    const { isAuthenticated } = useAuth();
 
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
@@ -261,6 +263,11 @@ const ProductDetailPage: React.FC = () => {
     // ── Buy Now (Direct Checkout) ─────────────────────────────────────────
     const [isChecking, setIsChecking] = useState(false);
     const handleBuyNow = async () => {
+        if (!isAuthenticated) {
+            toast.warning('Vui lòng đăng nhập để đặt hàng!');
+            return;
+        }
+
         if (!product || !selectedVariant) {
             toast.warning('Vui lòng chọn các thuộc tính sản phẩm!');
             return;

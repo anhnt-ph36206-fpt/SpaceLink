@@ -17,7 +17,7 @@ class CancelExpiredVnpayOrders extends Command
 
     public function handle()
     {
-        $expireMinutes = (int) env('VNPAY_ORDER_EXPIRE_MINUTES', 3);
+        $expireMinutes = (int) env('VNPAY_ORDER_EXPIRE_MINUTES', 1);
 
         $orders = \App\Models\Order::with('items')
             ->where('payment_method', 'vnpay')
@@ -52,17 +52,17 @@ class CancelExpiredVnpayOrders extends Command
 
                 // Đổi trạng thái Hủỷ
                 $order->update([
-                    'status'           => 'cancelled',
+                    'status' => 'cancelled',
                     'cancelled_reason' => "Hệ thống tự động hủy do giao dịch VNPAY quá hạn {$expireMinutes} phút.",
-                    'cancelled_at'     => now(),
+                    'cancelled_at' => now(),
                 ]);
 
                 // Ghi Log
                 \App\Models\OrderStatusHistory::create([
-                    'order_id'    => $order->id,
+                    'order_id' => $order->id,
                     'from_status' => 'pending',
-                    'to_status'   => 'cancelled',
-                    'note'        => "Hệ thống tự động hủy do giao dịch VNPAY quá hạn {$expireMinutes} phút.",
+                    'to_status' => 'cancelled',
+                    'note' => "Hệ thống tự động hủy do giao dịch VNPAY quá hạn {$expireMinutes} phút.",
                 ]);
 
                 // Xóa cart items liên quan

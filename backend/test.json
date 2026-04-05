@@ -1,0 +1,356 @@
+{
+  "data": [
+    {
+      "id": 17,
+      "name": "Vertu 2019 Version 7",
+      "slug": "vertu-2019-version-7",
+      "sku": "vertuvs7",
+      "price": "70000000.00",
+      "sale_price": "55000000.00",
+      "quantity": 6,
+      "image": "http://127.0.0.1:8000/storage/products/nfUw1uRFy8HjvDUJv6FcLiananbFQ4MdnJZcFbcK.jpg",
+      "images": [
+        {
+          "id": 17,
+          "image_path": "products/nfUw1uRFy8HjvDUJv6FcLiananbFQ4MdnJZcFbcK.jpg",
+          "image_url": "http://127.0.0.1:8000/storage/products/nfUw1uRFy8HjvDUJv6FcLiananbFQ4MdnJZcFbcK.jpg",
+          "is_primary": true
+        }
+      ],
+      "category": {
+        "id": 6,
+        "name": "Điện thoại khác"
+      },
+      "brand": null,
+      "is_featured": true,
+      "is_active": true
+    },
+    {
+      "id": 16,
+      "name": "Iphone7",
+      "slug": "iphone7",
+      "sku": "ip7",
+      "price": "5000000.00",
+      "sale_price": "4125000.00",
+      "quantity": 9,
+      "image": "http://127.0.0.1:8000/storage/products/6kfty8CrfM8uBEmi3E99JpI5C8Ib4zT9RYWKIt2L.webp",
+      "images": [
+        {
+          "id": 16,
+          "image_path": "products/6kfty8CrfM8uBEmi3E99JpI5C8Ib4zT9RYWKIt2L.webp",
+          "image_url": "http://127.0.0.1:8000/storage/products/6kfty8CrfM8uBEmi3E99JpI5C8Ib4zT9RYWKIt2L.webp",
+          "is_primary": true
+        }
+      ],
+      "category": {
+        "id": 2,
+        "name": "iPhone"
+      },
+      "brand": {
+        "id": 1,
+        "name": "Apple"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": 15,
+      "name": "Laptop",
+      "slug": "laptop",
+      "sku": "laptop1",
+      "price": "20000000.00",
+      "sale_price": null,
+      "quantity": 0,
+      "image": null,
+      "images": [],
+      "category": {
+        "id": 8,
+        "name": "Laptop Gaming"
+      },
+      "brand": {
+        "id": 6,
+        "name": "ASUS"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": 14,
+      "name": "iphone19",
+      "slug": "iphone19",
+      "sku": "iphone19",
+      "price": "13000000.00",
+      "sale_price": null,
+      "quantity": 0,
+      "image": null,
+      "images": [],
+      "category": {
+        "id": 4,
+        "name": "Xiaomi"
+      },
+      "brand": {
+        "id": 4,
+        "name": "Xiaomi"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": 13,
+      "name": "IphoneS",
+      "slug": "iphones",
+      "sku": "iphoneS",
+      "price": "13000000.00",
+      "sale_price": "12500000.00",
+      "quantity": 0,
+      "image": null,
+      "images": [],
+      "category": {
+        "id": 2,
+        "name": "iPhone"
+      },
+      "brand": {
+        "id": 1,
+        "name": "Apple"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": 12,
+      "name": "Tommy Xiaomi 2024",
+      "slug": "tommy-xiaomi-2024",
+      "sku": "xiaomi2024",
+      "price": "13000000.00",
+      "sale_price": null,
+      "quantity": 0,
+      "image": null,
+      "images": [],
+      "category": {
+        "id": 4,
+        "name": "Xiaomi"
+      },
+      "brand": {
+        "id": 4,
+        "name": "Xiaomi"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": 11,
+      "name": "Iphone 15 Pro",
+      "slug": "iphone-15-pro",
+      "sku": "iphone15-pro",
+      "price": "15900000.00",
+      "sale_price": "15500000.00",
+      "quantity": 39,
+      "image": "http://127.0.0.1:8000/storage/products/4ex0sJztYiampR6GlMLwrWuRklUBvHQ0shtBRxyg.webp",
+      "images": [
+        {
+          "id": 14,
+          "image_path": "products/4ex0sJztYiampR6GlMLwrWuRklUBvHQ0shtBRxyg.webp",
+          "image_url": "http://127.0.0.1:8000/storage/products/4ex0sJztYiampR6GlMLwrWuRklUBvHQ0shtBRxyg.webp",
+          "is_primary": true
+        }
+      ],
+      "category": {
+        "id": 2,
+        "name": "iPhone"
+      },
+      "brand": {
+        "id": 1,
+        "name": "Apple"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": 10,
+      "name": "Iphone 16 promax",
+      "slug": "iphone-16-promax",
+      "sku": "ip16prm",
+      "price": "27800000.00",
+      "sale_price": "27000000.00",
+      "quantity": 100,
+      "image": "http://127.0.0.1:8000/storage/products/AYFX3Q4HRsplCeD8eSgVQqAePhoZ66x5I0tWYUXb.webp",
+      "images": [
+        {
+          "id": 13,
+          "image_path": "products/AYFX3Q4HRsplCeD8eSgVQqAePhoZ66x5I0tWYUXb.webp",
+          "image_url": "http://127.0.0.1:8000/storage/products/AYFX3Q4HRsplCeD8eSgVQqAePhoZ66x5I0tWYUXb.webp",
+          "is_primary": true
+        }
+      ],
+      "category": {
+        "id": 2,
+        "name": "iPhone"
+      },
+      "brand": {
+        "id": 1,
+        "name": "Apple"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": 9,
+      "name": "Iphone17 Promax Xám Xi Măng",
+      "slug": "iphone17-promax-xam-xi-mang",
+      "sku": "iphone17-100",
+      "price": "35000000.00",
+      "sale_price": "33000000.00",
+      "quantity": 5,
+      "image": "http://127.0.0.1:8000/storage/products/JgUcpd3XVT8SBh8Eg7T3gKxo2lY5RGhhMYB19erT.jpg",
+      "images": [
+        {
+          "id": 10,
+          "image_path": "products/JgUcpd3XVT8SBh8Eg7T3gKxo2lY5RGhhMYB19erT.jpg",
+          "image_url": "http://127.0.0.1:8000/storage/products/JgUcpd3XVT8SBh8Eg7T3gKxo2lY5RGhhMYB19erT.jpg",
+          "is_primary": true
+        }
+      ],
+      "category": {
+        "id": 2,
+        "name": "iPhone"
+      },
+      "brand": {
+        "id": 1,
+        "name": "Apple"
+      },
+      "is_featured": true,
+      "is_active": true
+    },
+    {
+      "id": 1,
+      "name": "iPhone 15 Pro Max",
+      "slug": "iphone-15-pro-max-1",
+      "sku": "SKU-MPTXFK",
+      "price": "34990000.00",
+      "sale_price": "32990000.00",
+      "quantity": 79,
+      "image": "http://127.0.0.1:8000/storage/products/K2qcDIsX85hSsnAZING2WOkoBDhUmpS23aR93NhX.webp",
+      "images": [
+        {
+          "id": 1,
+          "image_path": "products/1-1.jpg",
+          "image_url": "http://127.0.0.1:8000/storage/products/1-1.jpg",
+          "is_primary": false
+        },
+        {
+          "id": 15,
+          "image_path": "products/K2qcDIsX85hSsnAZING2WOkoBDhUmpS23aR93NhX.webp",
+          "image_url": "http://127.0.0.1:8000/storage/products/K2qcDIsX85hSsnAZING2WOkoBDhUmpS23aR93NhX.webp",
+          "is_primary": true
+        }
+      ],
+      "category": {
+        "id": 2,
+        "name": "iPhone"
+      },
+      "brand": {
+        "id": 1,
+        "name": "Apple"
+      },
+      "is_featured": true,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "name": "Samsung Galaxy S24",
+      "slug": "samsung-galaxy-s24-2",
+      "sku": "SKU-8XUFM5",
+      "price": "24990000.00",
+      "sale_price": null,
+      "quantity": 54,
+      "image": "http://127.0.0.1:8000/storage/products/2-1.jpg",
+      "images": [
+        {
+          "id": 2,
+          "image_path": "products/2-1.jpg",
+          "image_url": "http://127.0.0.1:8000/storage/products/2-1.jpg",
+          "is_primary": true
+        }
+      ],
+      "category": {
+        "id": 3,
+        "name": "Samsung"
+      },
+      "brand": {
+        "id": 2,
+        "name": "Samsung"
+      },
+      "is_featured": true,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "name": "MacBook Air M2",
+      "slug": "macbook-air-m2-3",
+      "sku": "SKU-UDLZEE",
+      "price": "29990000.00",
+      "sale_price": "27990000.00",
+      "quantity": 172,
+      "image": "http://127.0.0.1:8000/storage/products/3-1.jpg",
+      "images": [
+        {
+          "id": 3,
+          "image_path": "products/3-1.jpg",
+          "image_url": "http://127.0.0.1:8000/storage/products/3-1.jpg",
+          "is_primary": true
+        }
+      ],
+      "category": {
+        "id": 7,
+        "name": "Laptop"
+      },
+      "brand": {
+        "id": 1,
+        "name": "Apple"
+      },
+      "is_featured": true,
+      "is_active": true
+    }
+  ],
+  "links": {
+    "first": "http://127.0.0.1:8000/api/products?page=1",
+    "last": "http://127.0.0.1:8000/api/products?page=2",
+    "prev": null,
+    "next": "http://127.0.0.1:8000/api/products?page=2"
+  },
+  "meta": {
+    "current_page": 1,
+    "from": 1,
+    "last_page": 2,
+    "links": [
+      {
+        "url": null,
+        "label": "&laquo; Previous",
+        "page": null,
+        "active": false
+      },
+      {
+        "url": "http://127.0.0.1:8000/api/products?page=1",
+        "label": "1",
+        "page": 1,
+        "active": true
+      },
+      {
+        "url": "http://127.0.0.1:8000/api/products?page=2",
+        "label": "2",
+        "page": 2,
+        "active": false
+      },
+      {
+        "url": "http://127.0.0.1:8000/api/products?page=2",
+        "label": "Next &raquo;",
+        "page": 2,
+        "active": false
+      }
+    ],
+    "path": "http://127.0.0.1:8000/api/products",
+    "per_page": 12,
+    "to": 12,
+    "total": 17
+  }
+}

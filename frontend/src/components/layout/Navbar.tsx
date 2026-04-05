@@ -136,11 +136,34 @@ const Navbar: React.FC = () => {
                     background: #f5f5ff;
                     color: var(--bs-primary, #0d6efd);
                 }
-                .cat-dropdown-menu .cat-togglebtn .cat-icon {
-                    width: 22px;
-                    text-align: center;
+                .cat-dropdown-menu .cat-togglebtn:hover .cat-icon {
                     color: var(--bs-primary, #0d6efd);
-                    font-size: .85rem;
+                }
+
+                /* Submenu Animation */
+                .cat-dropdown-menu .cat-item-wrap .cat-children {
+                    list-style: none;
+                    margin: 0;
+                    padding: 0;
+                    max-height: 0;
+                    overflow: hidden;
+                    opacity: 0;
+                    transition: max-height 0.3s ease, opacity 0.3s ease;
+                    background: #f8f9fa;
+                }
+                .cat-dropdown-menu .cat-item-wrap:hover .cat-children {
+                    max-height: 500px;
+                    opacity: 1;
+                }
+                .cat-dropdown-menu .cat-parent-link .cat-chevron {
+                    margin-left: auto;
+                    font-size: 0.75rem;
+                    color: #adb5bd;
+                    transition: transform 0.3s ease;
+                }
+                .cat-dropdown-menu .cat-item-wrap:hover .cat-parent-link .cat-chevron {
+                    transform: rotate(180deg);
+                    color: var(--bs-primary, #0d6efd);
                 }
             `}</style>
 
@@ -177,7 +200,7 @@ const Navbar: React.FC = () => {
                                 )}
                                 {categories.map((cat) =>
                                     cat.children && cat.children.length > 0 ? (
-                                        <div key={cat.id}>
+                                        <div key={cat.id} className="cat-item-wrap">
                                             {/* Parent as plain label, children are links */}
                                             <Link
                                                 to={`/shop?category=${cat.id}`}
@@ -186,6 +209,7 @@ const Navbar: React.FC = () => {
                                             >
                                                 <span className="cat-icon"><i className="fas fa-tag" /></span>
                                                 {cat.name}
+                                                <i className="fas fa-chevron-down cat-chevron" />
                                             </Link>
                                             <ul className="cat-children">
                                                 {cat.children.map((child) => (
@@ -203,15 +227,16 @@ const Navbar: React.FC = () => {
                                             </ul>
                                         </div>
                                     ) : (
-                                        <Link
-                                            key={cat.id}
-                                            to={`/shop?category=${cat.id}`}
-                                            className="cat-parent-link"
-                                            onClick={() => setCatOpen(false)}
-                                        >
-                                            <span className="cat-icon"><i className="fas fa-tag" /></span>
-                                            {cat.name}
-                                        </Link>
+                                        <div key={cat.id} className="cat-item-wrap">
+                                            <Link
+                                                to={`/shop?category=${cat.id}`}
+                                                className="cat-parent-link"
+                                                onClick={() => setCatOpen(false)}
+                                            >
+                                                <span className="cat-icon"><i className="fas fa-tag" /></span>
+                                                {cat.name}
+                                            </Link>
+                                        </div>
                                     )
                                 )}
                             </div>

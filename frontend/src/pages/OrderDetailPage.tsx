@@ -609,11 +609,13 @@ const OrderDetailPage: React.FC = () => {
   // 1. Hủy trực tiếp: COD pending + chưa TT VNPAY
   const canCancelDirect = order.status === 'pending' &&
     !(order.payment_method === 'vnpay' && order.payment_status === 'paid');
-  // 2. Yêu cầu hủy: VNPAY đã thanh toán, đơn còn pending/confirmed
-  const canRequestCancel = order.payment_method === 'vnpay' &&
-    order.payment_status === 'paid' &&
-    ['pending', 'confirmed'].includes(order.status) &&
-    cancelReqData?.status !== 'pending';
+  // 2. Yêu cầu hủy:
+  // - Hoặc (bất kỳ thanh toán nào) đã ở trạng thái confirmed -> cần request
+  // - Hoặc VNPAY đã TT và đang ở pending -> cần request
+  const canRequestCancel = (
+    order.status === 'confirmed' ||
+    (order.payment_method === 'vnpay' && order.payment_status === 'paid' && order.status === 'pending')
+  ) && cancelReqData?.status !== 'pending';
   const hasPendingCancelReq = cancelReqData?.status === 'pending';
   const canConfirmReceived = order.status === 'delivered';
 
@@ -1310,7 +1312,8 @@ const OrderDetailPage: React.FC = () => {
                     style={{ background: '#fff7ed', border: '1.5px solid #fd7e14', color: '#b45309' }}
                     onClick={() => setCancelReqOpen(true)}
                   >
-                    <i className="fas fa-rotate-left me-2" />Yêu cầu hủy &amp; hoàn tiền
+                    <i className="fas fa-rotate-left me-2" />
+                    {order.payment_status === 'paid' ? 'Yêu cầu hủy & hoàn tiền' : 'Tôi muốn hủy đơn'}
                   </button>
                 )}
 
@@ -1371,9 +1374,9 @@ const OrderDetailPage: React.FC = () => {
                     )}
                   </>
                 )}
-                {['confirmed', 'processing', 'shipping'].includes(order.status) && (
+                {['processing', 'shipping'].includes(order.status) && (
                   <div className="od-lock-hint">
-                    <i className="fas fa-lock me-2" />Đơn hàng đang xử lý, không thể hủy
+                    <i className="fas fa-lock me-2" />Đơn hàng đã được bàn giao đóng gói/vận chuyển, không thể hủy
                   </div>
                 )}
                 {/* Nút Khiếu nại */}
@@ -1511,9 +1514,12 @@ const OrderDetailPage: React.FC = () => {
             <div className="od-modal-hd">
               <div>
                 <div className="od-modal-title">
-                  <i className="fas fa-rotate-left me-2" style={{ color: '#fd7e14' }} />Yêu cầu hủy &amp; hoàn tiền
+                  <i className="fas fa-rotate-left me-2" style={{ color: '#fd7e14' }} />Yêu cầu hủy đơn hàng
                 </div>
-                <div className="od-modal-sub">Đơn <strong>#{order.order_code}</strong> đã thanh toán VNPAY. Admin sẽ xử lý hoàn tiền thủ công.</div>
+                <div className="od-modal-sub">
+                  Đơn <strong>#{order.order_code}</strong> sẽ được gửi yêu cầu hủy đến Admin.
+                  {order.payment_status === 'paid' && ' Admin sẽ liên hệ và xử lý hoàn tiền.'}
+                </div>
               </div>
               <button className="od-modal-x" onClick={() => setCancelReqOpen(false)}><i className="fas fa-times" /></button>
             </div>
@@ -1529,17 +1535,19 @@ const OrderDetailPage: React.FC = () => {
               />
               <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>{cancelReqReason.length}/1000</div>
 
-              <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff7ed', borderRadius: 10, border: '1px solid #fed7aa' }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: '#b45309', marginBottom: 10 }}>
-                  <i className="fas fa-university me-2" />Thông tin tài khoản nhận hoàn tiền
+              {order.payment_status === 'paid' && (
+                <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff7ed', borderRadius: 10, border: '1px solid #fed7aa' }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: '#b45309', marginBottom: 10 }}>
+                    <i className="fas fa-university me-2" />Thông tin tài khoản nhận hoàn tiền
+                  </div>
+                  <label className="od-modal-label">Ngân hàng</label>
+                  <input className="od-textarea" style={{ minHeight: 38 }} placeholder="Vd: Vietcombank, MB Bank..." value={cancelReqBank.bank} onChange={e => setCancelReqBank(b => ({ ...b, bank: e.target.value }))} />
+                  <label className="od-modal-label" style={{ marginTop: 8 }}>Tên chủ tài khoản</label>
+                  <input className="od-textarea" style={{ minHeight: 38 }} placeholder="Nguyễn Văn A" value={cancelReqBank.accountName} onChange={e => setCancelReqBank(b => ({ ...b, accountName: e.target.value }))} />
+                  <label className="od-modal-label" style={{ marginTop: 8 }}>Số tài khoản</label>
+                  <input className="od-textarea" style={{ minHeight: 38 }} placeholder="0123456789" value={cancelReqBank.accountNumber} onChange={e => setCancelReqBank(b => ({ ...b, accountNumber: e.target.value }))} />
                 </div>
-                <label className="od-modal-label">Ngân hàng</label>
-                <input className="od-textarea" style={{ minHeight: 38 }} placeholder="Vd: Vietcombank, MB Bank..." value={cancelReqBank.bank} onChange={e => setCancelReqBank(b => ({ ...b, bank: e.target.value }))} />
-                <label className="od-modal-label" style={{ marginTop: 8 }}>Tên chủ tài khoản</label>
-                <input className="od-textarea" style={{ minHeight: 38 }} placeholder="Nguyễn Văn A" value={cancelReqBank.accountName} onChange={e => setCancelReqBank(b => ({ ...b, accountName: e.target.value }))} />
-                <label className="od-modal-label" style={{ marginTop: 8 }}>Số tài khoản</label>
-                <input className="od-textarea" style={{ minHeight: 38 }} placeholder="0123456789" value={cancelReqBank.accountNumber} onChange={e => setCancelReqBank(b => ({ ...b, accountNumber: e.target.value }))} />
-              </div>
+              )}
 
               <div style={{ marginTop: 12, fontSize: 12, color: '#6c757d', background: '#f8f9fa', padding: '10px 12px', borderRadius: 8 }}>
                 <i className="fas fa-info-circle me-1" /> Sau khi gửi yêu cầu, chúng tôi sẽ liên hệ xác nhận và hoàn tiền trong <strong>3–5 ngày làm việc</strong>.

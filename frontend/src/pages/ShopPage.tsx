@@ -17,11 +17,6 @@ interface CategoryNode {
     children?: CategoryNode[];
 }
 
-interface Brand {
-    id: number;
-    name: string;
-}
-
 interface ProductResponse {
     id: number;
     name: string;
@@ -41,13 +36,15 @@ const ShopPage: React.FC = () => {
 
     const [products, setProducts]       = useState<Product[]>([]);
     const [categories, setCategories]   = useState<CategoryNode[]>([]);
-    const [brands, setBrands]           = useState<Brand[]>([]);
+
     const [loading, setLoading]         = useState(false);
     const [page, setPage]               = useState(1);
     const [totalPages, setTotalPages]   = useState(1);
     const [sort, setSort]               = useState("");
     const [priceRange, setPriceRange]   = useState(50000000);
     const [debouncePrice, setDebouncePrice] = useState(priceRange);
+    const [expandedCats, setExpandedCats] = useState<Record<number, boolean>>({});
+    const [totalProducts, setTotalProducts] = useState(0);
 
     // Read ?category= from URL (stays in sync with React Router)
     const selectedCategory = searchParams.get("category")
@@ -83,6 +80,7 @@ const ShopPage: React.FC = () => {
                 isSale: !!item.sale_price,
             })));
             setTotalPages(res.data.meta?.last_page ?? 1);
+            setTotalProducts(res.data.meta?.total ?? data.length);
         } catch (e) {
             console.error("Lỗi tải sản phẩm:", e);
         } finally {
@@ -90,15 +88,11 @@ const ShopPage: React.FC = () => {
         }
     }, [page, selectedCategory, sort, debouncePrice]);
 
-    /* ── Fetch filter data (categories tree + brands) ───── */
+    /* ── Fetch filter data (categories tree) ──────────────── */
     const fetchFilters = async () => {
         try {
-            const [catRes, brandRes] = await Promise.all([
-                axiosInstance.get("/categories", { params: { type: "tree" } }),
-                axiosInstance.get("/brands"),
-            ]);
+            const catRes = await axiosInstance.get("/categories", { params: { type: "tree" } });
             setCategories(catRes.data.data ?? []);
-            setBrands(brandRes.data.data ?? brandRes.data ?? []);
         } catch (e) {
             console.error("Lỗi tải filters:", e);
         }
@@ -160,11 +154,71 @@ const ShopPage: React.FC = () => {
                 {/* ── SIDEBAR ────────────────────────────── */}
                 <div className="col-lg-3">
 
-                    {/* Category tree */}
-                    <div className="border rounded p-4 mb-4">
-                        <h5 className="mb-3 fw-bold">Danh mục</h5>
+                    {/* Category animation styles */}
+                    <style>{`
+                        @keyframes catSlideDown {
+                            from { opacity: 0; transform: translateY(-8px); }
+                            to   { opacity: 1; transform: translateY(0); }
+                        }
+                        @keyframes catSlideUp {
+                            from { opacity: 1; transform: translateY(0); }
+                            to   { opacity: 0; transform: translateY(-8px); }
+                        }
+                        .cat-children-wrap {
+                            overflow: hidden;
+                            border-left: 2px solid #dbeafe;
+                            margin-left: 16px;
+                        }
+                        .cat-children-wrap.expanding {
+                            animation: catSlideDown 0.28s ease forwards;
+                        }
+                        .cat-children-wrap.collapsed {
+                            display: none;
+                        }
+                        .cat-child-item {
+                            opacity: 0;
+                            transform: translateX(-6px);
+                            animation: catChildFadeIn 0.25s ease forwards;
+                        }
+                        @keyframes catChildFadeIn {
+                            to { opacity: 1; transform: translateX(0); }
+                        }
+                        .cat-parent-row {
+                            transition: background 0.2s, box-shadow 0.2s;
+                            cursor: pointer;
+                        }
+                        .cat-parent-row:hover {
+                            background: #f0f4ff !important;
+                            box-shadow: 0 1px 4px rgba(13,110,253,.08);
+                        }
+                        .cat-toggle-btn {
+                            transition: all 0.25s ease;
+                        }
+                        .cat-toggle-btn:hover {
+                            transform: scale(1.15);
+                        }
+                        .cat-toggle-icon {
+                            transition: transform 0.3s ease;
+                            display: inline-block;
+                        }
+                        .cat-toggle-icon.open {
+                            transform: rotate(180deg);
+                        }
+                    `}</style>
 
-                        <div className="form-check mb-2">
+                    {/* Category tree */}
+                    <div className="border rounded p-4 mb-4" style={{ background: '#fafbfc' }}>
+                        <h5 className="mb-3 fw-bold d-flex align-items-center gap-2">
+                            <i className="fas fa-th-list text-primary" />
+                            Danh mục sản phẩm
+                        </h5>
+
+                        <div
+                            className="form-check mb-2 py-2 px-2 rounded cat-parent-row"
+                            style={{
+                                background: selectedCategory === null ? '#e8f0fe' : 'transparent',
+                            }}
+                        >
                             <input
                                 type="radio"
                                 className="form-check-input"
@@ -172,62 +226,99 @@ const ShopPage: React.FC = () => {
                                 checked={selectedCategory === null}
                                 onChange={() => handleCategoryChange(null)}
                             />
-                            <label className="form-check-label fw-semibold" htmlFor="cat-all">
+                            <label className="form-check-label fw-semibold" htmlFor="cat-all" style={{ cursor: 'pointer' }}>
+                                <i className="fas fa-border-all me-2 text-primary small" />
                                 Tất cả sản phẩm
                             </label>
                         </div>
 
-                        {categories.map((cat) => (
-                            <div key={cat.id} className="mb-1">
-                                {/* Parent */}
-                                <div className="form-check">
-                                    <input
-                                        type="radio"
-                                        className="form-check-input"
-                                        id={`cat-${cat.id}`}
-                                        checked={selectedCategory === cat.id}
-                                        onChange={() => handleCategoryChange(cat.id)}
-                                    />
-                                    <label className="form-check-label fw-semibold" htmlFor={`cat-${cat.id}`}>
-                                        {cat.name}
-                                    </label>
-                                </div>
-                                {/* Children */}
-                                {cat.children?.map((child) => (
-                                    <div key={child.id} className="form-check ms-3 mt-1">
-                                        <input
-                                            type="radio"
-                                            className="form-check-input"
-                                            id={`cat-${child.id}`}
-                                            checked={selectedCategory === child.id}
-                                            onChange={() => handleCategoryChange(child.id)}
-                                        />
-                                        <label className="form-check-label text-muted small" htmlFor={`cat-${child.id}`}>
-                                            ↳ {child.name}
-                                        </label>
-                                    </div>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
+                        <hr className="my-2" style={{ borderColor: '#e2e8f0' }} />
 
-                    {/* Brand */}
-                    <div className="border rounded p-4 mb-4">
-                        <h5 className="mb-3 fw-bold">Thương hiệu</h5>
-                        {brands.map((brand) => (
-                            <div key={brand.id} className="form-check mb-2">
-                                <input
-                                    type="radio"
-                                    className="form-check-input"
-                                    id={`brand-${brand.id}`}
-                                    checked={false}
-                                    onChange={() => setPage(1)}
-                                />
-                                <label className="form-check-label" htmlFor={`brand-${brand.id}`}>
-                                    {brand.name}
-                                </label>
-                            </div>
-                        ))}
+                        {categories.map((cat) => {
+                            const isExpanded = expandedCats[cat.id];
+                            const hasChildren = cat.children && cat.children.length > 0;
+                            const isParentActive = selectedCategory === cat.id;
+                            const isChildActive = hasChildren && cat.children!.some(c => c.id === selectedCategory);
+                            return (
+                                <div key={cat.id} className="mb-1">
+                                    {/* Parent */}
+                                    <div
+                                        className="d-flex align-items-center justify-content-between py-2 px-2 rounded cat-parent-row"
+                                        style={{
+                                            background: isParentActive || isChildActive ? '#e8f0fe' : 'transparent',
+                                        }}
+                                    >
+                                        <div className="form-check m-0">
+                                            <input
+                                                type="radio"
+                                                className="form-check-input"
+                                                id={`cat-${cat.id}`}
+                                                checked={selectedCategory === cat.id}
+                                                onChange={() => handleCategoryChange(cat.id)}
+                                            />
+                                            <label className="form-check-label fw-semibold" htmlFor={`cat-${cat.id}`} style={{ cursor: 'pointer' }}>
+                                                {cat.name}
+                                            </label>
+                                        </div>
+                                        {hasChildren && (
+                                            <button
+                                                className="btn btn-sm p-0 border-0 cat-toggle-btn"
+                                                style={{
+                                                    boxShadow: 'none',
+                                                    width: 26, height: 26,
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    borderRadius: '50%',
+                                                    background: isExpanded ? '#dbeafe' : '#f1f5f9',
+                                                    color: isExpanded ? '#0d6efd' : '#94a3b8',
+                                                }}
+                                                onClick={() => setExpandedCats(prev => ({ ...prev, [cat.id]: !prev[cat.id] }))}
+                                            >
+                                                <i
+                                                    className={`fas fa-chevron-down cat-toggle-icon${isExpanded ? ' open' : ''}`}
+                                                    style={{ fontSize: 10 }}
+                                                />
+                                            </button>
+                                        )}
+                                    </div>
+                                    {/* Children */}
+                                    {hasChildren && (
+                                        <div className={`cat-children-wrap${isExpanded ? ' expanding' : ' collapsed'}`}>
+                                            {isExpanded && cat.children!.map((child, idx) => (
+                                                <div
+                                                    key={child.id}
+                                                    className="form-check ms-3 py-1 px-2 rounded cat-child-item"
+                                                    style={{
+                                                        background: selectedCategory === child.id ? '#dbeafe' : 'transparent',
+                                                        animationDelay: `${idx * 0.05}s`,
+                                                        marginTop: idx === 0 ? 4 : 2,
+                                                    }}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        className="form-check-input"
+                                                        id={`cat-${child.id}`}
+                                                        checked={selectedCategory === child.id}
+                                                        onChange={() => handleCategoryChange(child.id)}
+                                                    />
+                                                    <label
+                                                        className="form-check-label small"
+                                                        htmlFor={`cat-${child.id}`}
+                                                        style={{
+                                                            cursor: 'pointer',
+                                                            color: selectedCategory === child.id ? '#0d6efd' : '#64748b',
+                                                            fontWeight: selectedCategory === child.id ? 600 : 400,
+                                                            transition: 'color 0.2s, font-weight 0.2s',
+                                                        }}
+                                                    >
+                                                        {child.name}
+                                                    </label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
 
                     {/* Price range */}
@@ -250,7 +341,7 @@ const ShopPage: React.FC = () => {
                 {/* ── PRODUCTS ───────────────────────────── */}
                 <div className="col-lg-9">
                     <div className="d-flex justify-content-between align-items-center mb-4">
-                        <p className="mb-0">Tìm thấy <b>{products.length}</b> sản phẩm</p>
+                        <p className="mb-0">Tìm thấy <b>{totalProducts}</b> sản phẩm</p>
                         <select
                             className="form-select w-auto"
                             value={sort}
