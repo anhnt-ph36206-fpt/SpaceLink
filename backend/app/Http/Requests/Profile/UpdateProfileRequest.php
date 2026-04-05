@@ -22,11 +22,11 @@ class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'fullname'      => 'nullable|string|max:150', // Partial update: không bắt buộc
-            'phone'         => 'nullable|string|max:20',
-            'gender'        => 'nullable|in:male,female,other',
+            'fullname' => 'nullable|string|max:150', // Partial update: không bắt buộc
+            'phone' => 'nullable|string|max:20',
+            'gender' => 'nullable|in:male,female,other',
             'date_of_birth' => 'nullable|date|before:today',
-            'avatar'        => 'nullable|string|max:500',
+            'avatar' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:5120', // 5MB
         ];
     }
 }

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\User\StoreUserRequest;
 use App\Http\Requests\Admin\User\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -48,6 +50,31 @@ class UserController extends Controller
     }
 
     // =========================================================================
+    // POST /api/admin/users — Tạo user mới (admin endpoint)
+    // =========================================================================
+    public function store(StoreUserRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+        $data['password'] = Hash::make($data['password']);
+
+        if (!isset($data['role_id'])) {
+            $data['role_id'] = User::ROLE_CUSTOMER;
+        }
+        if (!isset($data['status'])) {
+            $data['status'] = User::STATUS_ACTIVE;
+        }
+
+        $user = User::create($data);
+        $user->load('role');
+
+        return response()->json([
+            'status'  => true,
+            'message' => "Tạo người dùng \"{$user->fullname}\" thành công.",
+            'data'    => new UserResource($user),
+        ], 201);
+    }
+
+    // =========================================================================
     // GET /api/admin/users/{id} — Chi tiết người dùng
     // =========================================================================
     public function show(string $id): JsonResponse
@@ -73,12 +100,29 @@ class UserController extends Controller
     }
 
     // =========================================================================
-    // PUT /api/admin/users/{id} — Cập nhật user (role, status, profile)
+    // PUT /api/admin/users/{id} — Cập nhật user (role, status, profile, password)
     // =========================================================================
     public function update(UpdateUserRequest $request, string $id): JsonResponse
     {
         $user = User::findOrFail($id);
-        $user->update($request->validated());
+        $currentUser = $request->user();
+
+        // An toàn: admin không thể tự đổi role chính mình
+        if ($user->id === $currentUser->id && $request->has('role_id') && (int) $request->role_id !== $currentUser->role_id) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Bạn không thể thay đổi quyền của chính mình.',
+            ], 400);
+        }
+
+        $data = $request->validated();
+
+        // Hash password nếu có gửi lên
+        if (isset($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        }
+
+        $user->update($data);
         $user->load('role');
 
         return response()->json([
@@ -134,3 +178,4 @@ class UserController extends Controller
         ]);
     }
 }
+

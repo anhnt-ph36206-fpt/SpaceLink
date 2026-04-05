@@ -225,7 +225,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
 
     Route::apiResource('vouchers', \App\Http\Controllers\Api\Admin\VoucherController::class);
 
-    Route::apiResource('users', AdminUserController::class)->except(['store']);
+    Route::apiResource('users', AdminUserController::class);
     Route::post('users/{user}/restore', [AdminUserController::class, 'restore']);
 
     Route::get('reviews', [AdminReviewController::class, 'index']);

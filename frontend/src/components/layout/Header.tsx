@@ -137,8 +137,24 @@ const Header: React.FC = () => {
                             <span className="text-muted mx-2">|</span>
 
                             <div className="dropdown">
-                                <span className="dropdown-toggle text-muted ms-2" data-bs-toggle="dropdown" style={{ cursor: 'pointer' }}>
-                                    <small><i className="fa fa-user me-2"></i> {user ? `Xin Chào, ${user.fullname}` : 'Tài khoản'}</small>
+                                <span className="dropdown-toggle text-muted ms-2 d-inline-flex align-items-center" data-bs-toggle="dropdown" style={{ cursor: 'pointer' }}>
+                                    {user?.avatar ? (
+                                        <img
+                                            src={user.avatar}
+                                            alt={user.fullname}
+                                            style={{
+                                                width: 30, height: 30,
+                                                borderRadius: '50%',
+                                                objectFit: 'cover',
+                                                border: '2px solid #0d6efd',
+                                                marginRight: 8,
+                                                boxShadow: '0 2px 8px rgba(13,110,253,0.2)',
+                                            }}
+                                        />
+                                    ) : (
+                                        <i className="fa fa-user me-2"></i>
+                                    )}
+                                    <small>{user ? `Xin Chào, ${user.fullname}` : 'Tài khoản'}</small>
                                 </span>
                                 <div className="dropdown-menu rounded">
                                     {!user ? (
@@ -148,12 +164,45 @@ const Header: React.FC = () => {
                                         </>
                                     ) : (
                                         <>
-                                            <Link to="/profile" className="dropdown-item">Tài khoản của tôi</Link>
-                                            <button onClick={logout} className="dropdown-item w-100 text-start bg-transparent border-0">Đăng xuất</button>
+                                            <Link to="/profile" className="dropdown-item">
+                                                <div className="d-flex align-items-center py-1">
+                                                    {user.avatar ? (
+                                                        <img
+                                                            src={user.avatar}
+                                                            alt={user.fullname}
+                                                            style={{
+                                                                width: 36, height: 36,
+                                                                borderRadius: '50%',
+                                                                objectFit: 'cover',
+                                                                border: '2px solid #e8f0fe',
+                                                                marginRight: 10,
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div style={{
+                                                            width: 36, height: 36,
+                                                            borderRadius: '50%',
+                                                            background: 'linear-gradient(135deg, #0d6efd, #084298)',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            color: '#fff', fontSize: 14, marginRight: 10,
+                                                        }}>
+                                                            <i className="fas fa-user" />
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <div style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e' }}>{user.fullname}</div>
+                                                        <div style={{ fontSize: 11, color: '#8590a3' }}>{user.email}</div>
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                            <div className="dropdown-divider"></div>
+                                            <Link to="/profile" className="dropdown-item"><i className="fas fa-user-circle me-2 text-primary"></i>Tài khoản của tôi</Link>
+                                            <button onClick={logout} className="dropdown-item w-100 text-start bg-transparent border-0"><i className="fas fa-sign-out-alt me-2 text-danger"></i>Đăng xuất</button>
                                         </>
                                     )}
-                                    <Link to="/wishlist" className="dropdown-item">Yêu thích</Link>
-                                    <Link to="/cart" className="dropdown-item">Giỏ hàng</Link>
+                                    <div className="dropdown-divider"></div>
+                                    <Link to="/wishlist" className="dropdown-item"><i className="fas fa-heart me-2 text-primary"></i>Yêu thích</Link>
+                                    <Link to="/cart" className="dropdown-item"><i className="fas fa-shopping-bag me-2 text-primary"></i>Giỏ hàng</Link>
                                 </div>
                             </div>
                         </div >

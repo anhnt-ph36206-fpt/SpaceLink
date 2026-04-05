@@ -250,7 +250,7 @@ class AuthController extends Controller
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Mật khẩu hiện tại không chính xác.',
-            ], 401);
+            ], 422);
         }
 
         $user->update(['password' => Hash::make($request->password)]);
