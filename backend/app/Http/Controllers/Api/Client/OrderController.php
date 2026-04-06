@@ -276,7 +276,8 @@ class OrderController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Bạn không có quyền truy cập đơn hàng này.'], 403);
         }
 
-        // Chỉ cho phép hủy đơn VNPAY chưa thanh toán
+        // Bug #3 Fix: chỉ cho phép hủy đơn VNPAY chưa thanh toán và đang ở trạng thái pending
+        // Ngăn race condition: đơn đã confirmed (kho đã trừ) nhưng payment vẫn unpaid
         if ($order->payment_method !== 'vnpay' || $order->payment_status !== 'unpaid') {
             return response()->json([
                 'status' => 'error',
@@ -284,11 +285,11 @@ class OrderController extends Controller
             ], 422);
         }
 
-        // Bảo vệ: không hủy nếu đã cancelled hoặc đã có trạng thái khác
-        if (in_array($order->status, ['cancelled', 'completed', 'shipping', 'delivered'])) {
+        // Chỉ cho phép hủy khi đang pending (giống cancel() của COD)
+        if ($order->status !== 'pending') {
             return response()->json([
                 'status' => 'error',
-                'message' => "Không thể hủy đơn đang ở trạng thái \"{$order->status}\".",
+                'message' => "Không thể hủy đơn đang ở trạng thái \"{$order->status}\". Chỉ có thể hủy khi đơn đang chờ xử lý (pending).",
             ], 422);
         }
 
@@ -481,9 +482,9 @@ class OrderController extends Controller
         }
 
         DB::transaction(function () use ($order, $user) {
+            // Bug #2 Fix: bỏ 'vnpay_expired_at' — field này không có trong Order::$fillable
             $order->update([
-                'payment_method'  => 'cod',
-                'vnpay_expired_at' => null,
+                'payment_method' => 'cod',
             ]);
 
             OrderStatusHistory::create([

@@ -21,9 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/*',
         ]);
 
-        // Đăng ký middleware alias cho Admin
+        // Đăng ký middleware alias cho Admin và Staff
         $middleware->alias([
             'admin' => \App\Http\Middleware\CheckAdmin::class,
+            'staff' => \App\Http\Middleware\CheckStaff::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

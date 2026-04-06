@@ -250,7 +250,8 @@ class CheckoutController extends Controller
                     $voucher->increment('used_count');
                 }
 
-                OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => 'pending', 'note' => 'Đơn hàng được khởi tạo.', 'changed_by' => $user?->id]);
+                // Bug #8 Fix: thêm from_status để nhất quán với các chỗ khác
+                OrderStatusHistory::create(['order_id' => $order->id, 'from_status' => null, 'to_status' => 'pending', 'note' => 'Đơn hàng được khởi tạo.', 'changed_by' => $user?->id]);
 
                 // Admin notification: đơn hàng mới
                 AdminNotification::notify(
@@ -358,25 +359,15 @@ class CheckoutController extends Controller
                 $voucherDiscount = 0;
                 $voucher = null;
 
+                // Bug #5 Fix: sử dụng applyVoucher() thay inline logic để đảm bảo
+                // đầy đủ các check: used_count, usage_limit_per_user, product_id, category_id
                 if ($request->filled('voucher_code')) {
-                    $voucher = Voucher::where('code', $request->voucher_code)->where('is_active', true)
-                        ->where('start_date', '<=', now())->where('end_date', '>=', now())->lockForUpdate()->first();
-                    if (!$voucher) {
-                        throw new \Exception('Mã giảm giá không hợp lệ hoặc đã hết hạn.');
-                    }
-                    if ($subtotal < $voucher->min_order_amount) {
-                        throw new \Exception('Đơn hàng chưa đạt mức tối thiểu.');
-                    }
-
-                    if ($voucher->discount_type === 'percent') {
-                        $discount = $subtotal * ($voucher->discount_value / 100);
-                        if ($voucher->max_discount && $discount > $voucher->max_discount) {
-                            $discount = $voucher->max_discount;
-                        }
-                        $voucherDiscount = $discount;
-                    } else {
-                        $voucherDiscount = $voucher->discount_value;
-                    }
+                    [$voucher, $voucherDiscount] = $this->applyVoucher(
+                        $request->voucher_code,
+                        $subtotal,
+                        $user->id,
+                        $cartItems
+                    );
                 }
 
                 $totalAmount = max(0, $subtotal + $shippingFee - $voucherDiscount);
@@ -404,17 +395,25 @@ class CheckoutController extends Controller
                     $effectivePrice = $this->resolvePrice($item, $lockedVariants);
                     $variant = $item->variant_id ? $lockedVariants->find($item->variant_id) : null;
 
-                    // Lazy deduction: KHÔNG trừ kho — sẽ trừ trong vnpayIpn() khi thanh toán thành công
+                    // Bug #1 Fix: dùng đúng field names theo OrderItem::$fillable
+                    // Thêm product_image, product_sku (thay 'sku'), total
+                    $variantInfo = $variant ? [
+                        'sku'   => $variant->sku,
+                        'image' => $variant->image,
+                        'attrs' => $variant->attributes?->map(fn($a) => ['name' => $a->name, 'value' => $a->value])?->toArray(),
+                    ] : null;
 
                     OrderItem::create([
-                        'order_id' => $order->id,
-                        'product_id' => $item->product_id,
-                        'variant_id' => $item->variant_id,
-                        'product_name' => $item->product->name,
-                        'variant_info' => null,
-                        'sku' => $variant->sku,
-                        'quantity' => $item->quantity,
-                        'price' => $effectivePrice,
+                        'order_id'      => $order->id,
+                        'product_id'    => $item->product_id,
+                        'variant_id'    => $item->variant_id,
+                        'product_name'  => $item->product->name,
+                        'product_image' => $item->product->images->first()?->image_url ?? $variant?->image,
+                        'product_sku'   => $variant?->sku ?? $item->product->sku,
+                        'variant_info'  => $variantInfo,
+                        'price'         => $effectivePrice,
+                        'quantity'      => $item->quantity,
+                        'total'         => $effectivePrice * $item->quantity,
                     ]);
                 }
 

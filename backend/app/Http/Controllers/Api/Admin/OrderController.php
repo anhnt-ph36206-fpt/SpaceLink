@@ -491,7 +491,14 @@ class OrderController extends Controller
             $productReturn->reason_for_refusal = $reason;
             $productReturn->save();
 
-            $restoreStatus = $order->completed_at ? 'completed' : 'delivered';
+            // Bug #6 Fix: dùng delivered_at thay completed_at
+            // completed_at chỉ set khi khách xác nhận nhận hàng — không phải mốc giao hàng
+            // delivered_at đáng tin cậy hơn: có để restore 'delivered', không có là chưa giao
+            $restoreStatus = $order->delivered_at ? 'delivered' : 'completed';
+            // Fallback: nếu quả thực đã completed (có cả 2 mốc) thì restore về completed
+            if ($order->delivered_at && $order->completed_at) {
+                $restoreStatus = 'completed';
+            }
             $order->update(['status' => $restoreStatus]);
 
             OrderStatusHistory::create([
@@ -520,6 +527,67 @@ class OrderController extends Controller
             'status' => true,
             'message' => 'Đã từ chối hoàn trả. Trạng thái đơn hàng đã được khôi phục.',
             'data' => new OrderResource($order),
+        ]);
+    }
+    // =========================================================================
+    // POST /api/admin/orders/{id}/refund-out-of-stock
+    // Bug #7 Fix: Luồng hoàn tiền riêng cho đơn bị hủy do hết hàng sau VNPAY
+    // Khác với updatePaymentStatus(): không yêu cầu status='returned' + productReturn
+    // =========================================================================
+    public function refundOutOfStock(\Illuminate\Http\Request $request, string $id): JsonResponse
+    {
+        $admin = $request->user();
+        $order = Order::findOrFail($id);
+
+        // Chỉ dành cho đơn bị hủy đúng lý do hết hàng sau thanh toán VNPAY
+        if ($order->status !== 'cancelled' || $order->cancelled_reason !== 'out_of_stock_after_payment') {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Endpoint này chỉ dành cho đơn bị hủy do hết hàng sau thanh toán VNPAY.',
+            ], 422);
+        }
+
+        // Không cần thanh toán lại nếu đã refunded rồi
+        if (in_array($order->payment_status, ['refunded', 'partial_refund'], true)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Đơn hàng này đã được hoàn tiền.',
+            ], 422);
+        }
+
+        $transactionCode = $request->input('transaction_code', '');
+        $note = $request->input('note', 'Admin xác nhận đã hoàn tiền cho khách.');
+
+        DB::transaction(function () use ($order, $admin, $transactionCode, $note): void {
+            $order->update([
+                'payment_status' => 'refunded',
+                'admin_note'     => $note . ($transactionCode ? ' | Mã GD hoàn tiền: ' . $transactionCode : ''),
+            ]);
+
+            OrderStatusHistory::create([
+                'order_id'    => $order->id,
+                'from_status' => 'cancelled',
+                'to_status'   => 'cancelled',
+                'note'        => 'Admin xác nhận đã hoàn tiền cho đơn hết hàng sau VNPAY.' . ($transactionCode ? ' Mã GD: ' . $transactionCode : ''),
+                'changed_by'  => $admin->id,
+            ]);
+        });
+
+        // Thông báo cho khách
+        if ($order->user_id) {
+            UserNotification::notify(
+                $order->user_id,
+                'payment_refunded',
+                '💰 Đã hoàn tiền cho đơn hàng hết hàng',
+                "Đơn #{$order->order_code} đã được hoàn tiền toàn bộ sau khi bị hủy do hết hàng. Xin lỗi về sự cố này.",
+                $order->id
+            );
+        }
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Đã cập nhật trạng thái hoàn tiền thành công.',
+            'data'    => new OrderResource($order->fresh()),
         ]);
     }
 }
