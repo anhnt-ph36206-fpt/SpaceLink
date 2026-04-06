@@ -18,6 +18,7 @@ import {
     PictureOutlined,
     FileTextOutlined,
     CommentOutlined,
+    MessageOutlined,
     GiftOutlined,
     CheckOutlined,
     ToolOutlined,
@@ -86,6 +87,11 @@ const menuItems = [
         label: 'Đánh giá',
     },
     {
+        key: '/admin/comments',
+        icon: <MessageOutlined />,
+        label: 'Bình luận',
+    },
+    {
         key: '/admin/vouchers',
         icon: <GiftOutlined />,
         label: 'Mã giảm giá',
@@ -104,6 +110,7 @@ const breadcrumbMap: Record<string, string> = {
     '/admin/orders': 'Đơn hàng',
     '/admin/users': 'Người dùng',
     '/admin/reviews': 'Đánh giá',
+    '/admin/comments': 'Bình luận',
     '/admin/vouchers': 'Mã giảm giá',
 };
 

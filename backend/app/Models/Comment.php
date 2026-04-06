@@ -50,7 +50,7 @@ class Comment extends Model
         return $this->hasMany(Comment::class , 'parent_id')
             ->where('is_hidden', false)
             ->where('status', 'approved')
-            ->with('user:id,fullname,avatar')
+            ->with('user:id,fullname,avatar,role_id')
             ->latest()
             ->limit(5);
     }
