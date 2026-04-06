@@ -16,8 +16,14 @@ const Layout: React.FC<LayoutProps> = ({ children, showSpinner = false }) => {
     return (
         <>
             {showSpinner && <Spinner />}
-            <Header />
-            <Navbar />
+            <div className="d-flex flex-column">
+                <div className="order-2 order-lg-1">
+                    <Header />
+                </div>
+                <div className="order-1 order-lg-2">
+                    <Navbar />
+                </div>
+            </div>
             <main>{children}</main>
             <Footer />
             <BackToTop />

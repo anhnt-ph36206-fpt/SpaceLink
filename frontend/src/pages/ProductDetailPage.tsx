@@ -92,7 +92,6 @@ const ProductDetailPage: React.FC = () => {
     const [mainImg, setMainImg] = useState<string | null>(null);
     const [defaultMainImg, setDefaultMainImg] = useState<string | null>(null);
     const [qty, setQty] = useState(1);
-    const [activeTab, setActiveTab] = useState<'desc' | 'content' | 'tech_specs' | 'reviews' | 'comments'>('desc');
     const [relatedProducts, setRelatedProducts] = useState<{ id: string; name: string; image: string; price: number; oldPrice?: number; category?: string; rating?: number; isSale?: boolean; isNew?: boolean }[]>([]);
 
     // ── Reviews state ──────────────────────────────────────────────────
@@ -442,14 +441,16 @@ const ProductDetailPage: React.FC = () => {
                             )}
 
                             {/* Price */}
-                            <div className="bg-light rounded-3 p-3 mb-4 d-flex align-items-center gap-3">
-                                <span className="fw-bold" style={{ fontSize: 30, color: '#ff7a00' }}>
+                            <div className="bg-light rounded-3 p-3 mb-4 d-flex align-items-center flex-wrap gap-2 gap-md-3">
+                                <span className="fw-bold" style={{ fontSize: 'clamp(24px, 5vw, 30px)', color: '#ff7a00' }}>
                                     {formatVND(displayPrice)}
                                 </span>
                                 {discountPct > 0 && (
                                     <>
-                                        <del className="text-muted fs-6">{formatVND(originalPrice)}</del>
-                                        <span className="badge rounded-pill" style={{ backgroundColor: '#ff7a00' }}>
+                                        <del className="text-muted" style={{ fontSize: 'clamp(14px, 3vw, 16px)' }}>
+                                            {formatVND(originalPrice)}
+                                        </del>
+                                        <span className="badge rounded-pill" style={{ backgroundColor: '#ff7a00', fontSize: '13px', padding: '6px 10px' }}>
                                             Tiết kiệm {discountPct}%
                                         </span>
                                     </>
@@ -533,69 +534,70 @@ const ProductDetailPage: React.FC = () => {
                                 )}
                             </p>
 
-                            <div className="d-flex align-items-center gap-3 pt-4 border-top mt-4 flex-wrap">
-                                {/* Qty picker - Premium Styled */}
-                                <div
-                                    className="d-flex align-items-center"
-                                    style={{
-                                        height: 48,
-                                        border: '1px solid #dee2e6',
-                                        borderRadius: 12,
-                                        overflow: 'hidden',
-                                        background: '#fff'
-                                    }}
-                                >
-                                    <button
-                                        className="btn btn-link text-dark text-decoration-none px-3 h-100 shadow-none"
-                                        style={{ border: 'none', background: 'transparent' }}
-                                        onClick={() => setQty(q => Math.max(1, q - 1))}
-                                        disabled={qty <= 1}
-                                    >
-                                        <i className="fas fa-minus small" />
-                                    </button>
-                                    <input
-                                        type="text"
-                                        className="form-control text-center border-0 fw-bold shadow-none"
-                                        style={{ width: 45, background: 'transparent', fontSize: 16 }}
-                                        value={qty}
-                                        onChange={e => {
-                                            const v = parseInt(e.target.value) || 1;
-                                            setQty(Math.min(maxQty, Math.max(1, v)));
+                            <div className="pt-4 border-top mt-4">
+                                <div className="d-flex align-items-center gap-3 mb-3">
+                                    {/* Qty picker - Premium Styled */}
+                                    <div
+                                        className="d-flex align-items-center"
+                                        style={{
+                                            height: 48,
+                                            border: '1px solid #dee2e6',
+                                            borderRadius: 12,
+                                            overflow: 'hidden',
+                                            background: '#fff'
                                         }}
-                                    />
-                                    <button
-                                        className="btn btn-link text-dark text-decoration-none px-3 h-100 shadow-none"
-                                        style={{ border: 'none', background: 'transparent' }}
-                                        onClick={() => setQty(q => Math.min(maxQty, q + 1))}
-                                        disabled={qty >= maxQty}
                                     >
-                                        <i className="fas fa-plus small" />
+                                        <button
+                                            className="btn btn-link text-dark text-decoration-none px-3 h-100 shadow-none"
+                                            style={{ border: 'none', background: 'transparent' }}
+                                            onClick={() => setQty(q => Math.max(1, q - 1))}
+                                            disabled={qty <= 1}
+                                        >
+                                            <i className="fas fa-minus small" />
+                                        </button>
+                                        <input
+                                            type="text"
+                                            className="form-control text-center border-0 fw-bold shadow-none"
+                                            style={{ width: 45, background: 'transparent', fontSize: 16 }}
+                                            value={qty}
+                                            onChange={e => {
+                                                const v = parseInt(e.target.value) || 1;
+                                                setQty(Math.min(maxQty, Math.max(1, v)));
+                                            }}
+                                        />
+                                        <button
+                                            className="btn btn-link text-dark text-decoration-none px-3 h-100 shadow-none"
+                                            style={{ border: 'none', background: 'transparent' }}
+                                            onClick={() => setQty(q => Math.min(maxQty, q + 1))}
+                                            disabled={qty >= maxQty}
+                                        >
+                                            <i className="fas fa-plus small" />
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        className="btn btn-lg flex-grow-1 shop-btn-outline-orange bg-white"
+                                        style={{
+                                            borderRadius: 12,
+                                            fontWeight: 600,
+                                            height: 48,
+                                            border: '2px solid #ff7a00',
+                                            color: '#ff7a00',
+                                            transition: 'all .3s ease'
+                                        }}
+                                        disabled={stock === 0}
+                                        onClick={() => handleAddToCart(false)}
+                                    >
+                                        <i className="fas fa-cart-plus me-2" />Giỏ hàng
                                     </button>
                                 </div>
 
                                 <button
-                                    className="btn btn-lg flex-grow-1 shop-btn-outline-orange"
-                                    style={{
-                                        borderRadius: 12,
-                                        fontWeight: 600,
-                                        height: 48,
-                                        border: '2px solid #ff7a00',
-                                        color: '#ff7a00',
-                                        transition: 'all .3s ease'
-                                    }}
-                                    disabled={stock === 0}
-                                    onClick={() => handleAddToCart(false)}
-                                >
-                                    <i className="fas fa-cart-plus me-2" />Giỏ hàng
-                                </button>
-
-                                <button
-                                    className="btn btn-lg shop-btn-orange"
+                                    className="btn btn-lg shop-btn-orange w-100"
                                     style={{
                                         borderRadius: 12,
                                         fontWeight: 700,
                                         height: 48,
-                                        padding: '0 32px',
                                         background: '#ff7a00',
                                         borderColor: '#ff7a00',
                                         color: '#fff',
@@ -691,79 +693,57 @@ const ProductDetailPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* ── Tabs: Description / Content / Specs ─────────────── */}
-                <div className="card border-0 shadow-sm p-4" style={{ borderRadius: 16 }}>
-                    <ul className="nav nav-tabs mb-4">
-                        <li className="nav-item">
-                            <button
-                                className={`nav-link ${activeTab === 'desc' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('desc')}
-                            >
-                                Mô tả
-                            </button>
-                        </li>
-                        <li className="nav-item">
-                            <button
-                                className={`nav-link ${activeTab === 'content' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('content')}
-                            >
-                                Nội dung chi tiết
-                            </button>
-                        </li>
-
-                        <li className="nav-item">
-                            <button
-                                className={`nav-link ${activeTab === 'tech_specs' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('tech_specs')}
-                            >
-                                <i className="fas fa-list-ul me-1" />
-                                Thông số kỹ thuật
-                            </button>
-                        </li>
-                        <li className="nav-item">
-                            <button
-                                className={`nav-link ${activeTab === 'reviews' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('reviews')}
-                            >
-                                <i className="fas fa-star me-1 text-warning" style={{ fontSize: 12 }} />
-                                Đánh giá ({reviewStats.total_reviews})
-                            </button>
-                        </li>
-                        <li className="nav-item">
-                            <button
-                                className={`nav-link ${activeTab === 'comments' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('comments')}
-                            >
-                                <i className="fas fa-question-circle me-1" style={{ fontSize: 12 }} />
-                                Hỏi &amp; Đáp
-                            </button>
-                        </li>
-                    </ul>
-
-                    {activeTab === 'desc' && (
+                {/* ── Content Sections (Vertical Layout) ─────────────── */}
+                <div className="card border-0 shadow-sm p-4 p-md-5" style={{ borderRadius: 16 }}>
+                    
+                    {/* 1. Mô tả */}
+                    <div className="mb-5 pb-4 border-bottom">
+                        <div className="d-flex align-items-center gap-2 mb-4">
+                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <h3 className="fw-bold mb-0 h4">Mô tả sản phẩm</h3>
+                        </div>
                         <ProductDescription description={product.description} />
-                    )}
-                    {activeTab === 'content' && (
+                    </div>
+
+                    {/* 2. Nội dung chi tiết */}
+                    <div className="mb-5 pb-4 border-bottom">
+                        <div className="d-flex align-items-center gap-2 mb-4">
+                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <h3 className="fw-bold mb-0 h4">Nội dung chi tiết</h3>
+                        </div>
                         <ProductContent content={product.content} />
-                    )}
+                    </div>
 
-
-                    {activeTab === 'tech_specs' && (
+                    {/* 3. Thông số kỹ thuật */}
+                    <div className="mb-5 pb-4 border-bottom">
+                        <div className="d-flex align-items-center gap-2 mb-4">
+                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <h3 className="fw-bold mb-0 h4">Thông số kỹ thuật</h3>
+                        </div>
                         <ProductTechSpecs specifications={product.specifications} />
-                    )}
+                    </div>
 
-                    {/* ── Reviews Tab ────────────────────────────────── */}
-                    {activeTab === 'reviews' && (
+                    {/* 4. Đánh giá */}
+                    <div className="mb-5 pb-4 border-bottom">
+                        <div className="d-flex align-items-center gap-2 mb-4">
+                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <h3 className="fw-bold mb-0 h4">Đánh giá sản phẩm ({reviewStats.total_reviews})</h3>
+                        </div>
                         <ProductReviews
                             productId={id!}
                             onStatsChange={setReviewStats}
                         />
-                    )}
+                    </div>
 
-                    {/* ── Comments Tab ─────────────────────────────────── */}
-                    {activeTab === 'comments' && (
+                    {/* 5. Hỏi đáp */}
+                    <div>
+                        <div className="d-flex align-items-center gap-2 mb-4">
+                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <h3 className="fw-bold mb-0 h4">Hỏi & Đáp</h3>
+                        </div>
                         <ProductComments productId={id!} />
-                    )}
+                    </div>
+
                 </div>
 
                 {/* ── Related Products ─────────────────────────────── */}
