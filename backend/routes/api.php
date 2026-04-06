@@ -223,6 +223,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     Route::patch('notifications/read-all', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'readAll']);
     Route::patch('notifications/{id}/read', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'markRead']);
 
+    // Complaints
+    Route::apiResource('complaints', \App\Http\Controllers\Api\Admin\ComplaintController::class)->only(['index', 'show', 'update']);
+
     Route::apiResource('vouchers', \App\Http\Controllers\Api\Admin\VoucherController::class);
 
     Route::apiResource('users', AdminUserController::class);

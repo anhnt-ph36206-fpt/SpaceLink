@@ -301,7 +301,7 @@ const OrderDetailPage: React.FC = () => {
   const [complaintContent, setComplaintContent] = useState('');
   const [complaintLoading, setComplaintLoading] = useState(false);
   const [existingComplaint, setExistingComplaint] = useState<{
-    type?: string; subject?: string; content?: string;
+    type?: string; subject?: string; content?: string; images?: string[];
     status?: string; admin_reply?: string | null; created_at?: string;
   } | null>(null);
 
@@ -312,34 +312,47 @@ const OrderDetailPage: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // ── Fetch ──────────────────────────────────────────────────
+  // Fetches
   const fetchOrder = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setError('');
-    const [orderRes, cancelReqRes] = await Promise.allSettled([
-      axiosInstance.get(`/client/orders/${id}`),
-      axiosInstance.get(`/client/orders/${id}/cancel-request`),
-    ]);
-    if (orderRes.status === 'fulfilled') {
-      const d: ClientOrder = orderRes.value.data?.data ?? orderRes.value.data;
-      setOrder(d);
-    } else {
-      const e = (orderRes as PromiseRejectedResult).reason as { response?: { status?: number; data?: { message?: string } } };
+    try {
+      const [orderRes, cancelReqRes, complaintRes] = await Promise.allSettled([
+        axiosInstance.get(`/client/orders/${id}`),
+        axiosInstance.get(`/client/orders/${id}/cancel-request`),
+        axiosInstance.get(`/client/orders/${id}/complaint`),
+      ]);
+      
+      if (orderRes.status === 'fulfilled') {
+        const d: ClientOrder = orderRes.value.data?.data ?? orderRes.value.data;
+        setOrder(d);
+      } else {
+        throw (orderRes as PromiseRejectedResult).reason;
+      }
+      
+      if (cancelReqRes.status === 'fulfilled') {
+        const cr = cancelReqRes.value.data?.data;
+        setCancelReqData(cr ? {
+          status: cr.status,
+          reason: cr.reason,
+          admin_note: cr.admin_note,
+          transaction_code: cr.transaction_code,
+        } : null);
+      }
+      
+      if (complaintRes.status === 'fulfilled') {
+        setExistingComplaint(complaintRes.value.data?.data ?? null);
+      } else {
+        setExistingComplaint(null);
+      }
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number; data?: { message?: string } } };
       if (e?.response?.status === 403 || e?.response?.status === 404) {
         setError(e?.response?.data?.message ?? 'Không tìm thấy đơn hàng.');
       } else {
         setError('Không thể tải thông tin đơn hàng. Vui lòng thử lại.');
       }
-    }
-    if (cancelReqRes.status === 'fulfilled') {
-      const cr = cancelReqRes.value.data?.data;
-      setCancelReqData(cr ? {
-        status: cr.status,
-        reason: cr.reason,
-        admin_note: cr.admin_note,
-        transaction_code: cr.transaction_code,
-      } : null);
     }
     setLoading(false);
   }, [id]);
@@ -538,22 +551,31 @@ const OrderDetailPage: React.FC = () => {
   };
 
   // ── Submit Complaint ──────────────────────────────────────
+  const [complaintImages, setComplaintImages] = useState<File[]>([]);
+
   const handleSubmitComplaint = async () => {
     if (!order) return;
     if (!complaintSubject.trim()) { showToast('Vui lòng nhập tiêu đề khiếu nại.', 'error'); return; }
     if (!complaintContent.trim()) { showToast('Vui lòng nhập nội dung khiếu nại.', 'error'); return; }
     setComplaintLoading(true);
     try {
-      await axiosInstance.post(`/client/orders/${order.id}/complaint`, {
-        type: complaintType,
-        subject: complaintSubject,
-        content: complaintContent,
+      const fd = new FormData();
+      fd.append('type', complaintType);
+      fd.append('subject', complaintSubject);
+      fd.append('content', complaintContent);
+      complaintImages.forEach(f => fd.append('images[]', f));
+
+      await axiosInstance.post(`/client/orders/${order.id}/complaint`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
+
       showToast('Đã gửi khiếu nại thành công. Chúng tôi sẽ phản hồi sớm nhất!', 'success');
       setComplaintOpen(false);
       setComplaintSubject('');
       setComplaintContent('');
       setComplaintType('other');
+      setComplaintImages([]);
+      
       // Reload complaint
       const res = await axiosInstance.get(`/client/orders/${order.id}/complaint`);
       setExistingComplaint(res.data?.data ?? null);
@@ -1380,7 +1402,7 @@ const OrderDetailPage: React.FC = () => {
                   </div>
                 )}
                 {/* Nút Khiếu nại */}
-                {order.status !== 'pending' && (
+                {['delivered', 'completed'].includes(order.status) && (
                   <>
                     {existingComplaint ? (
                       <div style={{
@@ -1404,6 +1426,13 @@ const OrderDetailPage: React.FC = () => {
                           </span>
                         </div>
                         <div style={{ color: '#334155' }}>{existingComplaint.subject}</div>
+                        {existingComplaint.images && existingComplaint.images.length > 0 && (
+                          <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                            {existingComplaint.images.map((img, i) => (
+                              <img key={i} src={img} alt="Evidence" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', border: '1px solid #bae6fd' }} />
+                            ))}
+                          </div>
+                        )}
                         {existingComplaint.admin_reply && (
                           <div style={{ marginTop: 6, color: '#15803d', fontSize: 12 }}>
                             <i className="fas fa-reply me-1" />Phản hồi: {existingComplaint.admin_reply}
@@ -1488,6 +1517,46 @@ const OrderDetailPage: React.FC = () => {
               <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, textAlign: 'right' }}>
                 {complaintContent.length}/2000
               </div>
+
+              <label className="od-modal-label" style={{ marginTop: 12 }}>Hình ảnh minh chứng (Tối đa 5 ảnh)</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                {complaintImages.map((file, idx) => (
+                  <div key={idx} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, border: '1px solid #eaecf0', overflow: 'hidden' }}>
+                    <img src={URL.createObjectURL(file)} alt="Evidence" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button
+                      onClick={() => setComplaintImages(prev => prev.filter((_, i) => i !== idx))}
+                      style={{
+                        position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,.5)', color: '#fff', border: 'none',
+                        borderRadius: '50%', width: 20, height: 20, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                      }}
+                    >
+                      <i className="fas fa-times" />
+                    </button>
+                  </div>
+                ))}
+                {complaintImages.length < 5 && (
+                  <label style={{ 
+                    width: 64, height: 64, borderRadius: 8, border: '1.5px dashed #eaecf0', display: 'flex', alignItems: 'center', 
+                    justifyContent: 'center', color: '#8590a3', cursor: 'pointer', flexDirection: 'column', gap: 4, fontSize: 10 
+                  }}>
+                    <i className="fas fa-camera" style={{ fontSize: 16 }} />
+                    <input 
+                      type="file" multiple accept="image/*" style={{ display: 'none' }}
+                      onChange={e => {
+                        if (e.target.files) {
+                          const files = Array.from(e.target.files);
+                          if (complaintImages.length + files.length > 5) {
+                            showToast('Chỉ được chọn tối đa 5 hình ảnh.', 'error');
+                            return;
+                          }
+                          setComplaintImages(prev => [...prev, ...files]);
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+
             </div>
             <div className="od-modal-ft">
               <button className="od-modal-btn-no" onClick={() => setComplaintOpen(false)} disabled={complaintLoading}>Hủy</button>
