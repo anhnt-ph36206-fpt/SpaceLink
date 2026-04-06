@@ -13,6 +13,7 @@ import ProductReviews from "../components/product/ProductReviews";
 import type { ReviewStats } from "../components/product/ProductReviews";
 import ProductDescription from "../components/product/ProductDescription";
 import ProductContent from "../components/product/ProductContent";
+import ProductComments from "../components/product/ProductComments";
 import { toast } from "react-toastify";
 import { Spin } from "antd";
 import MDEditor from '@uiw/react-md-editor';
@@ -91,7 +92,7 @@ const ProductDetailPage: React.FC = () => {
     const [mainImg, setMainImg] = useState<string | null>(null);
     const [defaultMainImg, setDefaultMainImg] = useState<string | null>(null);
     const [qty, setQty] = useState(1);
-    const [activeTab, setActiveTab] = useState<'desc' | 'content' | 'tech_specs' | 'reviews'>('desc');
+    const [activeTab, setActiveTab] = useState<'desc' | 'content' | 'tech_specs' | 'reviews' | 'comments'>('desc');
     const [relatedProducts, setRelatedProducts] = useState<{ id: string; name: string; image: string; price: number; oldPrice?: number; category?: string; rating?: number; isSale?: boolean; isNew?: boolean }[]>([]);
 
     // ── Reviews state ──────────────────────────────────────────────────
@@ -728,6 +729,15 @@ const ProductDetailPage: React.FC = () => {
                                 Đánh giá ({reviewStats.total_reviews})
                             </button>
                         </li>
+                        <li className="nav-item">
+                            <button
+                                className={`nav-link ${activeTab === 'comments' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('comments')}
+                            >
+                                <i className="fas fa-question-circle me-1" style={{ fontSize: 12 }} />
+                                Hỏi &amp; Đáp
+                            </button>
+                        </li>
                     </ul>
 
                     {activeTab === 'desc' && (
@@ -748,6 +758,11 @@ const ProductDetailPage: React.FC = () => {
                             productId={id!}
                             onStatsChange={setReviewStats}
                         />
+                    )}
+
+                    {/* ── Comments Tab ─────────────────────────────────── */}
+                    {activeTab === 'comments' && (
+                        <ProductComments productId={id!} />
                     )}
                 </div>
 

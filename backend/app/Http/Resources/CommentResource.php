@@ -18,9 +18,10 @@ class CommentResource extends JsonResource
             'updated_at' => $this->updated_at->toDateTimeString(),
 
             'user' => [
-                'id'     => $this->resource->relationLoaded('user') && $this->user ? $this->user->id : null,
-                'name'   => $this->resource->relationLoaded('user') && $this->user ? $this->user->fullname : '',
-                'avatar' => $this->resource->relationLoaded('user') && $this->user ? $this->user->avatar : null,
+                'id'       => $this->resource->relationLoaded('user') && $this->user ? $this->user->id       : null,
+                'fullname' => $this->resource->relationLoaded('user') && $this->user ? $this->user->fullname : '',
+                'avatar'   => $this->resource->relationLoaded('user') && $this->user ? $this->user->avatar   : null,
+                'is_admin' => $this->resource->relationLoaded('user') && $this->user ? ($this->user->role_id === 1) : false,
             ],
 
             'product_id' => $this->product_id,

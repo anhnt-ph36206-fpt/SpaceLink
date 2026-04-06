@@ -17,7 +17,7 @@ class CommentController extends Controller
     {
         $perPage = min($request->integer('per_page', 10), 50);
 
-        $comments = Comment::with(['user:id,fullname,avatar', 'replies'])
+        $comments = Comment::with(['user:id,fullname,avatar,role_id', 'replies'])
             ->forProduct($productId)
             ->approved()
             ->topLevel()
@@ -48,7 +48,7 @@ class CommentController extends Controller
             'status'     => 'pending',
         ]);
 
-        $comment->load('user:id,fullname,avatar');
+        $comment->load('user:id,fullname,avatar,role_id');
 
         return response()->json([
             'message' => 'Bình luận đã được gửi, đang chờ duyệt.',
@@ -58,7 +58,7 @@ class CommentController extends Controller
 
     public function show(Comment $comment): JsonResponse
     {
-        $comment->load(['user:id,fullname,avatar', 'replies']);
+        $comment->load(['user:id,fullname,avatar,role_id', 'replies']);
 
         return response()->json([
             'data' => new CommentResource($comment),
@@ -73,7 +73,7 @@ class CommentController extends Controller
     {
         $perPage = min($request->integer('per_page', 10), 50);
 
-        $replies = Comment::with('user:id,fullname,avatar')
+        $replies = Comment::with('user:id,fullname,avatar,role_id')
             ->where('parent_id', $comment->id)
             ->where('is_hidden', false)
             ->where('status', 'approved')
@@ -104,7 +104,7 @@ class CommentController extends Controller
             'status'  => 'pending',
         ]);
 
-        $comment->load('user:id,fullname,avatar');
+        $comment->load('user:id,fullname,avatar,role_id');
 
         return response()->json([
             'message' => 'Cập nhật bình luận thành công, đang chờ duyệt lại.',
