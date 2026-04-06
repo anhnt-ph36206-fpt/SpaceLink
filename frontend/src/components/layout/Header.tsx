@@ -211,12 +211,12 @@ const Header: React.FC = () => {
             </div >
 
             <div
-                className="container-fluid px-5 py-4 d-none d-lg-block bg-white shadow-sm position-relative"
+                className="container-fluid px-2 px-lg-5 py-3 py-lg-4 bg-white shadow-sm position-relative"
                 style={{ zIndex: 100 }}
             >
                 <div className="row gx-0 align-items-center text-center">
 
-                    <div className="col-md-4 col-lg-3 text-center text-lg-start">
+                    <div className="col-12 col-lg-3 text-center text-lg-start d-none d-lg-block">
                         <Link to="/" className="navbar-brand p-0">
                             <h1 className="display-5 text-primary m-0 fw-bold">
                                 <i className="fas fa-satellite-dish text-secondary me-2"></i>
@@ -231,15 +231,15 @@ const Header: React.FC = () => {
                         </Link>
                     </div>
 
-                    <div className="col-md-4 col-lg-6 text-center">
-                        <div className="position-relative ps-4" ref={wrapperRef}>
+                    <div className="col-8 col-lg-6 text-center">
+                        <div className="position-relative ps-lg-4" ref={wrapperRef}>
 
                             <div className="d-flex border border-2 border-primary rounded-pill overflow-hidden bg-white position-relative" style={{ zIndex: 102 }}>
                                 <input
-                                    className="form-control border-0 py-3 ps-4"
+                                    className="form-control border-0 py-2 py-lg-3 ps-2 ps-lg-4"
                                     type="text"
-                                    placeholder="Tìm kiếm iPhone, Samsung..."
-                                    style={{ outline: 'none', boxShadow: 'none' }}
+                                    placeholder="Tìm kiếm..."
+                                    style={{ outline: 'none', boxShadow: 'none', fontSize: '0.9rem' }}
                                     value={keyword}
                                     onChange={(e) => setKeyword(e.target.value)}
                                     onKeyDown={handleKeyDown}
@@ -248,7 +248,7 @@ const Header: React.FC = () => {
 
                                 <button
                                     type="button"
-                                    className="btn btn-primary rounded-0 py-3 px-4 border-0"
+                                    className="btn btn-primary rounded-0 py-2 py-lg-3 px-3 px-lg-4 border-0"
                                     onClick={handleSearch}
                                 >
                                     <i className="fas fa-search fs-5"></i>
@@ -306,7 +306,7 @@ const Header: React.FC = () => {
                                                 </div>
                                             </div>
                                         ))}
-    
+
                                         <div
                                             className="list-group-item list-group-item-action text-center text-primary small fw-bold py-2 bg-light"
                                             style={{ cursor: 'pointer' }}
@@ -322,19 +322,19 @@ const Header: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="col-md-4 col-lg-3 text-center text-lg-end">
-                        <div className="d-inline-flex align-items-center">
+                    <div className="col-4 col-lg-3 text-end d-flex justify-content-end align-items-center pe-3 pe-lg-3">
+                        <div className="d-inline-flex align-items-center gap-3 gap-lg-4" style={{ transform: 'scale(0.95)', transformOrigin: 'right center' }}>
 
-                            <Link to="/login" className="me-4 text-muted d-block d-lg-none">
-                                <i className="fas fa-user fa-2x"></i>
+                            <Link to={user ? "/profile" : "/login"} className="text-muted d-block d-lg-none">
+                                <i className="fas fa-user fs-5"></i>
                             </Link>
 
-                            <Link to="/wishlist" className="d-flex align-items-center text-muted text-decoration-none me-4">
+                            <Link to="/wishlist" className="d-flex align-items-center text-muted text-decoration-none">
                                 <div className="position-relative">
-                                    <i className="fas fa-heart fa-2x text-primary"></i>
+                                    <i className="fas fa-heart fs-5 fs-lg-2 text-primary"></i>
                                     <span
-                                        className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark"
-                                        style={{ fontSize: '10px', border: '2px solid #fff' }}
+                                        className="position-absolute badge rounded-pill bg-warning text-dark"
+                                        style={{ fontSize: '10px', top: '-6px', right: '-8px', border: '1.5px solid #fff', padding: '2px 4px', transform: 'scale(0.9)' }}
                                     >
                                         {totalWishlistItems > 0 ? (totalWishlistItems > 99 ? '99+' : totalWishlistItems) : ''}
                                     </span>
@@ -343,19 +343,19 @@ const Header: React.FC = () => {
 
                             {/* 🔔 Notification Bell */}
                             {user && (
-                                <div className="position-relative me-4" ref={notifRef}>
+                                <div className="position-relative" ref={notifRef}>
                                     <button
                                         className="btn p-0 border-0 bg-transparent position-relative"
                                         onClick={() => setNotifOpen(!notifOpen)}
                                         title="Thông báo"
                                         id="client-notification-bell"
                                     >
-                                        <i className={`fas fa-bell fa-2x ${unreadCount > 0 ? 'text-primary' : 'text-muted'}`}
-                                           style={{ transition: 'color 0.2s' }} />
+                                        <i className={`fas fa-bell fs-5 fs-lg-2 ${unreadCount > 0 ? 'text-primary' : 'text-muted'}`}
+                                            style={{ transition: 'color 0.2s' }} />
                                         {unreadCount > 0 && (
                                             <span
-                                                className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                                style={{ fontSize: '10px', border: '2px solid #fff', minWidth: 18 }}
+                                                className="position-absolute badge rounded-pill bg-danger text-light"
+                                                style={{ fontSize: '10px', top: '-6px', right: '-8px', border: '1.5px solid #fff', padding: '2px 4px', transform: 'scale(0.9)' }}
                                             >
                                                 {unreadCount > 99 ? '99+' : unreadCount}
                                             </span>
@@ -373,7 +373,7 @@ const Header: React.FC = () => {
                                         >
                                             {/* Header */}
                                             <div className="d-flex align-items-center justify-content-between px-3 py-2"
-                                                 style={{ borderBottom: '1px solid #f0f0f0', background: '#fafbfc' }}>
+                                                style={{ borderBottom: '1px solid #f0f0f0', background: '#fafbfc' }}>
                                                 <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>
                                                     🔔 Thông báo
                                                     {unreadCount > 0 && (
@@ -460,11 +460,11 @@ const Header: React.FC = () => {
 
                             <Link to="/cart" className="d-flex align-items-center text-muted text-decoration-none">
                                 <div className="position-relative">
-                                    <i className="fas fa-shopping-bag fa-2x text-primary"></i>
+                                    <i className="fas fa-shopping-bag fs-5 fs-lg-2 text-primary"></i>
 
                                     <span
-                                        className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark"
-                                        style={{ fontSize: '10px', border: '2px solid #fff' }}
+                                        className="position-absolute badge rounded-pill bg-warning text-dark"
+                                        style={{ fontSize: '10px', top: '-6px', right: '-8px', border: '1.5px solid #fff', padding: '2px 4px', transform: 'scale(0.9)' }}
                                     >
                                         {totalItems > 0 ? (totalItems > 99 ? '99+' : totalItems) : ''}
                                     </span>

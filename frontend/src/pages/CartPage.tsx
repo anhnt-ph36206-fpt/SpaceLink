@@ -264,7 +264,7 @@ const CartPage: React.FC = () => {
                             {items.map((item, idx) => (
                                 <div
                                     key={item.id}
-                                    className={`p-3 d-flex gap-3 align-items-center cart-item-row ${selectedIds.has(item.id) ? 'cart-item-selected' : ''} ${idx !== items.length - 1 ? 'border-bottom' : ''}`}
+                                    className={`p-2 p-md-3 d-flex gap-2 gap-md-3 align-items-start align-items-md-center cart-item-row ${selectedIds.has(item.id) ? 'cart-item-selected' : ''} ${idx !== items.length - 1 ? 'border-bottom' : ''}`}
                                 >
                                     {/* Checkbox */}
                                     <div style={{ flexShrink: 0 }}>
@@ -276,8 +276,9 @@ const CartPage: React.FC = () => {
 
                                     {/* Image */}
                                     <div
+                                        className="cart-item-img-wrapper"
                                         style={{
-                                            width: 100, height: 100, flexShrink: 0,
+                                            flexShrink: 0,
                                             borderRadius: 12, overflow: 'hidden',
                                             background: '#f5f5f5', display: 'flex',
                                             alignItems: 'center', justifyContent: 'center',
@@ -291,70 +292,82 @@ const CartPage: React.FC = () => {
                                         )}
                                     </div>
 
-                                    {/* Info */}
-                                    <div className="flex-grow-1 min-w-0">
-                                        <Link
-                                            to={`/product/${item.productSlug || item.productId}`}
-                                            className="fw-semibold text-dark text-decoration-none hover-primary"
-                                            style={{ fontSize: 16, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}
-                                        >
-                                            {item.name}
-                                        </Link>
+                                    {/* Info & Qty Wrapper */}
+                                    <div className="flex-grow-1 min-w-0 d-flex flex-column flex-md-row justify-content-between gap-2 gap-md-3 mt-1 mt-md-0">
+                                        
+                                        {/* Info */}
+                                        <div className="min-w-0 flex-grow-1">
+                                            <Link
+                                                to={`/product/${item.productSlug || item.productId}`}
+                                                className="fw-semibold text-dark text-decoration-none hover-primary"
+                                                style={{ fontSize: 15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}
+                                            >
+                                                {item.name}
+                                            </Link>
 
-                                        {/* Variant Selector Trigger */}
-                                        <div className="mt-2">
-                                            <Tooltip title="Nhấn để đổi phân loại">
-                                                <div
-                                                    className="d-inline-flex align-items-center gap-1 px-2 py-1 rounded bg-light border text-muted small"
-                                                    style={{ cursor: 'pointer' }}
-                                                    onClick={() => handleOpenEdit(item)}
-                                                >
-                                                    <span className="text-truncate" style={{ maxWidth: 150 }}>
-                                                        Phân loại: {item.attributes || 'Mặc định'}
-                                                    </span>
-                                                    <SwapOutlined size={10} />
-                                                </div>
-                                            </Tooltip>
-                                        </div>
-
-                                        <div className="mt-2 text-danger fw-bold">{formatVND(item.price)}</div>
-
-                                        {item.stock < item.quantity && (
-                                            <div className="mt-1 text-danger small">
-                                                <InfoCircleOutlined className="me-1" />
-                                                Chỉ còn {item.stock} sản phẩm trong kho
+                                            {/* Variant Selector Trigger */}
+                                            <div className="mt-2">
+                                                <Tooltip title="Nhấn để đổi phân loại">
+                                                    <div
+                                                        className="d-inline-flex align-items-center gap-1 px-2 py-1 rounded bg-light border text-muted small"
+                                                        style={{ cursor: 'pointer' }}
+                                                        onClick={() => handleOpenEdit(item)}
+                                                    >
+                                                        <span className="text-truncate" style={{ maxWidth: 150 }}>
+                                                            Phân loại: {item.attributes || 'Mặc định'}
+                                                        </span>
+                                                        <SwapOutlined size={10} />
+                                                    </div>
+                                                </Tooltip>
                                             </div>
-                                        )}
-                                    </div>
 
-                                    {/* Qty */}
-                                    <div className="d-flex flex-column align-items-end gap-2" style={{ width: 140 }}>
-                                        <div className={`input-group input-group-sm rounded-pill overflow-hidden border ${updatingItems.has(item.id) ? 'opacity-50' : ''}`}>
-                                            <button
-                                                className="btn btn-light border-0 px-2"
-                                                onClick={() => updateQty(item.id, item.quantity - 1)}
-                                                disabled={item.quantity <= 1 || updatingItems.has(item.id)}
-                                            >
-                                                <MinusOutlined />
-                                            </button>
-                                            <input
-                                                type="text"
-                                                className="form-control border-0 text-center fw-bold bg-white"
-                                                value={item.quantity}
-                                                readOnly
-                                                style={{ width: 40, pointerEvents: 'none' }}
-                                            />
-                                            <button
-                                                className="btn btn-light border-0 px-2"
-                                                onClick={() => updateQty(item.id, item.quantity + 1)}
-                                                disabled={item.quantity >= item.stock || updatingItems.has(item.id)}
-                                            >
-                                                <PlusOutlined />
-                                            </button>
+                                            <div className="mt-2 text-danger fw-bold">{formatVND(item.price)}</div>
+
+                                            {item.stock < item.quantity && (
+                                                <div className="mt-1 text-danger small">
+                                                    <InfoCircleOutlined className="me-1" />
+                                                    Chỉ còn {item.stock} sản phẩm trong kho
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="fw-bold text-primary small d-flex align-items-center gap-1">
-                                            {updatingItems.has(item.id) && <Spin size="small" />}
-                                            {formatVND(item.price * item.quantity)}
+
+                                        {/* Qty & Total block */}
+                                        <div className="d-flex flex-row flex-md-column align-items-center align-items-md-end justify-content-between gap-2 pt-2 pt-md-0 border-top border-md-0" style={{ flexShrink: 0 }}>
+                                            <div className="fw-bold text-primary small d-md-none d-flex align-items-center gap-1">
+                                                {/* Mobile total price display (left side of Qty block) */}
+                                                {updatingItems.has(item.id) && <Spin size="small" />}
+                                                {formatVND(item.price * item.quantity)}
+                                            </div>
+
+                                            <div className={`input-group input-group-sm rounded-pill overflow-hidden border ${updatingItems.has(item.id) ? 'opacity-50' : ''}`} style={{ width: '100px' }}>
+                                                <button
+                                                    className="btn btn-light border-0 px-2"
+                                                    onClick={() => updateQty(item.id, item.quantity - 1)}
+                                                    disabled={item.quantity <= 1 || updatingItems.has(item.id)}
+                                                >
+                                                    <MinusOutlined />
+                                                </button>
+                                                <input
+                                                    type="text"
+                                                    className="form-control border-0 text-center fw-bold bg-white px-0"
+                                                    value={item.quantity}
+                                                    readOnly
+                                                    style={{ minWidth: '30px', pointerEvents: 'none', fontSize: 13 }}
+                                                />
+                                                <button
+                                                    className="btn btn-light border-0 px-2"
+                                                    onClick={() => updateQty(item.id, item.quantity + 1)}
+                                                    disabled={item.quantity >= item.stock || updatingItems.has(item.id)}
+                                                >
+                                                    <PlusOutlined />
+                                                </button>
+                                            </div>
+
+                                            <div className="fw-bold text-primary small d-none d-md-flex align-items-center gap-1">
+                                                {/* Desktop total price display (below Qty block) */}
+                                                {updatingItems.has(item.id) && <Spin size="small" />}
+                                                {formatVND(item.price * item.quantity)}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -544,6 +557,12 @@ const CartPage: React.FC = () => {
                 .cart-item-selected { background: #f0f6ff; }
                 .cart-item-row:hover { background: #fafafa; }
                 .cart-item-selected:hover { background: #e8f0fe; }
+                
+                .cart-item-img-wrapper { width: 80px; height: 80px; }
+                @media (min-width: 768px) {
+                    .cart-item-img-wrapper { width: 100px; height: 100px; }
+                    .border-md-0 { border: none !important; }
+                }
             `}</style>
         </div>
     );

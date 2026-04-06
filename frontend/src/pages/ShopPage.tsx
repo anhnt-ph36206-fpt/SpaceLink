@@ -34,14 +34,14 @@ interface ProductResponse {
 const ShopPage: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const [products, setProducts]       = useState<Product[]>([]);
-    const [categories, setCategories]   = useState<CategoryNode[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<CategoryNode[]>([]);
 
-    const [loading, setLoading]         = useState(false);
-    const [page, setPage]               = useState(1);
-    const [totalPages, setTotalPages]   = useState(1);
-    const [sort, setSort]               = useState("");
-    const [priceRange, setPriceRange]   = useState(50000000);
+    const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [sort, setSort] = useState("");
+    const [priceRange, setPriceRange] = useState(50000000);
     const [debouncePrice, setDebouncePrice] = useState(priceRange);
     const [expandedCats, setExpandedCats] = useState<Record<number, boolean>>({});
     const [totalProducts, setTotalProducts] = useState(0);
