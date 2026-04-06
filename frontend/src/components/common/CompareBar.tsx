@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useCompare } from '../../context/CompareContext';
 import { axiosInstance } from '../../api/axios';
 import { toast } from 'react-toastify';
+import { useMediaQuery } from 'react-responsive';
 
 export interface PickItem {
     id: string;
@@ -155,6 +156,93 @@ const CSS = `
     border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* -- Responsive Mobile -- */
+@media (max-width: 768px) {
+    .cb-inner {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0;
+        gap: 0;
+    }
+    .cb-slots {
+        flex-direction: column;
+        width: 100%;
+        gap: 0;
+    }
+    .cb-slot, .cb-slot-empty {
+        width: 100%;
+        height: auto;
+        min-height: 90px;
+        border: none !important;
+        border-bottom: 1px dashed #e2e8f0 !important;
+        border-radius: 0;
+        padding: 12px 16px;
+        box-shadow: none;
+    }
+    .cb-slot-empty:last-child {
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+    .cb-slot-name {
+        margin-top: 4px;
+        font-size: 13px;
+        color: #334155;
+    }
+    .cb-slot-rm {
+        top: 12px;
+        right: 12px;
+    }
+    .cb-actions {
+        padding: 12px 16px 16px;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 12px;
+    }
+    .cb-summary { font-size: 13px; text-align: left; }
+    .cb-actions-row { 
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        gap: 8px; 
+    }
+    .cb-btn-outline, .cb-btn-primary { 
+        flex: 1; 
+        text-align: center; 
+        padding: 10px 0; 
+        font-size: 14px; 
+    }
+    
+    .cb-popup {
+        width: 100vw;
+        border-radius: 12px 12px 0 0;
+        bottom: 100%;
+    }
+}
+
+/* Floating Collapsed Button */
+.cb-floating-btn {
+    position: fixed;
+    bottom: 24px;
+    left: 20px;
+    background: #fff;
+    padding: 10px 20px;
+    border-radius: 30px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    z-index: 1050;
+    font-weight: 500;
+    font-size: 15px;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    animation: fadeIn 0.3s ease;
+    font-family: inherit;
+}
+.cb-floating-btn:hover { background: #f8f9fa; }
+.cb-floating-btn span { color: #d70018; }
 `;
 
 /* ─── Inline MiniPicker Component ────────────────────────── */
@@ -336,7 +424,9 @@ const CompareBar: React.FC = () => {
     const [popupOpen, setPopupOpen] = useState(false);
     const popupRef = useRef<HTMLDivElement>(null);
     const [hiddenOnRoute, setHiddenOnRoute] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const prevListLength = useRef(compareList.length);
+    const isMobile = useMediaQuery({ maxWidth: 768 });
 
     // Bật lại thanh so sánh nếu người dùng THÊM sản phẩm mới
     useEffect(() => {
@@ -387,18 +477,26 @@ const CompareBar: React.FC = () => {
 
     if (compareList.length === 0 || hiddenOnRoute) return null;
 
-    // Hide bar entirely if hidden property is true (like a "Thu gọn" mode)
-    // Actually the user screenshot doesn't show it hidden, just the "Thu gọn" button.
+    // Hide bar entirely if hidden property is true
     const emptySlotsCount = 3 - compareList.length;
 
     return (
         <>
             <style>{CSS}</style>
-            <div className="cb-container">
-                <div className="cb-inner">
+            
+            {isCollapsed ? (
+                <button 
+                    className="cb-floating-btn" 
+                    onClick={() => setIsCollapsed(false)}
+                >
+                    So sánh <span>({compareList.length})</span>
+                </button>
+            ) : (
+                <div className="cb-container">
+                    <div className="cb-inner">
 
-                    {/* Left: Product Slots */}
-                    <div className="cb-slots">
+                        {/* Left: Product Slots */}
+                    <div className="cb-slots" style={{ display: isCollapsed ? 'none' : 'flex' }}>
                         {/* Filled Slots */}
                         {compareList.map(p => (
                             <div key={p.id} className="cb-slot">
@@ -436,7 +534,9 @@ const CompareBar: React.FC = () => {
                     <div className="cb-actions">
                         <span className="cb-summary">Đã chọn {compareList.length} sản phẩm</span>
                         <div className="cb-actions-row">
-                            <button className="cb-btn-outline" onClick={() => clearCompare()}>Xóa tất cả</button>
+                            <button className="cb-btn-outline" onClick={() => setIsCollapsed(!isCollapsed)}>
+                                {isCollapsed ? 'Mở rộng' : 'Thu gọn'}
+                            </button>
                             <button
                                 className="cb-btn-primary"
                                 onClick={() => navigate('/compare')}
@@ -459,6 +559,7 @@ const CompareBar: React.FC = () => {
 
                 </div>
             </div>
+            )}
         </>
     );
 };

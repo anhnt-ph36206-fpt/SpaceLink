@@ -36,7 +36,7 @@ const CSS = `
 .cp-btn-clear { background: #fee2e2; border: none; color: #dc2626; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
 .cp-btn-clear:hover { background: #fca5a5; }
 
-.cp-table-wrap { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff; }
+.cp-table-wrap { border: 1px solid #e2e8f0; border-radius: 12px; overflow-x: auto; overflow-y: hidden; background: #fff; }
 .cp-table { width: 100%; border-collapse: collapse; min-width: 900px; }
 .cp-table th, .cp-table td { border: 1px solid #f1f5f9; padding: 16px; }
 
@@ -75,6 +75,20 @@ const CSS = `
 .cp-group-row td { background: #f1f5f9 !important; color: #ff7a00; font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px; padding: 12px 16px; border-top: 2px solid #e2e8f0; }
 
 .cp-empty-td { background: #f8f9fa; }
+
+/* Responsive Mobile */
+@media (max-width: 768px) {
+    .cp-top { flex-direction: column; align-items: stretch; gap: 16px; }
+    .cp-title { text-align: center; }
+    .cp-actions { width: 100%; justify-content: space-between; }
+    .cp-btn-add, .cp-btn-clear { flex: 1; justify-content: center; text-align: center; font-size: 14px; }
+    .cp-container { padding: 16px; min-height: 50vh; }
+    .cp-wrapper { padding-bottom: 30px; }
+    .cp-table-wrap {
+        border-radius: 8px; /* Slightly smaller radius on mobile */
+    }
+    .cp-table th, .cp-table td { padding: 12px 8px; }
+}
 `;
 
 const ComparePage: React.FC = () => {
@@ -195,7 +209,15 @@ const ComparePage: React.FC = () => {
                         <div className="cp-top">
                             <h2 className="cp-title">So sánh {compareList.length} sản phẩm</h2>
                             <div className="cp-actions">
-                                <button onClick={() => setShowPicker(true)} className="cp-btn-add">
+                                <button 
+                                    onClick={() => setShowPicker(true)} 
+                                    className="cp-btn-add"
+                                    disabled={compareList.length >= 3}
+                                    style={{ 
+                                        opacity: compareList.length >= 3 ? 0.5 : 1, 
+                                        cursor: compareList.length >= 3 ? 'not-allowed' : 'pointer' 
+                                    }}
+                                >
                                     <i className="fas fa-plus" /> Thêm sản phẩm
                                 </button>
                                 <button onClick={clearCompare} className="cp-btn-clear">
