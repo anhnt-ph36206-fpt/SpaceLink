@@ -14,10 +14,13 @@ class CommentController extends Controller
     
     public function index(Request $request): JsonResponse
     {
-        $comments = Comment::with(['user:id,fullname,avatar', 'product:id,name'])
+        $comments = Comment::with(['user:id,fullname,avatar,role_id', 'product:id,name'])
             ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->when($request->product_id, fn($q) => $q->where('product_id', $request->product_id))
             ->when($request->keyword, fn($q) => $q->where('content', 'like', '%' . $request->keyword . '%'))
+            ->when($request->is_hidden !== null && $request->is_hidden !== '', fn($q) => $q->where('is_hidden', filter_var($request->is_hidden, FILTER_VALIDATE_BOOLEAN)))
+            ->when($request->type === 'question', fn($q) => $q->whereNull('parent_id'))
+            ->when($request->type === 'answer',   fn($q) => $q->whereNotNull('parent_id'))
             ->latest()
             ->paginate($request->integer('per_page', 15));
 

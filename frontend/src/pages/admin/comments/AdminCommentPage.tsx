@@ -184,46 +184,65 @@ export default function AdminCommentPage() {
         title: 'Hành động',
         key: 'action',
         align: 'center' as const,
-        width: 200,
+        width: 180,
         render: (_: any, record: CommentItem) => {
             const busy = actionLoading === record.id;
             return (
                 <Space size={4} wrap>
-                    {record.status !== 'approved' && (
-                        <Tooltip title="Duyệt">
-                            <Button size="small" type="primary" icon={<CheckCircleOutlined />}
-                                loading={busy} onClick={() => handleApprove(record.id)}
-                                style={{ background: '#52c41a', borderColor: '#52c41a' }} />
-                        </Tooltip>
+                    {/* ── PENDING: Duyệt + Từ chối ── */}
+                    {record.status === 'pending' && (
+                        <>
+                            <Tooltip title="Duyệt">
+                                <Button size="small" type="primary" icon={<CheckCircleOutlined />}
+                                    loading={busy} onClick={() => handleApprove(record.id)}
+                                    style={{ background: '#52c41a', borderColor: '#52c41a' }} />
+                            </Tooltip>
+                            <Tooltip title="Từ chối">
+                                <Button size="small" danger ghost icon={<CloseCircleOutlined />}
+                                    loading={busy} onClick={() => handleReject(record.id)} />
+                            </Tooltip>
+                        </>
                     )}
-                    {record.status !== 'rejected' && (
-                        <Tooltip title="Từ chối">
-                            <Button size="small" danger ghost icon={<CloseCircleOutlined />}
-                                loading={busy} onClick={() => handleReject(record.id)} />
-                        </Tooltip>
+
+                    {/* ── APPROVED: Trả lời (câu hỏi) + Ẩn/Hiện + Xoá ── */}
+                    {record.status === 'approved' && (
+                        <>
+                            {activeTab === 'questions' && (
+                                <Tooltip title="Trả lời câu hỏi này">
+                                    <Button size="small" type="primary" icon={<SendOutlined />}
+                                        loading={busy}
+                                        onClick={() => { setAnswerModal(record); setAnswerText(''); }}
+                                        style={{ background: '#722ed1', borderColor: '#722ed1' }}
+                                    />
+                                </Tooltip>
+                            )}
+                            <Tooltip title={record.is_hidden ? 'Bỏ ẩn' : 'Ẩn'}>
+                                <Button size="small" type="dashed"
+                                    icon={record.is_hidden ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                                    loading={busy} onClick={() => handleToggleHide(record.id)} />
+                            </Tooltip>
+                            <Popconfirm
+                                title="Xoá vĩnh viễn?" icon={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
+                                onConfirm={() => handleDelete(record.id)} okText="Xoá" okType="danger" cancelText="Huỷ"
+                            >
+                                <Tooltip title="Xoá">
+                                    <Button size="small" danger icon={<DeleteOutlined />} loading={busy} />
+                                </Tooltip>
+                            </Popconfirm>
+                        </>
                     )}
-                    {activeTab === 'questions' && (
-                        <Tooltip title="Trả lời câu hỏi này">
-                            <Button size="small" type="primary" icon={<SendOutlined />}
-                                loading={busy}
-                                onClick={() => { setAnswerModal(record); setAnswerText(''); }}
-                                style={{ background: '#722ed1', borderColor: '#722ed1' }}
-                            />
-                        </Tooltip>
+
+                    {/* ── REJECTED: Xoá ── */}
+                    {record.status === 'rejected' && (
+                        <Popconfirm
+                            title="Xoá vĩnh viễn?" icon={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
+                            onConfirm={() => handleDelete(record.id)} okText="Xoá" okType="danger" cancelText="Huỷ"
+                        >
+                            <Tooltip title="Xoá">
+                                <Button size="small" danger icon={<DeleteOutlined />} loading={busy} />
+                            </Tooltip>
+                        </Popconfirm>
                     )}
-                    <Tooltip title={record.is_hidden ? 'Bỏ ẩn' : 'Ẩn'}>
-                        <Button size="small" type="dashed"
-                            icon={record.is_hidden ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-                            loading={busy} onClick={() => handleToggleHide(record.id)} />
-                    </Tooltip>
-                    <Popconfirm
-                        title="Xoá vĩnh viễn?" icon={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
-                        onConfirm={() => handleDelete(record.id)} okText="Xoá" okType="danger" cancelText="Huỷ"
-                    >
-                        <Tooltip title="Xoá">
-                            <Button size="small" danger icon={<DeleteOutlined />} loading={busy} />
-                        </Tooltip>
-                    </Popconfirm>
                 </Space>
             );
         },
@@ -273,12 +292,12 @@ export default function AdminCommentPage() {
                     }}
                     onClick={() => setDetailComment(r)} title="Click xem đầy đủ"
                 >
-                    {activeTab === 'questions' && (
-                        <span style={{ color: '#0d6efd', fontWeight: 700, marginRight: 4 }}>Q:</span>
-                    )}
-                    {activeTab === 'answers' && (
-                        <span style={{ color: '#52c41a', fontWeight: 700, marginRight: 4 }}>A:</span>
-                    )}
+                    <span style={{ marginRight: 6, flexShrink: 0 }}>
+                        {activeTab === 'questions'
+                            ? <QuestionCircleOutlined style={{ color: '#1677ff', fontSize: 13 }} />
+                            : <MessageOutlined style={{ color: '#52c41a', fontSize: 13 }} />
+                        }
+                    </span>
                     {r.content}
                 </div>
             ),
