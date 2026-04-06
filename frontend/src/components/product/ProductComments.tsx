@@ -194,7 +194,7 @@ const AnswerThread: React.FC<AnswerThreadProps> = ({
                                 color: "#fff", fontSize: 11, fontWeight: 700,
                             }}
                         >
-                            {isAdmin ? "QTV" : (ans.user?.fullname ?? "A").charAt(0).toUpperCase()}
+                            {isAdmin ? "Q" : (ans.user?.fullname ?? "A").charAt(0).toUpperCase()}
                         </div>
                         <div style={{ flex: 1 }}>
                             <div
@@ -600,7 +600,7 @@ const ProductQA: React.FC<ProductQAProps> = ({ productId }) => {
                                             color: "#fff", fontWeight: 900, fontSize: 17,
                                         }}
                                     >
-                                        Q
+                                        {(q.user?.fullname ?? "?").charAt(0).toUpperCase()}
                                     </div>
 
                                     <div style={{ flex: 1 }}>
