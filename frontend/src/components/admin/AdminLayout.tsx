@@ -90,7 +90,7 @@ const menuItems = [
     {
         key: '/admin/comments',
         icon: <MessageOutlined />,
-        label: 'Bình luận',
+        label: 'Hỏi và đáp',
     },
     {
         key: '/admin/vouchers',
