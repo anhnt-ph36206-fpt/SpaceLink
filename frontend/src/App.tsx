@@ -29,6 +29,7 @@ import AdminUserPage from './pages/admin/AdminUserPage';
 import AdminReviewPage from './pages/admin/reviews/AdminReviewPage';
 import AdminCommentPage from './pages/admin/comments/AdminCommentPage';
 import AdminVoucherPage from './pages/admin/vouchers/AdminVoucherPage';
+import AdminComplaintPage from './pages/admin/complaints/AdminComplaintPage';
 import ProductList from "./pages/admin/products/list";
 import ProductCreate from "./pages/admin/products/create";
 import ProductEdit from "./pages/admin/products/edit";
@@ -85,6 +86,7 @@ function App() {
                                 <Route path="reviews" element={<AdminReviewPage />} />
                                 <Route path="comments" element={<AdminCommentPage />} />
                                 <Route path="vouchers" element={<AdminVoucherPage />} />
+                                <Route path="complaints" element={<AdminComplaintPage />} />
                             </Route>
 
                             {/* Public routes */}

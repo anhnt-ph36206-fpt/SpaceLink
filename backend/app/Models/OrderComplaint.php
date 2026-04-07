@@ -12,8 +12,13 @@ class OrderComplaint extends Model
         'type',
         'subject',
         'content',
+        'images',
         'status',
         'admin_reply',
+    ];
+
+    protected $casts = [
+        'images' => 'array',
     ];
 
     public function order()

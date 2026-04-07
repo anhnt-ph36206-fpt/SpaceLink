@@ -227,6 +227,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'staff'])->g
     Route::patch('notifications/read-all', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'readAll']);
     Route::patch('notifications/{id}/read', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'markRead']);
 
+    // Complaints
+    Route::apiResource('complaints', \App\Http\Controllers\Api\Admin\ComplaintController::class)->only(['index', 'show', 'update']);
+
     Route::apiResource('vouchers', \App\Http\Controllers\Api\Admin\VoucherController::class);
 
     Route::get('reviews', [AdminReviewController::class, 'index']);
@@ -264,4 +267,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
 
     // Báo cáo doanh thu cấp cao — CHỈ Admin
     Route::get('dashboard/revenue', [DashboardController::class, 'revenue']);
+    Route::get('dashboard/sales-by-category', [DashboardController::class, 'salesByCategory']);
+    Route::get('dashboard/top-products', [DashboardController::class, 'topProducts']);
 });
