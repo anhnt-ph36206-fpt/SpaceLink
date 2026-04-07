@@ -241,17 +241,6 @@ const AdminCategoryPage: React.FC = () => {
         setIsTransferring(false);
     };
 
-    const handleSoftDelete = async () => {
-        if (!categoryToDelete) return;
-        try {
-            await axiosInstance.delete(`${categoryPrefix}/${categoryToDelete.id}`);
-            toast.success('Đã ẩn danh mục thành công (Soft delete)');
-            setDeleteModalVisible(false);
-            fetchCategories();
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Có lỗi xảy ra khi ẩn');
-        }
-    };
 
     const handleTransferAndDelete = async () => {
         if (!categoryToDelete || !transferCategoryId) return;
@@ -574,34 +563,12 @@ const AdminCategoryPage: React.FC = () => {
                                 type="warning"
                                 showIcon
                                 message={<strong>Danh mục này đang có {categoryProductCount} sản phẩm</strong>}
-                                description="Để đảm bảo toàn vẹn dữ liệu, hệ thống không cho phép xóa tĩnh danh mục đang chứa sản phẩm. Vui lòng chọn 1 trong 2 phương án bên dưới:"
+                                description="Để đảm bảo toàn vẹn dữ liệu, hệ thống không cho phép xóa danh mục đang chứa sản phẩm. Vui lòng chuyển sản phẩm sang danh mục khác để tiếp tục:"
                                 style={{ marginBottom: 24, borderRadius: 8 }}
                             />
                         )}
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                            {/* Option 1: Soft Delete */}
-                            <Card
-                                size="small"
-                                hoverable
-                                style={{ borderColor: '#0d6efd', background: '#f8fbff', borderRadius: 10 }}
-                                bodyStyle={{ padding: 16 }}
-                            >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                                    <div style={{ flex: 1, minWidth: 200 }}>
-                                        <div style={{ fontWeight: 700, color: '#0d6efd', fontSize: 15, marginBottom: 4 }}>
-                                            👻 Ẩn danh mục (Soft Delete)
-                                        </div>
-                                        <div style={{ fontSize: 13, color: '#444' }}>
-                                            Chuẩn production: Danh mục được ẩn khỏi trang Khách, nhưng vẫn giữ nguyên dữ liệu gốc để tra cứu sau này.
-                                        </div>
-                                    </div>
-                                    <Button type="primary" onClick={handleSoftDelete} style={{ borderRadius: 8, background: '#0d6efd' }}>
-                                        Tiến hành Ẩn
-                                    </Button>
-                                </div>
-                            </Card>
-
                             {/* Option 2: Transfer & Delete */}
                             {categoryProductCount !== null && categoryProductCount > 0 && (
                                 <Card size="small" hoverable style={{ borderColor: '#e9ecef', borderRadius: 10 }} bodyStyle={{ padding: 16 }}>
