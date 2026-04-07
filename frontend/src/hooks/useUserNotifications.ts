@@ -11,7 +11,7 @@ export interface UserNotif {
     created_at: string;
 }
 
-const POLL_INTERVAL = 30_000; // 30 giây
+const POLL_INTERVAL = 3_000; // 3 giây — gần real-time
 
 export function useUserNotifications(enabled: boolean = true) {
     const [notifications, setNotifications] = useState<UserNotif[]>([]);

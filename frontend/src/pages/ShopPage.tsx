@@ -3,6 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import ProductCard from "../components/common/ProductCard";
 import { axiosInstance } from "../api/axios";
 import type { Product } from "../types";
+import { useCart } from "../context/CartContext";
+import VariantSelectorModal from "../components/product/VariantSelectorModal";
+import { toast } from "react-toastify";
 
 const formatVND = (v: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
@@ -33,9 +36,12 @@ interface ProductResponse {
 
 const ShopPage: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
+    const { addToCart } = useCart();
 
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<CategoryNode[]>([]);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
@@ -116,6 +122,21 @@ const ShopPage: React.FC = () => {
         setSort("");
         setPriceRange(50000000);
         setPage(1);
+    };
+
+    const handleQuickAdd = async (p: any) => {
+        const t = toast.info('Đang tải thông tin sản phẩm...', { autoClose: false });
+        try {
+            const res = await axiosInstance.get(`/products/${p.id}`);
+            if (res.data?.data) {
+                setSelectedProduct(res.data.data);
+                setModalVisible(true);
+            } else toast.error('Không tìm thấy dữ liệu sản phẩm');
+        } catch {
+            toast.error('Không thể lấy thông tin sản phẩm');
+        } finally {
+            toast.dismiss(t);
+        }
     };
 
     /* ── Find selected category name for breadcrumb ─────── */
@@ -362,7 +383,13 @@ const ShopPage: React.FC = () => {
                                 <p className="mt-2 text-muted">Đang tải sản phẩm...</p>
                             </div>
                         ) : products.length ? (
-                            products.map((product) => <ProductCard key={product.id} product={product} />)
+                            products.map((product) => (
+                                <ProductCard 
+                                    key={product.id} 
+                                    product={product} 
+                                    onAddToCart={() => handleQuickAdd(product)} 
+                                />
+                            ))
                         ) : (
                             <div className="col-12 text-center py-5 text-muted">
                                 <i className="fas fa-box-open fs-1 mb-3 d-block opacity-50" />
@@ -388,6 +415,13 @@ const ShopPage: React.FC = () => {
                 </div>
 
             </div>
+            
+            <VariantSelectorModal
+                visible={modalVisible}
+                product={selectedProduct}
+                onCancel={() => setModalVisible(false)}
+                onAddToCart={(vId, q) => addToCart(vId, q)}
+            />
         </div>
     );
 };

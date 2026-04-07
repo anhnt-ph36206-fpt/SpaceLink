@@ -762,9 +762,11 @@ class CheckoutController extends Controller
 
                         if ($variant) {
                             $variant->decrement('quantity', $item->quantity);
-                            Product::where('id', $item->product_id)
-                                ->where('quantity', '>=', $item->quantity)
-                                ->decrement('quantity', $item->quantity);
+                            // Sync product.quantity = tổng variant (nhất quán với hoàn kho)
+                            $product = Product::find($item->product_id);
+                            if ($product) {
+                                $product->update(['quantity' => ProductVariant::where('product_id', $product->id)->sum('quantity')]);
+                            }
                         }
                     }
                 }

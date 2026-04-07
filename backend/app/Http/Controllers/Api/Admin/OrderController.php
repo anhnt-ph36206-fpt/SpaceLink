@@ -353,17 +353,37 @@ class OrderController extends Controller
         }
 
         DB::transaction(function () use ($order, $updateData, $newPaymentStatus, $productReturn): void {
-            $order->update($updateData);
+            // Lock order để tránh race condition (admin double-click)
+            $freshOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+            if (!$freshOrder) return;
+
+            $freshOrder->update($updateData);
 
             if (in_array($newPaymentStatus, ['refunded', 'partial_refund'], true) && $productReturn) {
-                $productReturn->status = 'refunded';
-                $productReturn->refund_amount = $newPaymentStatus === 'refunded' ? $order->total_amount : $productReturn->refund_amount;
-                $productReturn->save();
+                // Re-lock productReturn bên trong transaction để đảm bảo idempotent
+                $freshReturn = \App\Models\ProductReturn::where('id', $productReturn->id)
+                    ->lockForUpdate()->first();
+
+                // ĐÃ refunded rồi → KHÔNG hoàn kho lần 2 (chống double-click)
+                if (!$freshReturn || $freshReturn->status === 'refunded') {
+                    return;
+                }
+
+                $freshReturn->status = 'refunded';
+                $freshReturn->refund_amount = $newPaymentStatus === 'refunded'
+                    ? $freshOrder->total_amount
+                    : $freshReturn->refund_amount;
+                $freshReturn->save();
 
                 // Lazy deduction: Hoàn kho khi refund (vì stock đã bị trừ khi confirmed/paid)
-                foreach ($order->items()->with('variant')->get() as $item) {
-                    if ($item->variant_id && $item->variant) {
-                        $item->variant->increment('quantity', $item->quantity);
+                foreach ($freshOrder->items()->with('variant')->get() as $item) {
+                    if ($item->variant_id) {
+                        // Lock variant trước khi increment để tránh race condition
+                        $variant = ProductVariant::where('id', $item->variant_id)
+                            ->lockForUpdate()->first();
+                        if ($variant) {
+                            $variant->increment('quantity', $item->quantity);
+                        }
                     }
                     // Sync product.quantity = tổng variant
                     $p = Product::find($item->product_id);

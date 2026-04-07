@@ -158,6 +158,15 @@ class OrderController extends Controller
             ], 403);
         }
 
+        // Nếu đơn đã được tự động hoàn thành (AutoComplete) → trả về success
+        if ($order->status === 'completed') {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Đơn hàng đã được xác nhận hoàn tất.',
+                'data' => new OrderResource($order),
+            ]);
+        }
+
         if ($order->status !== 'delivered') {
             return response()->json([
                 'status' => 'error',
@@ -186,6 +195,14 @@ class OrderController extends Controller
             'order_completed',
             '🎉 Đơn hàng hoàn tất',
             "Đơn #{$order->order_code} đã được xác nhận hoàn tất. Cảm ơn bạn đã mua hàng!",
+            $order->id
+        );
+
+        // Thông báo cho admin
+        AdminNotification::notify(
+            'order_completed',
+            '🎉 Khách hàng xác nhận nhận hàng',
+            "#{$order->order_code} — {$user->fullname} đã xác nhận nhận được hàng.",
             $order->id
         );
 

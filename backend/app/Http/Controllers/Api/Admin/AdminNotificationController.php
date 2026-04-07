@@ -91,8 +91,17 @@ class AdminNotificationController extends Controller
         ]);
 
         DB::transaction(function () use ($order, $cancelReq, $admin, $request) {
+            // Lock order + cancel request để tránh race condition
+            $freshOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+            $freshCancelReq = \App\Models\OrderCancelRequest::where('id', $cancelReq->id)
+                ->lockForUpdate()->first();
+
+            if (!$freshOrder || !$freshCancelReq || $freshCancelReq->status !== 'pending') {
+                return; // Đã được xử lý rồi (chống double-click)
+            }
+
             // 1. Cập nhật cancel request
-            $cancelReq->update([
+            $freshCancelReq->update([
                 'status'           => 'approved',
                 'transaction_code' => $request->transaction_code,
                 'admin_note'       => $request->admin_note,
@@ -101,30 +110,34 @@ class AdminNotificationController extends Controller
             ]);
 
             // 2. Xử lý đơn hàng
-            $wasConfirmed = in_array($order->status, ['confirmed', 'processing', 'shipping', 'delivered', 'completed'], true);
-            $isVnpayPaid = $order->payment_method === 'vnpay' && $order->payment_status === 'paid';
-            $isStockCancelled = $order->status === 'cancelled'
-                && $order->cancelled_reason === 'out_of_stock_after_payment';
+            $wasConfirmed = in_array($freshOrder->status, ['confirmed', 'processing', 'shipping', 'delivered', 'completed'], true);
+            $isVnpayPaid = $freshOrder->payment_method === 'vnpay' && $freshOrder->payment_status === 'paid';
+            $isStockCancelled = $freshOrder->status === 'cancelled'
+                && $freshOrder->cancelled_reason === 'out_of_stock_after_payment';
 
-            $newPaymentStatus = $order->payment_status === 'paid' ? 'refunded' : $order->payment_status;
+            $newPaymentStatus = $freshOrder->payment_status === 'paid' ? 'refunded' : $freshOrder->payment_status;
 
-            $order->update([
+            $freshOrder->update([
                 'status'           => 'cancelled',
                 'payment_status'   => $newPaymentStatus,
                 'cancelled_reason' => $isStockCancelled
-                    ? 'out_of_stock_after_payment'  // Giữ nguyên lý do gốc
+                    ? 'out_of_stock_after_payment'
                     : 'Admin duyệt yêu cầu hủy.',
                 'cancelled_by'     => $admin->id,
-                'cancelled_at'     => $order->cancelled_at ?? now(),
+                'cancelled_at'     => $freshOrder->cancelled_at ?? now(),
             ]);
 
             // Hoàn kho nếu đơn đã confirmed+ (stock đã bị trừ)
             // HOẶC đơn VNPAY ĐÃ THANH TOÁN (vì IPN của VNPAY đã tự động trừ kho)
             // Đơn cancelled vì out_of_stock_after_payment → chưa trừ kho → KHÔNG hoàn
             if (($wasConfirmed || $isVnpayPaid) && !$isStockCancelled) {
-                foreach ($order->items as $item) {
-                    if ($item->variant_id && $item->variant) {
-                        $item->variant->increment('quantity', $item->quantity);
+                foreach ($freshOrder->items()->with('variant')->get() as $item) {
+                    if ($item->variant_id) {
+                        $variant = \App\Models\ProductVariant::where('id', $item->variant_id)
+                            ->lockForUpdate()->first();
+                        if ($variant) {
+                            $variant->increment('quantity', $item->quantity);
+                        }
                     }
                     $p = Product::find($item->product_id);
                     if ($p) {
@@ -136,8 +149,8 @@ class AdminNotificationController extends Controller
             // 3. KHÔNG hoàn voucher (đơn đã paid = đã dùng dịch vụ)
             // Ghi lịch sử
             OrderStatusHistory::create([
-                'order_id'    => $order->id,
-                'from_status' => 'pending',
+                'order_id'    => $freshOrder->id,
+                'from_status' => $order->status,
                 'to_status'   => 'cancelled',
                 'note'        => 'Admin duyệt yêu cầu hủy. Mã GD hoàn tiền: ' . ($request->transaction_code ?? '—'),
                 'changed_by'  => $admin->id,
