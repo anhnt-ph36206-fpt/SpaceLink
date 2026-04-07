@@ -22,28 +22,28 @@ class CategoryResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'          => $this->id,
-            'name'        => $this->name,
-            'slug'        => $this->slug,
+            'id' => $this->id,
+            'name' => $this->name,
+            'slug' => $this->slug,
 
             // Absolute URL: trả null nếu trường rỗng
-            'image'       => $this->image ? url('storage/' . $this->image) : null,
-            'icon'        => $this->icon  ? url('storage/' . $this->icon)  : null,
+            'image' => $this->image ? url('storage/' . $this->image) : null,
+            'icon' => $this->icon ? url('storage/' . $this->icon) : null,
 
             'description' => $this->description,
-            'parent_id'   => $this->parent_id,
-            'is_active'   => (bool) $this->is_active,
+            'parent_id' => $this->parent_id,
+            'is_active' => (bool) $this->is_active,
             'products_count' => $this->whenCounted('products'),
 
             // Bọc parent vào Resource để đồng nhất format trả về
             // Chỉ xuất hiện khi relationship được Eager Load
-            'parent'      => new CategoryResource($this->whenLoaded('parent')),
+            'parent' => new CategoryResource($this->whenLoaded('parent')),
 
             // Đệ quy: chỉ xuất hiện khi relationship được Eager Load
-            'children'    => CategoryResource::collection($this->whenLoaded('children')),
+            'children' => CategoryResource::collection($this->whenLoaded('children')),
 
             // Gộp display_order vào meta, tách biệt khỏi các trường chính
-            'meta'        => [
+            'meta' => [
                 'display_order' => $this->display_order,
             ],
         ];
