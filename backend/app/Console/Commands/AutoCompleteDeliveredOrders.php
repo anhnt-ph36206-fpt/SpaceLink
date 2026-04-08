@@ -8,20 +8,20 @@ use App\Models\UserNotification;
 use Illuminate\Console\Command;
 
 /**
- * Tự động chuyển đơn từ "delivered" → "completed" sau 1 tiếng.
+ * Tự động chuyển đơn từ "delivered" → "completed" sau 1 ngày.
  *
- * Lý do: Nếu khách không bấm "Đã nhận hàng" sau 1 tiếng kể từ ngày giao,
+ * Lý do: Nếu khách không bấm "Đã nhận hàng" sau 1 ngày kể từ ngày giao,
  * hệ thống tự hoàn tất đơn thay họ (giống Shopee/Lazada).
  *
  * Schedule: chạy mỗi phút.
  */
 class AutoCompleteDeliveredOrders extends Command
 {
-    protected $signature   = 'orders:auto-complete-delivered';
-    protected $description = 'Tự động hoàn thành ("completed") các đơn đã giao hàng ("delivered") sau 1 tiếng.';
+    protected $signature = 'orders:auto-complete-delivered';
+    protected $description = 'Tự động hoàn thành ("completed") các đơn đã giao hàng ("delivered") sau 1 ngày.';
 
-    /** Số phút tự động hoàn tất kể từ delivered_at */
-    private const MINUTES_THRESHOLD = 2;
+    /** Số phút tự động hoàn tất kể từ delivered_at (1 ngày = 1440 phút) */
+    private const MINUTES_THRESHOLD = 1440;
 
     public function handle(): void
     {
@@ -36,7 +36,7 @@ class AutoCompleteDeliveredOrders extends Command
         $count = 0;
         foreach ($orders as $order) {
             $updateData = [
-                'status'       => 'completed',
+                'status' => 'completed',
                 'completed_at' => now(),
             ];
 
@@ -48,10 +48,10 @@ class AutoCompleteDeliveredOrders extends Command
             $order->update($updateData);
 
             OrderStatusHistory::create([
-                'order_id'   => $order->id,
-                'from_status'=> 'delivered',
-                'to_status'  => 'completed',
-                'note'       => 'Hệ thống tự động hoàn thành sau ' . self::MINUTES_THRESHOLD . ' phút giao hàng.',
+                'order_id' => $order->id,
+                'from_status' => 'delivered',
+                'to_status' => 'completed',
+                'note' => 'Hệ thống tự động hoàn thành sau 1 ngày giao hàng.',
                 'changed_by' => null,
             ]);
 
@@ -61,7 +61,7 @@ class AutoCompleteDeliveredOrders extends Command
                     $order->user_id,
                     'order_completed',
                     '🎉 Đơn hàng đã hoàn tất',
-                    "Đơn #{$order->order_code} đã được hệ thống tự động xác nhận hoàn tất sau " . self::MINUTES_THRESHOLD . " phút giao hàng.",
+                    "Đơn #{$order->order_code} đã được hệ thống tự động xác nhận hoàn tất sau 1 ngày giao hàng.",
                     $order->id
                 );
             }
