@@ -42,7 +42,11 @@ class ProductController extends Controller
         }
 
         if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+            $categoryId = $request->category_id;
+            // Lấy tất cả ID danh mục con (nếu là danh mục cha)
+            $childIds = \App\Models\Category::where('parent_id', $categoryId)->pluck('id')->toArray();
+            $categoryIds = array_merge([$categoryId], $childIds);
+            $query->whereIn('category_id', $categoryIds);
         }
 
         if ($request->filled('brand_id')) {
