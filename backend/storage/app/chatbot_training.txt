@@ -1,0 +1,1356 @@
+=============================================================
+PHẦN 1: DANH MỤC SẢN PHẨM
+=============================================================
+- Danh mục: Apple Watch
+- Danh mục: Bàn phím & Chuột
+- Danh mục: Điện thoại
+- Danh mục: Điện thoại khác
+- Danh mục: Đồng hồ thông minh
+- Danh mục: hiep
+- Danh mục: iPad
+- Danh mục: iPhone
+- Danh mục: Laptop
+- Danh mục: Laptop Gaming
+- Danh mục: Laptop Văn phòng
+- Danh mục: MacBook
+- Danh mục: Ốp lưng & Bảo vệ
+- Danh mục: OPPO
+- Danh mục: Phụ kiện
+- Danh mục: Sạc & Cáp
+- Danh mục: Samsung
+- Danh mục: Samsung Tab
+- Danh mục: Samsung Watch
+- Danh mục: Smartwatch khác
+- Danh mục: Tablet
+- Danh mục: Tablet khác
+- Danh mục: Tai nghe
+- Danh mục: Xiaomi
+
+=============================================================
+PHẦN 2: THƯƠNG HIỆU
+=============================================================
+- Thương hiệu: Acer
+- Thương hiệu: Apple
+- Thương hiệu: Asus
+- Thương hiệu: Dell
+- Thương hiệu: HP
+- Thương hiệu: Lenovo
+- Thương hiệu: MSI
+- Thương hiệu: OPPO
+- Thương hiệu: Samsung
+- Thương hiệu: Sony
+- Thương hiệu: Xiaomi
+
+=============================================================
+PHẦN 3: TOÀN BỘ SẢN PHẨM VỚI THÔNG SỐ KỸ THUẬT
+=============================================================
+Lưu ý: Khi người dùng hỏi về sản phẩm, PHẢI kèm đường link sản phẩm theo chuẩn: /product/{slug}
+
+------------------------------------------------------------
+Tên sản phẩm: 123
+  - Thương hiệu: N/A
+  - Danh mục: Laptop Gaming
+  - Giá bán: 100 VND (Giá gốc: 123 VND — Đang SALE!)
+  - Link sản phẩm: /product/123
+  - SKU: 123
+  - Tồn kho: 123 chiếc
+  - Mô tả: 123...
+
+------------------------------------------------------------
+Tên sản phẩm: Apple AirPods 3
+  - Thương hiệu: Apple
+  - Danh mục: Tai nghe
+  - Giá bán: 4.200.000 VND (Giá gốc: 4.500.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/apple-airpods-3-L4FHD
+  - SKU: APPLE-AIRPODS-3-16-vUjA
+  - Tồn kho: 24 chiếc
+  - Mô tả: Trang bị ngay Apple AirPods 3 chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (4.700.000 VND),  (5.200.000 VND),  (5.700.000 VND),  (6.200.000 VND),  (6.700.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Apple AirPods Max
+  - Thương hiệu: Apple
+  - Danh mục: Tai nghe
+  - Giá bán: 11.500.000 VND (Giá gốc: 12.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/apple-airpods-max-Sujx0
+  - SKU: APPLE-AIRPODS-M-16-ws6l
+  - Tồn kho: 78 chiếc
+  - Mô tả: Trang bị ngay Apple AirPods Max chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (12.000.000 VND),  (12.500.000 VND),  (13.000.000 VND),  (13.500.000 VND),  (14.000.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Apple AirPods Pro 2
+  - Thương hiệu: Apple
+  - Danh mục: Tai nghe
+  - Giá bán: 5.890.000 VND (Giá gốc: 6.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/apple-airpods-pro-2-fHnS2
+  - SKU: APPLE-AIRPODS-P-16-9Byt
+  - Tồn kho: 67 chiếc
+  - Mô tả: Trang bị ngay Apple AirPods Pro 2 chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (6.390.000 VND),  (6.890.000 VND),  (7.390.000 VND),  (7.890.000 VND),  (8.390.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Apple Watch SE 2023 GPS 40mm
+  - Thương hiệu: Apple
+  - Danh mục: Apple Watch
+  - Giá bán: 5.990.000 VND (Giá gốc: 6.500.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/apple-watch-se-2023-gps-40mm-n1wNl
+  - SKU: APPLE-WATCH-SE--21-1TvK
+  - Tồn kho: 59 chiếc
+  - Mô tả: Đồng hồ thông minh Apple Watch SE 2023 GPS 40mm không chỉ là phụ kiện thời trang mà còn là trợ lý sức khỏe đắc lực. Theo dõi vận động, nhịp tim và giữ kết nối liên tục không gián đoạn....
+  - Phiên bản / Biến thể:  (6.490.000 VND),  (6.990.000 VND),  (7.490.000 VND),  (7.990.000 VND),  (8.490.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+        * Chống nước: 5 ATM / IP68
+        * Theo dõi sức khỏe: Nhịp tim, SpO2, Giấc ngủ
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Apple Watch Series 9 GPS 41mm
+  - Thương hiệu: Apple
+  - Danh mục: Apple Watch
+  - Giá bán: 9.990.000 VND (Giá gốc: 10.500.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/apple-watch-series-9-gps-41mm-jlUnv
+  - SKU: APPLE-WATCH-SER-21-qnot
+  - Tồn kho: 83 chiếc
+  - Mô tả: Đồng hồ thông minh Apple Watch Series 9 GPS 41mm không chỉ là phụ kiện thời trang mà còn là trợ lý sức khỏe đắc lực. Theo dõi vận động, nhịp tim và giữ kết nối liên tục không gián đoạn....
+  - Phiên bản / Biến thể:  (10.490.000 VND),  (10.990.000 VND),  (11.490.000 VND),  (11.990.000 VND),  (12.490.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+        * Chống nước: 5 ATM / IP68
+        * Theo dõi sức khỏe: Nhịp tim, SpO2, Giấc ngủ
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Apple Watch Ultra 2 GPS + Cellular
+  - Thương hiệu: Apple
+  - Danh mục: Apple Watch
+  - Giá bán: 20.490.000 VND (Giá gốc: 21.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/apple-watch-ultra-2-gps-cellular-bmTTy
+  - SKU: APPLE-WATCH-ULT-21-TNy7
+  - Tồn kho: 30 chiếc
+  - Mô tả: Đồng hồ thông minh Apple Watch Ultra 2 GPS + Cellular không chỉ là phụ kiện thời trang mà còn là trợ lý sức khỏe đắc lực. Theo dõi vận động, nhịp tim và giữ kết nối liên tục không gián đoạn....
+  - Phiên bản / Biến thể:  (20.990.000 VND),  (21.490.000 VND),  (21.990.000 VND),  (22.490.000 VND),  (22.990.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+        * Chống nước: 5 ATM / IP68
+        * Theo dõi sức khỏe: Nhịp tim, SpO2, Giấc ngủ
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Apple Watch Ultra 3 GPS
+  - Thương hiệu: Apple
+  - Danh mục: Apple Watch
+  - Giá bán: 25.999.000 VND (Giá gốc: 26.999.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/apple-watch-ultra-3-gps
+  - SKU: AWULTRA3
+  - Tồn kho: 50 chiếc
+  - Mô tả: Đồng hồ thông minh Apple Watch Ultra 3 GPS không chỉ là phụ kiện thời trang mà còn là trợ lý sức khỏe đắc lực. Theo dõi vận động, nhịp tim và giữ kết nối liên tục không gián đoạn....
+  - Phiên bản / Biến thể:  (26.499.000 VND),  (26.999.000 VND),  (27.499.000 VND),  (27.999.000 VND),  (28.499.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+        * Chống nước: 5 ATM / IP68
+        * Theo dõi sức khỏe: Nhịp tim, SpO2, Giấc ngủ
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Bao da Clear View Galaxy S24 Ultra
+  - Thương hiệu: Samsung
+  - Danh mục: Ốp lưng & Bảo vệ
+  - Giá bán: 1.050.000 VND (Giá gốc: 1.200.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/bao-da-clear-view-galaxy-s24-ultra-Yauo9
+  - SKU: BAO-DA-CLEAR-VI-17-xas8
+  - Tồn kho: 94 chiếc
+  - Mô tả: Trang bị ngay Bao da Clear View Galaxy S24 Ultra chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (1.550.000 VND),  (2.050.000 VND),  (2.550.000 VND),  (3.050.000 VND),  (3.550.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Cáp Sạc Apple USB-C to USB-C 1m
+  - Thương hiệu: Apple
+  - Danh mục: Sạc & Cáp
+  - Giá bán: 390.000 VND (Giá gốc: 450.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/cap-sac-apple-usb-c-to-usb-c-1m-JyJ4p
+  - SKU: CAP-SAC-APPLE-U-18-kATV
+  - Tồn kho: 94 chiếc
+  - Mô tả: Trang bị ngay Cáp Sạc Apple USB-C to USB-C 1m chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (890.000 VND),  (1.390.000 VND),  (1.890.000 VND),  (2.390.000 VND),  (2.890.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Cáp Sạc Baseus 100W Type-C to Type-C
+  - Thương hiệu: N/A
+  - Danh mục: Sạc & Cáp
+  - Giá bán: 150.000 VND (Giá gốc: 200.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/cap-sac-baseus-100w-type-c-to-type-c-qd4SW
+  - SKU: CAP-SAC-BASEUS--18-CMzd
+  - Tồn kho: 61 chiếc
+  - Mô tả: Trang bị ngay Cáp Sạc Baseus 100W Type-C to Type-C chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (650.000 VND),  (1.150.000 VND),  (1.650.000 VND),  (2.150.000 VND),  (2.650.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Củ Sạc Nhanh Anker 313 30W
+  - Thương hiệu: N/A
+  - Danh mục: Sạc & Cáp
+  - Giá bán: 350.000 VND (Giá gốc: 450.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/cu-sac-nhanh-anker-313-30w-9zCvE
+  - SKU: CU-SAC-NHANH-AN-18-QfX1
+  - Tồn kho: 86 chiếc
+  - Mô tả: Trang bị ngay Củ Sạc Nhanh Anker 313 30W chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (850.000 VND),  (1.350.000 VND),  (1.850.000 VND),  (2.350.000 VND),  (2.850.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Củ Sạc Nhanh Apple 20W Type-C
+  - Thương hiệu: Apple
+  - Danh mục: Sạc & Cáp
+  - Giá bán: 490.000 VND (Giá gốc: 550.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/cu-sac-nhanh-apple-20w-type-c-ypE5J
+  - SKU: CU-SAC-NHANH-AP-18-hwfn
+  - Tồn kho: 43 chiếc
+  - Mô tả: Trang bị ngay Củ Sạc Nhanh Apple 20W Type-C chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (990.000 VND),  (1.490.000 VND),  (1.990.000 VND),  (2.490.000 VND),  (2.990.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Củ Sạc Nhanh Apple 20W Type-C
+  - Thương hiệu: Apple
+  - Danh mục: Sạc & Cáp
+  - Giá bán: 490.000 VND (Giá gốc: 550.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/cu-sac-nhanh-apple-20w-type-c-4friw
+  - SKU: CU-SAC-NHANH-AP-18-IvZo
+  - Tồn kho: 51 chiếc
+  - Mô tả: Trang bị ngay Củ Sạc Nhanh Apple 20W Type-C chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (990.000 VND),  (1.490.000 VND),  (1.990.000 VND),  (2.490.000 VND),  (2.990.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Củ Sạc Samsung 45W Kèm Cáp Type-C
+  - Thương hiệu: Samsung
+  - Danh mục: Sạc & Cáp
+  - Giá bán: 790.000 VND (Giá gốc: 950.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/cu-sac-samsung-45w-kem-cap-type-c-7s7qg
+  - SKU: CU-SAC-SAMSUNG--18-KLXw
+  - Tồn kho: 95 chiếc
+  - Mô tả: Trang bị ngay Củ Sạc Samsung 45W Kèm Cáp Type-C chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (1.290.000 VND),  (1.790.000 VND),  (2.290.000 VND),  (2.790.000 VND),  (3.290.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Garmin Forerunner 265
+  - Thương hiệu: N/A
+  - Danh mục: Smartwatch khác
+  - Giá bán: 10.990.000 VND (Giá gốc: 11.500.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/garmin-forerunner-265-hCXs0
+  - SKU: GARMIN-FORERUNN-23-8PEl
+  - Tồn kho: 44 chiếc
+  - Mô tả: Đồng hồ thông minh Garmin Forerunner 265 không chỉ là phụ kiện thời trang mà còn là trợ lý sức khỏe đắc lực. Theo dõi vận động, nhịp tim và giữ kết nối liên tục không gián đoạn....
+  - Phiên bản / Biến thể:  (11.490.000 VND),  (11.990.000 VND),  (12.490.000 VND),  (12.990.000 VND),  (13.490.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+        * Chống nước: 5 ATM / IP68
+        * Theo dõi sức khỏe: Nhịp tim, SpO2, Giấc ngủ
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Huawei Watch GT 4
+  - Thương hiệu: N/A
+  - Danh mục: Smartwatch khác
+  - Giá bán: 4.990.000 VND (Giá gốc: 5.500.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/huawei-watch-gt-4-2W0n8
+  - SKU: HUAWEI-WATCH-GT-23-FS1h
+  - Tồn kho: 59 chiếc
+  - Mô tả: Đồng hồ thông minh Huawei Watch GT 4 không chỉ là phụ kiện thời trang mà còn là trợ lý sức khỏe đắc lực. Theo dõi vận động, nhịp tim và giữ kết nối liên tục không gián đoạn....
+  - Phiên bản / Biến thể:  (5.490.000 VND),  (5.990.000 VND),  (6.490.000 VND),  (6.990.000 VND),  (7.490.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+        * Chống nước: 5 ATM / IP68
+        * Theo dõi sức khỏe: Nhịp tim, SpO2, Giấc ngủ
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: iPhone 15 Pro Max 256GB
+  - Thương hiệu: Apple
+  - Danh mục: iPhone
+  - Giá bán: 44.000.000 VND (Giá gốc: 45.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/iphone-15-pro-max-256gb
+  - SKU: IP15PM256
+  - Tồn kho: 231 chiếc
+  - Mô tả: Sở hữu ngay iPhone 15 Pro Max 256GB chính hãng tại SpaceLink. Trải nghiệm màn hình sắc nét, camera chụp ảnh đỉnh cao cùng hiệu năng vượt trội, đáp ứng mọi nhu cầu từ giải trí đến công việc....
+  - Phiên bản / Biến thể:  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (45.000.000 VND),  (44.500.000 VND),  (45.000.000 VND),  (45.500.000 VND),  (46.000.000 VND),  (46.500.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+        * Công nghệ màn hình: AMOLED / IPS LCD
+      [Camera sau]
+        * Camera sau: Chính 50MP & Phụ
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: 5000 mAh
+        * Dung lượng pin: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: iPhone 17
+  - Thương hiệu: Apple
+  - Danh mục: iPhone
+  - Giá bán: 23.490.000 VND (Giá gốc: 24.590.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/iphone-17
+  - SKU: IPHONE17
+  - Tồn kho: 49 chiếc
+  - Mô tả: Sở hữu ngay iPhone 17 chính hãng tại SpaceLink. Trải nghiệm màn hình sắc nét, camera chụp ảnh đỉnh cao cùng hiệu năng vượt trội, đáp ứng mọi nhu cầu từ giải trí đến công việc....
+  - Phiên bản / Biến thể:  (24.590.000 VND),  (24.590.000 VND),  (23.990.000 VND),  (24.490.000 VND),  (24.990.000 VND),  (25.490.000 VND),  (25.990.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Công nghệ màn hình: AMOLED / IPS LCD
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Camera sau: Chính 50MP & Phụ
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: 5000 mAh
+        * Dung lượng pin: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: iPhone 17 Pro Max
+  - Thương hiệu: Apple
+  - Danh mục: iPhone
+  - Giá bán: 29.000.000 VND (Giá gốc: 30.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/iphone-17-pro-max
+  - SKU: IP17-MAX
+  - Tồn kho: 100 chiếc
+  - Mô tả: Sở hữu ngay iPhone 17 Pro Max chính hãng tại SpaceLink. Trải nghiệm màn hình sắc nét, camera chụp ảnh đỉnh cao cùng hiệu năng vượt trội, đáp ứng mọi nhu cầu từ giải trí đến công việc....
+  - Phiên bản / Biến thể:  (30.000.000 VND),  (30.000.000 VND),  (30.000.000 VND),  (30.000.000 VND),  (30.000.000 VND),  (30.000.000 VND),  (30.000.000 VND),  (30.000.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+        * Công nghệ màn hình: AMOLED / IPS LCD
+      [Camera sau]
+        * Camera sau: Chính 50MP & Phụ
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: 5000 mAh
+        * Dung lượng pin: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: iPhone 17e
+  - Thương hiệu: Apple
+  - Danh mục: iPhone
+  - Giá bán: 16.000.000 VND (Giá gốc: 17.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/iphone-17e
+  - SKU: IP17E
+  - Tồn kho: 50 chiếc
+  - Mô tả: Sở hữu ngay iPhone 17e chính hãng tại SpaceLink. Trải nghiệm màn hình sắc nét, camera chụp ảnh đỉnh cao cùng hiệu năng vượt trội, đáp ứng mọi nhu cầu từ giải trí đến công việc....
+  - Phiên bản / Biến thể:  (16.500.000 VND),  (17.000.000 VND),  (17.500.000 VND),  (18.000.000 VND),  (18.500.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Công nghệ màn hình: AMOLED / IPS LCD
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Camera sau: Chính 50MP & Phụ
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: 5000 mAh
+        * Dung lượng pin: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: iPhone Air
+  - Thương hiệu: Apple
+  - Danh mục: iPhone
+  - Giá bán: 23.000.000 VND (Giá gốc: 24.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/iphone-air
+  - SKU: IPHONEAIR
+  - Tồn kho: 182 chiếc
+  - Mô tả: Sở hữu ngay iPhone Air chính hãng tại SpaceLink. Trải nghiệm màn hình sắc nét, camera chụp ảnh đỉnh cao cùng hiệu năng vượt trội, đáp ứng mọi nhu cầu từ giải trí đến công việc....
+  - Phiên bản / Biến thể:  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (23.500.000 VND),  (24.000.000 VND),  (24.500.000 VND),  (25.000.000 VND),  (25.500.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+        * Công nghệ màn hình: AMOLED / IPS LCD
+      [Camera sau]
+        * Camera sau: Chính 50MP & Phụ
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: 5000 mAh
+        * Dung lượng pin: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Laptop Acer Gaming Nitro Lite 16
+  - Thương hiệu: Acer
+  - Danh mục: Laptop Gaming
+  - Giá bán: 24.000.000 VND (Giá gốc: 25.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/laptop-acer-gaming-nitro-lite-16
+  - SKU: NITRO16
+  - Tồn kho: 229 chiếc
+  - Mô tả: Laptop Laptop Acer Gaming Nitro Lite 16 mang đến sức mạnh ấn tượng trong một thiết kế tối ưu. Xử lý mượt mà đa tác vụ, đồ họa hay gaming, là thiết bị đồng hành hoàn hảo cho công việc và học tập....
+  - Phiên bản / Biến thể:  (24.000.000 VND),  (24.500.000 VND),  (25.000.000 VND),  (25.500.000 VND),  (26.000.000 VND),  (26.500.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Cấu hình]
+        * Loại CPU: Intel Core / Apple M-series
+        * Chip xử lý (CPU): Đang cập nhật
+      [Đồ họa & Âm thanh]
+        * Card đồ họa: Tích hợp / Rời
+        * Trọng lượng: 1.2 kg - 2.5 kg
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Laptop Dell 14 DC14250
+  - Thương hiệu: Dell
+  - Danh mục: Laptop Văn phòng
+  - Giá bán: 10.040.000 VND (Giá gốc: 12.550.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/laptop-dell-14-dc14250
+  - SKU: DELL14DC14250
+  - Tồn kho: 221 chiếc
+  - Mô tả: Laptop Laptop Dell 14 DC14250 mang đến sức mạnh ấn tượng trong một thiết kế tối ưu. Xử lý mượt mà đa tác vụ, đồ họa hay gaming, là thiết bị đồng hành hoàn hảo cho công việc và học tập....
+  - Phiên bản / Biến thể:  (10.040.000 VND),  (10.540.000 VND),  (11.040.000 VND),  (11.540.000 VND),  (12.040.000 VND),  (12.540.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Cấu hình]
+        * Loại CPU: Intel Core / Apple M-series
+        * Chip xử lý (CPU): Đang cập nhật
+      [Đồ họa & Âm thanh]
+        * Card đồ họa: Tích hợp / Rời
+        * Trọng lượng: 1.2 kg - 2.5 kg
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Laptop Dell Pro 14
+  - Thương hiệu: Dell
+  - Danh mục: Laptop Gaming
+  - Giá bán: 24.790.000 VND (Giá gốc: 25.790.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/laptop-dell-pro-14
+  - SKU: DELLPRO14
+  - Tồn kho: 10 chiếc
+  - Mô tả: Laptop Laptop Dell Pro 14 mang đến sức mạnh ấn tượng trong một thiết kế tối ưu. Xử lý mượt mà đa tác vụ, đồ họa hay gaming, là thiết bị đồng hành hoàn hảo cho công việc và học tập....
+  - Phiên bản / Biến thể:  (24.790.000 VND),  (25.290.000 VND),  (25.790.000 VND),  (26.290.000 VND),  (26.790.000 VND),  (27.290.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Cấu hình]
+        * Loại CPU: Intel Core / Apple M-series
+        * Chip xử lý (CPU): Đang cập nhật
+      [Đồ họa & Âm thanh]
+        * Card đồ họa: Tích hợp / Rời
+        * Trọng lượng: 1.2 kg - 2.5 kg
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Laptop HP Omnibook X Flip 14
+  - Thương hiệu: HP
+  - Danh mục: Laptop Văn phòng
+  - Giá bán: 27.590.000 VND (Giá gốc: 28.590.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/laptop-hp-omnibook-x-flip-14
+  - SKU: OMNIBOOKXFLIP14
+  - Tồn kho: 20 chiếc
+  - Mô tả: Laptop Laptop HP Omnibook X Flip 14 mang đến sức mạnh ấn tượng trong một thiết kế tối ưu. Xử lý mượt mà đa tác vụ, đồ họa hay gaming, là thiết bị đồng hành hoàn hảo cho công việc và học tập....
+  - Phiên bản / Biến thể:  (27.590.000 VND),  (28.090.000 VND),  (28.590.000 VND),  (29.090.000 VND),  (29.590.000 VND),  (30.090.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Cấu hình]
+        * Loại CPU: Intel Core / Apple M-series
+        * Chip xử lý (CPU): Đang cập nhật
+      [Đồ họa & Âm thanh]
+        * Card đồ họa: Tích hợp / Rời
+        * Trọng lượng: 1.2 kg - 2.5 kg
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Laptop HP Victus 15
+  - Thương hiệu: HP
+  - Danh mục: Laptop Gaming
+  - Giá bán: 23.090.000 VND (Giá gốc: 24.090.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/laptop-hp-victus-15
+  - SKU: VICTUS15
+  - Tồn kho: 20 chiếc
+  - Mô tả: Laptop Laptop HP Victus 15 mang đến sức mạnh ấn tượng trong một thiết kế tối ưu. Xử lý mượt mà đa tác vụ, đồ họa hay gaming, là thiết bị đồng hành hoàn hảo cho công việc và học tập....
+  - Phiên bản / Biến thể:  (24.090.000 VND),  (23.590.000 VND),  (24.090.000 VND),  (24.590.000 VND),  (25.090.000 VND),  (25.590.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Cấu hình]
+        * Loại CPU: Intel Core / Apple M-series
+        * Chip xử lý (CPU): Đang cập nhật
+      [Đồ họa & Âm thanh]
+        * Card đồ họa: Tích hợp / Rời
+        * Trọng lượng: 1.2 kg - 2.5 kg
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Laptop MSI Prestige
+  - Thương hiệu: MSI
+  - Danh mục: Laptop Gaming
+  - Giá bán: 20.000.000 VND (Giá gốc: 25.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/laptop-msi-prestige
+  - SKU: MSIPRESTIGE
+  - Tồn kho: 151 chiếc
+  - Mô tả: Laptop Laptop MSI Prestige mang đến sức mạnh ấn tượng trong một thiết kế tối ưu. Xử lý mượt mà đa tác vụ, đồ họa hay gaming, là thiết bị đồng hành hoàn hảo cho công việc và học tập....
+  - Phiên bản / Biến thể:  (25.000.000 VND),  (20.500.000 VND),  (21.000.000 VND),  (21.500.000 VND),  (22.000.000 VND),  (22.500.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Cấu hình]
+        * Loại CPU: Intel Core / Apple M-series
+        * Chip xử lý (CPU): Đang cập nhật
+      [Đồ họa & Âm thanh]
+        * Card đồ họa: Tích hợp / Rời
+        * Trọng lượng: 1.2 kg - 2.5 kg
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: MacBook Air M4 15 inch 2025
+  - Thương hiệu: Apple
+  - Danh mục: MacBook
+  - Giá bán: 28.990.000 VND (Giá gốc: 29.990.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/macbook-air-m4-15-inch-2025
+  - SKU: AIRM4-15-2025
+  - Tồn kho: 20 chiếc
+  - Mô tả: Laptop MacBook Air M4 15 inch 2025 mang đến sức mạnh ấn tượng trong một thiết kế tối ưu. Xử lý mượt mà đa tác vụ, đồ họa hay gaming, là thiết bị đồng hành hoàn hảo cho công việc và học tập....
+  - Phiên bản / Biến thể:  (29.990.000 VND),  (29.490.000 VND),  (29.990.000 VND),  (30.490.000 VND),  (30.990.000 VND),  (31.490.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Cấu hình]
+        * Loại CPU: Intel Core / Apple M-series
+        * Chip xử lý (CPU): Đang cập nhật
+      [Đồ họa & Âm thanh]
+        * Card đồ họa: Tích hợp / Rời
+        * Trọng lượng: 1.2 kg - 2.5 kg
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: MacBook Air M4 15 inch 2025
+  - Thương hiệu: Apple
+  - Danh mục: MacBook
+  - Giá bán: 24.000.000 VND (Giá gốc: 25.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/macbook-air-m4-15-inch
+  - SKU: AIRM4
+  - Tồn kho: 18 chiếc
+  - Mô tả: Laptop MacBook Air M4 15 inch 2025 mang đến sức mạnh ấn tượng trong một thiết kế tối ưu. Xử lý mượt mà đa tác vụ, đồ họa hay gaming, là thiết bị đồng hành hoàn hảo cho công việc và học tập....
+  - Phiên bản / Biến thể:  (25.000.000 VND),  (24.500.000 VND),  (25.000.000 VND),  (25.500.000 VND),  (26.000.000 VND),  (26.500.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Cấu hình]
+        * Loại CPU: Intel Core / Apple M-series
+        * Chip xử lý (CPU): Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Đồ họa & Âm thanh]
+        * Card đồ họa: Tích hợp / Rời
+        * Trọng lượng: 1.2 kg - 2.5 kg
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Macbook Pro M1
+  - Thương hiệu: Apple
+  - Danh mục: MacBook
+  - Giá bán: 38.500.000 VND (Giá gốc: 40.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/macbook-pro-m1
+  - SKU: MAC-PROM1
+  - Tồn kho: 148 chiếc
+  - Mô tả: Laptop Macbook Pro M1 mang đến sức mạnh ấn tượng trong một thiết kế tối ưu. Xử lý mượt mà đa tác vụ, đồ họa hay gaming, là thiết bị đồng hành hoàn hảo cho công việc và học tập....
+  - Phiên bản / Biến thể:  (39.000.000 VND),  (39.500.000 VND),  (40.000.000 VND),  (40.500.000 VND),  (41.000.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Cấu hình]
+        * Loại CPU: Intel Core / Apple M-series
+        * Chip xử lý (CPU): Đang cập nhật
+      [Đồ họa & Âm thanh]
+        * Card đồ họa: Tích hợp / Rời
+        * Trọng lượng: 1.2 kg - 2.5 kg
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Ốp lưng Da MagSafe iPhone 15 Pro Max
+  - Thương hiệu: Apple
+  - Danh mục: Ốp lưng & Bảo vệ
+  - Giá bán: 1.650.000 VND (Giá gốc: 1.800.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/op-lung-da-magsafe-iphone-15-pro-max-M6cYD
+  - SKU: OP-LUNG-DA-MAGS-17-Y90g
+  - Tồn kho: 86 chiếc
+  - Mô tả: Trang bị ngay Ốp lưng Da MagSafe iPhone 15 Pro Max chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (2.150.000 VND),  (2.650.000 VND),  (3.150.000 VND),  (3.650.000 VND),  (4.150.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Ốp lưng Nillkin CamShield Xiaomi 14
+  - Thương hiệu: N/A
+  - Danh mục: Ốp lưng & Bảo vệ
+  - Giá bán: 200.000 VND (Giá gốc: 250.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/op-lung-nillkin-camshield-xiaomi-14-7Pm0S
+  - SKU: OP-LUNG-NILLKIN-17-rL9t
+  - Tồn kho: 76 chiếc
+  - Mô tả: Trang bị ngay Ốp lưng Nillkin CamShield Xiaomi 14 chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (700.000 VND),  (1.200.000 VND),  (1.700.000 VND),  (2.200.000 VND),  (2.700.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Ốp lưng Samsung Silicone S24 Ultra
+  - Thương hiệu: Samsung
+  - Danh mục: Ốp lưng & Bảo vệ
+  - Giá bán: 850.000 VND
+  - Link sản phẩm: /product/op-lung-samsung-silicone-s24-ultra-85iTW
+  - SKU: OP-LUNG-SAMSUNG-17-OKuH
+  - Tồn kho: 72 chiếc
+  - Mô tả: Trang bị ngay Ốp lưng Samsung Silicone S24 Ultra chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (1.150.000 VND),  (1.650.000 VND),  (2.150.000 VND),  (2.650.000 VND),  (3.150.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Ốp lưng Silicone MagSafe iPhone 15 Pro Max
+  - Thương hiệu: Apple
+  - Danh mục: Ốp lưng & Bảo vệ
+  - Giá bán: 1.500.000 VND
+  - Link sản phẩm: /product/op-lung-silicone-magsafe-iphone-15-pro-max-1qCq8
+  - SKU: OP-LUNG-SILICON-17-FwM9
+  - Tồn kho: 38 chiếc
+  - Mô tả: Trang bị ngay Ốp lưng Silicone MagSafe iPhone 15 Pro Max chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (1.800.000 VND),  (2.300.000 VND),  (2.800.000 VND),  (3.300.000 VND),  (3.800.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Ốp lưng Spigen Liquid Crystal iPhone 15
+  - Thương hiệu: N/A
+  - Danh mục: Ốp lưng & Bảo vệ
+  - Giá bán: 390.000 VND (Giá gốc: 450.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/op-lung-spigen-liquid-crystal-iphone-15-teJmM
+  - SKU: OP-LUNG-SPIGEN--17-5rFq
+  - Tồn kho: 79 chiếc
+  - Mô tả: Trang bị ngay Ốp lưng Spigen Liquid Crystal iPhone 15 chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (890.000 VND),  (1.390.000 VND),  (1.890.000 VND),  (2.390.000 VND),  (2.890.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Ốp lưng TPU Chống Sốc OPPO Reno 12
+  - Thương hiệu: N/A
+  - Danh mục: Ốp lưng & Bảo vệ
+  - Giá bán: 99.000 VND (Giá gốc: 150.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/op-lung-tpu-chong-soc-oppo-reno-12-j9CJJ
+  - SKU: OP-LUNG-TPU-CHO-17-qq02
+  - Tồn kho: 54 chiếc
+  - Mô tả: Trang bị ngay Ốp lưng TPU Chống Sốc OPPO Reno 12 chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (599.000 VND),  (1.099.000 VND),  (1.599.000 VND),  (2.099.000 VND),  (2.599.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Ốp lưng UAG Plasma Galaxy S24 Ultra
+  - Thương hiệu: N/A
+  - Danh mục: Ốp lưng & Bảo vệ
+  - Giá bán: 850.000 VND (Giá gốc: 950.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/op-lung-uag-plasma-galaxy-s24-ultra-TiF9w
+  - SKU: OP-LUNG-UAG-PLA-17-wn6k
+  - Tồn kho: 91 chiếc
+  - Mô tả: Trang bị ngay Ốp lưng UAG Plasma Galaxy S24 Ultra chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (1.350.000 VND),  (1.850.000 VND),  (2.350.000 VND),  (2.850.000 VND),  (3.350.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: OPPO Reno12 5G
+  - Thương hiệu: OPPO
+  - Danh mục: Điện thoại khác
+  - Giá bán: 7.980.000 VND (Giá gốc: 8.900.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/oppo-reno12-5g
+  - SKU: RENO12
+  - Tồn kho: 16 chiếc
+  - Mô tả: Sở hữu ngay OPPO Reno12 5G chính hãng tại SpaceLink. Trải nghiệm màn hình sắc nét, camera chụp ảnh đỉnh cao cùng hiệu năng vượt trội, đáp ứng mọi nhu cầu từ giải trí đến công việc....
+  - Phiên bản / Biến thể:  (7.950.000 VND),  (8.480.000 VND),  (8.980.000 VND),  (9.480.000 VND),  (9.980.000 VND),  (10.480.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Công nghệ màn hình: AMOLED / IPS LCD
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Camera sau: Chính 50MP & Phụ
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: 5000 mAh
+        * Dung lượng pin: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: OPPO Reno15
+  - Thương hiệu: OPPO
+  - Danh mục: OPPO
+  - Giá bán: 19.000.000 VND (Giá gốc: 20.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/oppo-reno15
+  - SKU: RENO15
+  - Tồn kho: 8 chiếc
+  - Mô tả: Sở hữu ngay OPPO Reno15 chính hãng tại SpaceLink. Trải nghiệm màn hình sắc nét, camera chụp ảnh đỉnh cao cùng hiệu năng vượt trội, đáp ứng mọi nhu cầu từ giải trí đến công việc....
+  - Phiên bản / Biến thể:  (20.000.000 VND),  (20.000.000 VND),  (19.500.000 VND),  (20.000.000 VND),  (20.500.000 VND),  (21.000.000 VND),  (21.500.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Công nghệ màn hình: AMOLED / IPS LCD
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Camera sau: Chính 50MP & Phụ
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: 5000 mAh
+        * Dung lượng pin: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Sạc Dự Phòng Không Dây Magsafe Baseus 10000mAh
+  - Thương hiệu: N/A
+  - Danh mục: Sạc & Cáp
+  - Giá bán: 750.000 VND (Giá gốc: 850.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/sac-du-phong-khong-day-magsafe-baseus-10000mah-Wul2i
+  - SKU: SAC-DU-PHONG-KH-18-TC1e
+  - Tồn kho: 95 chiếc
+  - Mô tả: Trang bị ngay Sạc Dự Phòng Không Dây Magsafe Baseus 10000mAh chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (1.250.000 VND),  (1.750.000 VND),  (2.250.000 VND),  (2.750.000 VND),  (3.250.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Sạc Dự Phòng Xiaomi Mi Power Bank 3 10000mAh
+  - Thương hiệu: Xiaomi
+  - Danh mục: Sạc & Cáp
+  - Giá bán: 320.000 VND (Giá gốc: 400.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/sac-du-phong-xiaomi-mi-power-bank-3-10000mah-UPLxT
+  - SKU: SAC-DU-PHONG-XI-18-U8gZ
+  - Tồn kho: 82 chiếc
+  - Mô tả: Trang bị ngay Sạc Dự Phòng Xiaomi Mi Power Bank 3 10000mAh chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (820.000 VND),  (1.320.000 VND),  (1.820.000 VND),  (2.320.000 VND),  (2.820.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Sạc Không Dây MagSafe Apple
+  - Thương hiệu: Apple
+  - Danh mục: Sạc & Cáp
+  - Giá bán: 1.050.000 VND (Giá gốc: 1.200.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/sac-khong-day-magsafe-apple-WTKzj
+  - SKU: SAC-KHONG-DAY-M-18-h2jQ
+  - Tồn kho: 42 chiếc
+  - Mô tả: Trang bị ngay Sạc Không Dây MagSafe Apple chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (1.550.000 VND),  (2.050.000 VND),  (2.550.000 VND),  (3.050.000 VND),  (3.550.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Samsung Galaxy Buds 2 Pro
+  - Thương hiệu: Samsung
+  - Danh mục: Tai nghe
+  - Giá bán: 3.500.000 VND (Giá gốc: 4.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/samsung-galaxy-buds-2-pro-GAssX
+  - SKU: SAMSUNG-GALAXY--16-nmhN
+  - Tồn kho: 62 chiếc
+  - Mô tả: Trang bị ngay Samsung Galaxy Buds 2 Pro chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (4.000.000 VND),  (4.500.000 VND),  (5.000.000 VND),  (5.500.000 VND),  (6.000.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Samsung Galaxy Buds FE
+  - Thương hiệu: Samsung
+  - Danh mục: Tai nghe
+  - Giá bán: 1.290.000 VND (Giá gốc: 1.500.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/samsung-galaxy-buds-fe-lvO6z
+  - SKU: SAMSUNG-GALAXY--16-Y9tI
+  - Tồn kho: 83 chiếc
+  - Mô tả: Trang bị ngay Samsung Galaxy Buds FE chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (1.790.000 VND),  (2.290.000 VND),  (2.790.000 VND),  (3.290.000 VND),  (3.790.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Samsung Galaxy S26 Ultra
+  - Thương hiệu: Samsung
+  - Danh mục: Samsung
+  - Giá bán: 35.000.000 VND (Giá gốc: 40.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/samsung-galaxy-s26-ultra
+  - SKU: S26ULTRA
+  - Tồn kho: 296 chiếc
+  - Mô tả: Sở hữu ngay Samsung Galaxy S26 Ultra chính hãng tại SpaceLink. Trải nghiệm màn hình sắc nét, camera chụp ảnh đỉnh cao cùng hiệu năng vượt trội, đáp ứng mọi nhu cầu từ giải trí đến công việc....
+  - Phiên bản / Biến thể:  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (35.500.000 VND),  (36.000.000 VND),  (36.500.000 VND),  (37.000.000 VND),  (37.500.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Công nghệ màn hình: AMOLED / IPS LCD
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Camera sau: Chính 50MP & Phụ
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: 5000 mAh
+        * Dung lượng pin: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Samsung Galaxy Watch 6 40mm
+  - Thương hiệu: Samsung
+  - Danh mục: Samsung Watch
+  - Giá bán: 5.990.000 VND (Giá gốc: 6.990.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/samsung-galaxy-watch-6-40mm-SZwka
+  - SKU: SAMSUNG-GALAXY--22-8rzp
+  - Tồn kho: 49 chiếc
+  - Mô tả: Đồng hồ thông minh Samsung Galaxy Watch 6 40mm không chỉ là phụ kiện thời trang mà còn là trợ lý sức khỏe đắc lực. Theo dõi vận động, nhịp tim và giữ kết nối liên tục không gián đoạn....
+  - Phiên bản / Biến thể:  (6.490.000 VND),  (6.990.000 VND),  (7.490.000 VND),  (7.990.000 VND),  (8.490.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+        * Chống nước: 5 ATM / IP68
+        * Theo dõi sức khỏe: Nhịp tim, SpO2, Giấc ngủ
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Samsung Galaxy Watch 6 Classic 43mm
+  - Thương hiệu: Samsung
+  - Danh mục: Samsung Watch
+  - Giá bán: 7.990.000 VND (Giá gốc: 8.990.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/samsung-galaxy-watch-6-classic-43mm-IhW8e
+  - SKU: SAMSUNG-GALAXY--22-H7mV
+  - Tồn kho: 100 chiếc
+  - Mô tả: Đồng hồ thông minh Samsung Galaxy Watch 6 Classic 43mm không chỉ là phụ kiện thời trang mà còn là trợ lý sức khỏe đắc lực. Theo dõi vận động, nhịp tim và giữ kết nối liên tục không gián đoạn....
+  - Phiên bản / Biến thể:  (8.490.000 VND),  (8.990.000 VND),  (9.490.000 VND),  (9.990.000 VND),  (10.490.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+        * Chống nước: 5 ATM / IP68
+        * Theo dõi sức khỏe: Nhịp tim, SpO2, Giấc ngủ
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Samsung Galaxy Z Fold7
+  - Thương hiệu: Samsung
+  - Danh mục: Samsung
+  - Giá bán: 38.000.000 VND (Giá gốc: 40.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/samsung-galaxy-z-fold7
+  - SKU: FOL7
+  - Tồn kho: 50 chiếc
+  - Mô tả: Sở hữu ngay Samsung Galaxy Z Fold7 chính hãng tại SpaceLink. Trải nghiệm màn hình sắc nét, camera chụp ảnh đỉnh cao cùng hiệu năng vượt trội, đáp ứng mọi nhu cầu từ giải trí đến công việc....
+  - Phiên bản / Biến thể:  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (40.000.000 VND),  (38.500.000 VND),  (39.000.000 VND),  (39.500.000 VND),  (40.000.000 VND),  (40.500.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Công nghệ màn hình: AMOLED / IPS LCD
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Camera sau: Chính 50MP & Phụ
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: 5000 mAh
+        * Dung lượng pin: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Sony WF-1000XM5
+  - Thương hiệu: Sony
+  - Danh mục: Tai nghe
+  - Giá bán: 5.990.000 VND (Giá gốc: 6.500.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/sony-wf-1000xm5-63M5e
+  - SKU: SONY-WF-1000XM5-16-Bmhf
+  - Tồn kho: 55 chiếc
+  - Mô tả: Trang bị ngay Sony WF-1000XM5 chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (6.490.000 VND),  (6.990.000 VND),  (7.490.000 VND),  (7.990.000 VND),  (8.490.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Sony WH-1000XM5
+  - Thương hiệu: Sony
+  - Danh mục: Tai nghe
+  - Giá bán: 7.490.000 VND (Giá gốc: 8.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/sony-wh-1000xm5-gM1X0
+  - SKU: SONY-WH-1000XM5-16-4uB7
+  - Tồn kho: 23 chiếc
+  - Mô tả: Trang bị ngay Sony WH-1000XM5 chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (7.990.000 VND),  (8.490.000 VND),  (8.990.000 VND),  (9.490.000 VND),  (9.990.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Xiaomi Buds 4 Pro
+  - Thương hiệu: Xiaomi
+  - Danh mục: Tai nghe
+  - Giá bán: 2.790.000 VND (Giá gốc: 3.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/xiaomi-buds-4-pro-noVfT
+  - SKU: XIAOMI-BUDS-4-P-16-0cL1
+  - Tồn kho: 33 chiếc
+  - Mô tả: Trang bị ngay Xiaomi Buds 4 Pro chất lượng cao cấp, bền bỉ. Phụ kiện hoàn hảo để bảo vệ và tối ưu hóa trải nghiệm sử dụng thiết bị công nghệ của bạn hàng ngày....
+  - Phiên bản / Biến thể:  (3.290.000 VND),  (3.790.000 VND),  (4.290.000 VND),  (4.790.000 VND),  (5.290.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Xiaomi POCO F8 Pro 5G
+  - Thương hiệu: Xiaomi
+  - Danh mục: Xiaomi
+  - Giá bán: 23.000.000 VND (Giá gốc: 24.000.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/xiaomi-poco-f8-pro-5g
+  - SKU: POCOF8PRO
+  - Tồn kho: 50 chiếc
+  - Mô tả: Sở hữu ngay Xiaomi POCO F8 Pro 5G chính hãng tại SpaceLink. Trải nghiệm màn hình sắc nét, camera chụp ảnh đỉnh cao cùng hiệu năng vượt trội, đáp ứng mọi nhu cầu từ giải trí đến công việc....
+  - Phiên bản / Biến thể:  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (24.000.000 VND),  (23.500.000 VND),  (24.000.000 VND),  (24.500.000 VND),  (25.000.000 VND),  (25.500.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Công nghệ màn hình: AMOLED / IPS LCD
+        * Kích thước màn hình: Đang cập nhật
+      [Camera sau]
+        * Camera sau: Chính 50MP & Phụ
+        * Độ phân giải camera: Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: 5000 mAh
+        * Dung lượng pin: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+
+------------------------------------------------------------
+Tên sản phẩm: Xiaomi Watch S3
+  - Thương hiệu: Xiaomi
+  - Danh mục: Smartwatch khác
+  - Giá bán: 3.190.000 VND (Giá gốc: 3.500.000 VND — Đang SALE!)
+  - Link sản phẩm: /product/xiaomi-watch-s3-QZODL
+  - SKU: XIAOMI-WATCH-S3-23-gfPt
+  - Tồn kho: 50 chiếc
+  - Mô tả: Đồng hồ thông minh Xiaomi Watch S3 không chỉ là phụ kiện thời trang mà còn là trợ lý sức khỏe đắc lực. Theo dõi vận động, nhịp tim và giữ kết nối liên tục không gián đoạn....
+  - Phiên bản / Biến thể:  (3.690.000 VND),  (4.190.000 VND),  (4.690.000 VND),  (5.190.000 VND),  (5.690.000 VND)
+  - Thông số kỹ thuật:
+      [Màn hình]
+        * Kích thước màn hình: Đang cập nhật
+        * Chống nước: 5 ATM / IP68
+        * Theo dõi sức khỏe: Nhịp tim, SpO2, Giấc ngủ
+      [Camera sau]
+        * Độ phân giải camera: Đang cập nhật
+      [Cấu hình]
+        * Chip xử lý (CPU): Đang cập nhật
+      [Pin & Sạc]
+        * Dung lượng pin: Đang cập nhật
+
+=============================================================
+PHẦN 4: MÃ GIẢM GIÁ (VOUCHER)
+=============================================================
+- Mã 'GIAM50K': Giảm 50.000đ — Giảm 50.000 VND (Đơn tối thiểu: 300.000 VND) — Hết hạn: 16/04/2026
+
+=============================================================
+PHẦN 5: TIN TỨC VÀ CHÍNH SÁCH
+=============================================================
+Lưu ý: Khi hỏi về chính sách, đường link bài viết là: /news/{slug}
+
+- Tiêu đề: MacBook Neo và Air hay Pro - chọn laptop nào trong năm 2026?
+  Link: /news/macbook-neo-va-air-hay-pro-chon-laptop-nao-trong-nam-2026-69bc44da596c0
+- Tiêu đề: Apple lại đánh mất nhân sự chủ chốt
+  Link: /news/apple-lai-danh-mat-nhan-su-chu-chot-69bc448c0a0a9
+  Tóm tắt: Giám đốc mảng thiết bị gia đình của Apple sẽ rời công ty để gia nhập nhà sản xuất nhẫn thông minh Oura.
+
+=============================================================
+PHẦN 6: SO SÁNH SẢN PHẨM
+=============================================================
+Website SpaceLink có tính năng so sánh sản phẩm tại đường dẫn: /compare
+Khi khách hàng muốn so sánh 2 sản phẩm bất kỳ, hãy:
+1. Cung cấp bảng so sánh thông số kỹ thuật dựa trên dữ liệu ở Phần 3.
+2. Nêu điểm mạnh và điểm yếu của từng máy.
+3. Gợi ý sản phẩm phù hợp với nhu cầu cụ thể của khách (gaming, chụp ảnh, làm việc...).
+4. Kèm đường link tới /compare để khách tự tay so sánh trực tiếp trên web.
+
+=============================================================
+PHẦN 7: PHƯƠNG THỨC THANH TOÁN
+=============================================================
+
+SpaceLink hiện hỗ trợ 2 phương thức thanh toán:
+
+1. COD (Cash On Delivery - Thanh toán khi nhận hàng):
+   - Khách hàng trả tiền mặt trực tiếp cho shipper khi nhận hàng tại địa chỉ giao.
+   - Không mất phí xử lý.
+   - Được áp dụng cho tất cả đơn hàng trong khu vực giao hàng của SpaceLink.
+   - Lưu ý: Hãy kiểm tra kỹ sản phẩm TRƯỚC khi thanh toán cho shipper.
+
+2. Chuyển khoản / Thanh toán online (VNPay):
+   - Hỗ trợ thanh toán qua cổng VNPay: thẻ ATM nội địa, thẻ tín dụng (VISA/MasterCard), ví điện tử (MoMo, ZaloPay, VNPay QR).
+   - Đơn hàng được xác nhận và ưu tiên xử lý ngay sau khi thanh toán thành công.
+   - An toàn, bảo mật theo tiêu chuẩn PCI DSS.
+   - Nếu thanh toán không thành công, đơn hàng sẽ được giữ thêm 15 phút để thử lại.
+
+=============================================================
+PHẦN 8: QUY TRÌNH ĐẶT HÀNG (Hướng dẫn từng bước)
+=============================================================
+
+Bước 1: Chọn sản phẩm
+   - Tìm kiếm bằng thanh tìm kiếm hoặc duyệt qua các danh mục.
+   - Chọn màu sắc, dung lượng phù hợp trong trang chi tiết sản phẩm.
+   - Bấm "Thêm vào giỏ hàng" hoặc "Mua ngay".
+
+Bước 2: Xem giỏ hàng
+   - Truy cập giỏ hàng tại icon túi ở góc trên cùng, hoặc vào /cart.
+   - Kiểm tra số lượng, loại sản phẩm đã chọn.
+   - Nhập mã giảm giá (nếu có) tại ô "Mã voucher".
+
+Bước 3: Điền thông tin giao hàng
+   - Nhập đầy đủ: Họ tên, số điện thoại, địa chỉ giao hàng chi tiết (tỉnh/thành, quận/huyện, phường/xã, số nhà).
+   - Có thể lưu địa chỉ vào tài khoản cho lần sau.
+
+Bước 4: Chọn phương thức giao hàng và thanh toán
+   - Chọn COD (tiền mặt) hoặc VNPay (online).
+   - Kiểm tra tóm tắt đơn hàng lần cuối.
+
+Bước 5: Xác nhận đặt hàng
+   - Bấm "Đặt hàng" để hoàn tất.
+   - Hệ thống sẽ gửi email xác nhận đơn hàng đến địa chỉ email đăng ký.
+   - Có thể theo dõi trạng thái đơn tại trang /profile → Đơn hàng của tôi, hoặc /orders/(mã đơn).
+
+=============================================================
+PHẦN 9: CHÍNH SÁCH BẢO HÀNH & ĐỔI TRẢ
+=============================================================
+
+Chính sách bảo hành:
+- Tất cả sản phẩm tại SpaceLink đều là hàng CHÍNH HÃNG 100%, có tem bảo hành đầy đủ.
+- Lỗi phần cứng từ nhà sản xuất: Bảo hành 12 tháng tại trung tâm bảo hành chính hãng.
+- Lỗi phát sinh trong 30 ngày đầu (lỗi màn hình, lỗi phần cứng rõ ràng): Đổi mới 1 đổi 1.
+- Không bảo hành: Hư hỏng do tác động vật lý, vào nước (không có tính năng chống nước), tự ý sửa chữa.
+
+Chính sách đổi trả:
+- Thời gian đổi trả: Trong vòng 7 ngày kể từ ngày nhận hàng.
+- Điều kiện: Sản phẩm còn nguyên vẹn, đầy đủ phụ kiện, hộp, chưa kích hoạt (đối với thiết bị).
+- Cách thực hiện: Liên hệ hotline hoặc tạo yêu cầu đổi trả/khiếu nại tại trang /profile → Khiếu nại.
+- Phí đổi trả: SpaceLink hỗ trợ miễn phí vận chuyển đổi trả nếu lỗi từ phía cửa hàng.
+
+=============================================================
+PHẦN 10: TÀI KHOẢN KHÁCH HÀNG
+=============================================================
+
+Đăng ký / Đăng nhập:
+- Khách hàng có thể đăng ký tài khoản tại /register, đăng nhập tại /login.
+- Yêu cầu: Email hợp lệ, mật khẩu tối thiểu 8 ký tự.
+
+Sau khi đăng nhập, khách hàng được:
+- Xem và quản lý đơn hàng tại /profile → Đơn hàng.
+- Lưu địa chỉ giao hàng tại /profile → Địa chỉ.
+- Xem danh sách yêu thích tại /wishlist.
+- Nhận thông báo về trạng thái đơn hàng qua hệ thống.
+- Gửi đánh giá sản phẩm, bình luận dưới bài tin tức.
+- Gửi khiếu nại hoặc yêu cầu hoàn trả, đổi trả tại /profile → Khiếu nại.
+
+=============================================================
+PHẦN 11: CÁC TRANG CHỨC NĂNG CỦA WEBSITE
+=============================================================
+
+- Trang chủ: / — Hiển thị banner khuyến mãi, sản phẩm nổi bật và bán chạy.
+- Cửa hàng: /shop — Xem toàn bộ sản phẩm, lọc theo danh mục, thương hiệu, giá.
+- Sản phẩm bán chạy: /bestseller — Xem top sản phẩm bán chạy nhất.
+- Giỏ hàng: /cart — Quản lý các sản phẩm đã thêm.
+- Thanh toán: /checkout — Điền địa chỉ và thanh toán (cần đăng nhập).
+- So sánh sản phẩm: /compare — So sánh tối đa 2-3 sản phẩm cùng lúc.
+- Danh sách yêu thích: /wishlist — Lưu sản phẩm để mua sau (cần đăng nhập).
+- Tìm kiếm: /search?q=... — Tìm sản phẩm theo từ khóa.
+- Tin tức / Blog: /news — Bài viết công nghệ, đánh giá sản phẩm, chính sách.
+- Liên hệ: /contact — Form gửi câu hỏi hoặc yêu cầu hỗ trợ.
+- Trang cá nhân: /profile — Quản lý tài khoản, đơn hàng, địa chỉ, khiếu nại.
+
+=============================================================
+PHẦN 12: GIAO HÀNG
+=============================================================
+
+- Khu vực giao hàng: Toàn quốc (Việt Nam).
+- Thời gian giao hàng dự kiến:
+  + Nội thành (TP.HCM, Hà Nội): 1-2 ngày làm việc.
+  + Các tỉnh thành khác: 3-5 ngày làm việc.
+- Phí vận chuyển: Tính theo địa chỉ và nhà vận chuyển, hiển thị rõ tại bước thanh toán.
+- Đơn hàng được đóng gói cẩn thận, có tem niêm phong để đảm bảo an toàn cho sản phẩm.
+
+=============================================================
+PHẦN 13: LIÊN HỆ & HỖ TRỢ
+=============================================================
+
+- Khách hàng có thể gửi câu hỏi qua form tại: /contact
+- Trang câu hỏi thường gặp (FAQ) và bình luận: 
+  + Bình luận dưới bài tin tức.
+  + Đánh giá và hỏi đáp sản phẩm trên trang chi tiết sản phẩm.
+- Hỗ trợ trực tiếp: Qua chatbot này 24/7.
+
+=============================================================
+HDƯNG DẪN CHO BOT: CÁCH TƯ VẤN HIỆU QUẢ
+=============================================================
+
+1. Khi khách hỏi "điện thoại tầm X triệu": Lọc các sản phẩm trong khoảng giá đó từ Phần 3, đề xuất 2-3 máy kèm link.
+2. Khi khách hỏi về chụp ảnh: Ưu tiên các máy có camera 50MP, AMOLED.
+3. Khi khách hỏi pin trâu: Ưu tiên máy có pin 5000 mAh.
+4. Khi khách muốn so sánh: Lấy thông số kỹ thuật từ Phần 3 và lập bảng so sánh, kèm link /compare.
+5. Khi khách hỏi mã giảm giá: Báo mã từ Phần 4, bao gồm điều kiện sử dụng và ngày hết hạn.
+6. Khi khách hỏi đặt hàng: Hướng dẫn theo Phần 8 từng bước rõ ràng.
+7. Khi khách hỏi còn hàng không: Kiểm tra tồn kho trong Phần 3.
+8. Khi khách hỏi chính sách bảo hành: Trả lời từ Phần 9.
+9. LUÔN kèm đường link sản phẩm/bài viết khi đề cập đến chúng.
+10. KHÔNG bịa đặt thông tin ngoài file này. Nếu không có dữ liệu, hãy gợi ý khách liên hệ qua /contact.

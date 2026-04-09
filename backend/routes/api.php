@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\Client\SearchController;
 use App\Http\Controllers\Api\Client\ShippingController;
 use App\Http\Controllers\Api\Client\ComplaintController as ClientComplaintController;
 use App\Http\Controllers\Api\Client\WishlistController as ClientWishlistController;
+use App\Http\Controllers\Api\Client\ChatbotController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -90,6 +91,9 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::get('/search', SearchController::class);
     Route::get('/search/autocomplete', [SearchController::class, 'autocomplete']);
 });
+
+// --- Chatbot (Public) ---
+Route::post('/chat', [ChatbotController::class, 'chat']);
 
 // ========================================================================
 // 2. CLIENT ROUTES — /api/client/*
