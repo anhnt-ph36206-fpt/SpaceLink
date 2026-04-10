@@ -37,22 +37,22 @@ interface PaginationState { current: number; total: number; pageSize: number; pe
 // ─── Status config ────────────────────────────────────────────────────────────
 
 const statusConfig: Record<string, { color: string; label: string }> = {
-    pending:  { color: 'orange', label: 'Chờ duyệt'  },
-    approved: { color: 'green',  label: 'Đã duyệt'   },
-    rejected: { color: 'red',    label: 'Đã từ chối' },
+    pending: { color: 'orange', label: 'Chờ duyệt' },
+    approved: { color: 'green', label: 'Đã duyệt' },
+    rejected: { color: 'red', label: 'Đã từ chối' },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminCommentPage() {
     const [activeTab, setActiveTab] = useState<'questions' | 'answers'>('questions');
-    const [comments, setComments]   = useState<CommentItem[]>([]);
-    const [loading, setLoading]     = useState(false);
+    const [comments, setComments] = useState<CommentItem[]>([]);
+    const [loading, setLoading] = useState(false);
     const [actionLoading, setActionLoading] = useState<number | null>(null);
 
     // Filters
-    const [keyword,  setKeyword]  = useState('');
-    const [status,   setStatus]   = useState<string | undefined>();
+    const [keyword, setKeyword] = useState('');
+    const [status, setStatus] = useState<string | undefined>();
     const [isHidden, setIsHidden] = useState<string | undefined>();
 
     const [pagination, setPagination] = useState<PaginationState>({
@@ -61,8 +61,8 @@ export default function AdminCommentPage() {
 
     // Detail / Answer modals
     const [detailComment, setDetailComment] = useState<CommentItem | null>(null);
-    const [answerModal, setAnswerModal]     = useState<CommentItem | null>(null);
-    const [answerText, setAnswerText]       = useState('');
+    const [answerModal, setAnswerModal] = useState<CommentItem | null>(null);
+    const [answerText, setAnswerText] = useState('');
     const [answerSubmitting, setAnswerSubmitting] = useState(false);
 
     // ── Fetch ──────────────────────────────────────────────────────────────────
@@ -73,8 +73,8 @@ export default function AdminCommentPage() {
                 params: {
                     page,
                     per_page: pagination.pageSize,
-                    keyword:   keyword  || undefined,
-                    status:    status   || undefined,
+                    keyword: keyword || undefined,
+                    status: status || undefined,
                     is_hidden: isHidden || undefined,
                     // parent_id: null → top-level (questions), else replies (answers)
                     type: activeTab === 'questions' ? 'question' : 'answer',
@@ -85,8 +85,8 @@ export default function AdminCommentPage() {
             setPagination(prev => ({
                 ...prev,
                 current: meta.current_page ?? page,
-                total:   meta.total        ?? 0,
-                pending: meta.pending      ?? 0,
+                total: meta.total ?? 0,
+                pending: meta.pending ?? 0,
             }));
         } catch {
             message.error('Không thể tải danh sách.');
@@ -167,8 +167,8 @@ export default function AdminCommentPage() {
         try {
             await axiosInstance.post('/client/comments', {
                 product_id: answerModal.product_id,
-                parent_id:  answerModal.id,
-                content:    trimmed,
+                parent_id: answerModal.id,
+                content: trimmed,
             });
             message.success('Đã gửi câu trả lời thành công!');
             setAnswerModal(null);
@@ -402,8 +402,8 @@ export default function AdminCommentPage() {
                             placeholder="Trạng thái" allowClear style={{ width: 150 }} value={status}
                             onChange={v => setStatus(v)}
                             options={[
-                                { value: 'pending',  label: '⏳ Chờ duyệt'  },
-                                { value: 'approved', label: '✅ Đã duyệt'   },
+                                { value: 'pending', label: '⏳ Chờ duyệt' },
+                                { value: 'approved', label: '✅ Đã duyệt' },
                                 { value: 'rejected', label: '❌ Đã từ chối' },
                             ]}
                         />
@@ -414,7 +414,7 @@ export default function AdminCommentPage() {
                             onChange={v => setIsHidden(v)}
                             options={[
                                 { value: 'false', label: '👁 Đang hiển thị' },
-                                { value: 'true',  label: '🙈 Đang ẩn'       },
+                                { value: 'true', label: '🙈 Đang ẩn' },
                             ]}
                         />
                     </Col>
@@ -437,12 +437,12 @@ export default function AdminCommentPage() {
                     style={{ borderRadius: 10, overflow: 'hidden' }}
                     rowClassName={r => r.status === 'pending' ? 'comment-row-pending' : ''}
                     pagination={{
-                        current:  pagination.current,
-                        total:    pagination.total,
+                        current: pagination.current,
+                        total: pagination.total,
                         pageSize: pagination.pageSize,
                         showSizeChanger: false,
                         showTotal: t => `Tổng ${t} ${activeTab === 'questions' ? 'câu hỏi' : 'câu trả lời'}`,
-                        onChange:  page => fetchComments(page),
+                        onChange: page => fetchComments(page),
                     }}
                     scroll={{ x: 980 }}
                     locale={{
