@@ -980,6 +980,39 @@ const OrderDetailPage: React.FC = () => {
             </div>
           )}
 
+          {/* ── CTA: Đánh giá sản phẩm (delivered / completed + có item chưa đánh giá) ── */}
+          {['delivered', 'completed'].includes(order.status) && (order.items ?? []).some(it => !it.is_reviewed) && (
+            <div className="od-review-cta-card">
+              <div className="od-review-cta-left">
+                <div style={{ fontSize: 28 }}>⭐</div>
+                <div>
+                  <div className="od-review-cta-title">Đánh giá sản phẩm để nhận ưu đãi!</div>
+                  <div className="od-review-cta-sub">
+                    Chia sẻ trải nghiệm giúp người mua khác và cải thiện chất lượng Shop.
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {(order.items ?? []).filter(it => !it.is_reviewed).map(it => (
+                  <button
+                    key={it.id}
+                    className="od-btn-review-cta"
+                    onClick={() => {
+                      setReviewItem(it);
+                      setWriteRating(5);
+                      setHoverRating(0);
+                      setReviewContent('');
+                      setReviewOpen(true);
+                    }}
+                  >
+                    <i className="fas fa-star me-1" />
+                    {it.product_name.length > 22 ? it.product_name.slice(0, 22) + '…' : it.product_name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ── Stepper (only non-cancelled) ── */}
           {!isCancelled && (
             <div className="od-card od-stepper-card">
@@ -1045,16 +1078,24 @@ const OrderDetailPage: React.FC = () => {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                         <div className="od-item-total">{formatVND(item.total)}</div>
-                        {order.status === 'completed' && (
+                        {['delivered', 'completed'].includes(order.status) && (
                           <button
-                            className="od-btn-review-sm"
+                            className={`od-btn-review-sm${!item.is_reviewed ? ' od-btn-review-sm--glow' : ''}`}
                             disabled={item.is_reviewed}
                             onClick={() => {
-                              setReviewItem(item);
-                              setReviewOpen(true);
+                              if (!item.is_reviewed) {
+                                setReviewItem(item);
+                                setWriteRating(5);
+                                setHoverRating(0);
+                                setReviewContent('');
+                                setReviewOpen(true);
+                              }
                             }}
                           >
-                            {item.is_reviewed ? <><i className="fas fa-check me-1" />Đã đánh giá</> : 'Đánh giá'}
+                            {item.is_reviewed
+                              ? <><i className="fas fa-check-circle me-1" />Đã đánh giá</>
+                              : <><i className="fas fa-star me-1" />Đánh giá ngay</>
+                            }
                           </button>
                         )}
                       </div>
@@ -1885,56 +1926,92 @@ const OrderDetailPage: React.FC = () => {
       {/* ── Review Modal ── */}
       {reviewOpen && reviewItem && (
         <div className="od-overlay" onClick={e => { if (e.target === e.currentTarget) setReviewOpen(false); }}>
-          <div className="od-modal">
+          <div className="od-modal" style={{ maxWidth: 480 }}>
             <div className="od-modal-hd">
               <div>
                 <div className="od-modal-title">
-                  <i className="fas fa-star me-2" style={{ color: '#eab308' }} />Đánh giá sản phẩm
+                  <i className="fas fa-star me-2" style={{ color: '#f59e0b' }} />Đánh giá sản phẩm
                 </div>
-                <div className="od-modal-sub">Bạn cảm thấy thế nào về sản phẩm này?</div>
+                <div className="od-modal-sub">Chia sẻ trải nghiệm của bạn về sản phẩm này</div>
               </div>
               <button className="od-modal-x" onClick={() => setReviewOpen(false)}><i className="fas fa-times" /></button>
             </div>
             <div className="od-modal-bd">
-              <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                <img src={reviewItem.product_image || 'https://via.placeholder.com/60'} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid #eee' }} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1d23', marginBottom: 4 }}>{reviewItem.product_name}</div>
-                  <div style={{ fontSize: 12, color: '#8590a3' }}>Phân loại: {parseVariantAttrs(reviewItem.variant_info).map(a => `${a.name}: ${a.value}`).join(', ') || 'Mặc định'}</div>
+              {/* Product info */}
+              <div style={{ display: 'flex', gap: 12, marginBottom: 18, background: '#f8fafc', borderRadius: 12, padding: '12px 14px' }}>
+                <img
+                  src={reviewItem.product_image || 'https://via.placeholder.com/56'}
+                  alt=""
+                  style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 10, border: '1.5px solid #e5e7eb', flexShrink: 0 }}
+                />
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#111827', marginBottom: 5, lineHeight: 1.4 }}>
+                    {reviewItem.product_name}
+                  </div>
+                  {parseVariantAttrs(reviewItem.variant_info).length > 0 && (
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, background: '#f0fdf4',
+                      border: '1px solid #86efac', color: '#15803d',
+                      borderRadius: 99, padding: '2px 10px', display: 'inline-flex', alignItems: 'center', gap: 4,
+                    }}>
+                      <i className="fas fa-tag" style={{ fontSize: 9 }} />
+                      {parseVariantAttrs(reviewItem.variant_info).map(a => `${a.name}: ${a.value}`).join(' · ')}
+                    </span>
+                  )}
                 </div>
               </div>
 
+              {/* Star picker */}
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Mức độ hài lòng</div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 10 }}>Mức độ hài lòng của bạn</div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
                   {[1, 2, 3, 4, 5].map(star => (
                     <i
                       key={star}
                       className={star <= (hoverRating || writeRating) ? 'fas fa-star' : 'far fa-star'}
-                      style={{ fontSize: 28, color: '#eab308', cursor: 'pointer', transition: 'transform 0.1s' }}
+                      style={{
+                        fontSize: 32, color: star <= (hoverRating || writeRating) ? '#f59e0b' : '#d1d5db',
+                        cursor: 'pointer', transition: 'transform .15s, color .1s',
+                        transform: star <= (hoverRating || writeRating) ? 'scale(1.2)' : 'scale(1)',
+                      }}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(0)}
                       onClick={() => setWriteRating(star)}
                     />
                   ))}
                 </div>
+                {(hoverRating || writeRating) > 0 && (
+                  <span style={{ fontSize: 13.5, fontWeight: 700, color: '#f59e0b' }}>
+                    {['', 'Rất tệ', 'Tệ', 'Bình thường', 'Tốt', 'Xuất sắc'][hoverRating || writeRating]}
+                  </span>
+                )}
               </div>
 
-              <label className="od-modal-label">Nhận xét chi tiết</label>
+              <label className="od-modal-label">Nhận xét của bạn <span style={{ fontWeight: 400, color: '#9ca3af' }}>(tuỳ chọn)</span></label>
               <textarea
                 className="od-textarea"
-                placeholder="Hãy chia sẻ những điều bạn thích về sản phẩm này nhé..."
+                placeholder="Hãy chia sẻ những điều bạn thích (hoặc không thích) về sản phẩm..."
                 value={reviewContent}
                 onChange={e => setReviewContent(e.target.value)}
-                style={{ minHeight: 100 }}
+                style={{ minHeight: 100, fontSize: 14 }}
+                maxLength={1000}
               />
+              <div style={{ fontSize: 11.5, color: '#9ca3af', textAlign: 'right', marginTop: 4 }}>{reviewContent.length}/1000</div>
             </div>
             <div className="od-modal-ft">
-              <button className="od-modal-btn-no" onClick={() => setReviewOpen(false)} disabled={reviewLoading}>Trở lại</button>
-              <button className="od-modal-btn-yes" style={{ background: 'linear-gradient(135deg, #1d4ed8, #1e3a8a)' }} onClick={handleSubmitReview} disabled={reviewLoading}>
+              <button className="od-modal-btn-no" onClick={() => setReviewOpen(false)} disabled={reviewLoading}>Huỷ</button>
+              <button
+                className="od-modal-btn-yes"
+                style={{
+                  background: reviewLoading ? '#d1d5db' : 'linear-gradient(135deg,#f59e0b,#d97706)',
+                  boxShadow: reviewLoading ? 'none' : '0 4px 14px rgba(245,158,11,0.4)',
+                }}
+                onClick={handleSubmitReview}
+                disabled={reviewLoading}
+              >
                 {reviewLoading
                   ? <><span className="od-spin me-2" />Đang gửi...</>
-                  : <><i className="fas fa-paper-plane me-2" />Hoàn thành</>
+                  : <><i className="fas fa-star me-2" />Gửi đánh giá</>
                 }
               </button>
             </div>
@@ -2117,9 +2194,30 @@ const CSS = `
   .od-note-box { font-size: 13px; color: #5a6275; font-style: italic; line-height: 1.65; background: var(--od-primary-light); border-radius: 8px; padding: 10px 12px; }
 
   /* Action buttons */
-  .od-btn-review-sm { background: #fff; border: 1.5px solid var(--od-primary); color: var(--od-primary); font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; }
-  .od-btn-review-sm:hover:not(:disabled) { background: var(--od-primary); color: #fff; }
-  .od-btn-review-sm:disabled { border-color: #eaecf0; color: #8590a3; cursor: not-allowed; background: #f8f9fc; }
+  .od-btn-review-sm { background: #fff; border: 1.5px solid #f59e0b; color: #b45309; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 7px; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 4px; }
+  .od-btn-review-sm:hover:not(:disabled) { background: #f59e0b; color: #fff; box-shadow: 0 4px 12px rgba(245,158,11,0.35); }
+  .od-btn-review-sm:disabled { border-color: #d1fae5; color: #15803d; cursor: default; background: #f0fdf4; font-weight: 600; }
+  .od-btn-review-sm--glow { animation: reviewGlow 2s infinite; }
+  @keyframes reviewGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); } 50% { box-shadow: 0 0 0 4px rgba(245,158,11,0.25); } }
+
+  /* Review CTA banner */
+  .od-review-cta-card {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+    background: linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);
+    border: 2px solid #fcd34d; border-radius: var(--od-radius);
+    padding: 16px 22px; margin-bottom: 16px;
+    box-shadow: 0 4px 20px rgba(245,158,11,0.15);
+  }
+  .od-review-cta-left { display: flex; align-items: flex-start; gap: 12px; }
+  .od-review-cta-title { font-weight: 800; font-size: 14.5px; color: #92400e; margin-bottom: 3px; }
+  .od-review-cta-sub { font-size: 12.5px; color: #78350f; }
+  .od-btn-review-cta {
+    background: linear-gradient(135deg,#f59e0b,#d97706); border: none; color: #fff;
+    border-radius: 9px; padding: 8px 16px; font-size: 12.5px; font-weight: 700;
+    cursor: pointer; transition: all .2s; display: inline-flex; align-items: center;
+    box-shadow: 0 3px 10px rgba(245,158,11,0.35); white-space: nowrap;
+  }
+  .od-btn-review-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(245,158,11,0.5); }
   .od-btn-full { width: 100%; display: flex; align-items: center; justify-content: center; border-radius: 10px; padding: 11px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s; margin-bottom: 10px; }
   .od-btn-full:last-child { margin-bottom: 0; }
   .od-btn-cancel { background: #fff5f5; border: 1.5px solid #dc3545; color: #dc3545; }
