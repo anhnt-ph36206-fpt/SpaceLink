@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { axiosInstance } from '../api/axios'
 import { Calendar, Eye, ArrowLeft, User } from 'lucide-react'
+import { handleImgError, NEWS_FALLBACK } from '../utils/safeImgFallback'
 
 interface NewsDetail {
   id: number
@@ -17,7 +18,7 @@ interface NewsDetail {
   author?: { id: number; fullname: string } | null
 }
 
-const FALLBACK_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='500' viewBox='0 0 1200 500'%3E%3Crect width='1200' height='500' fill='%23e9ecef'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='22' fill='%23adb5bd'%3ESpaceLink News%3C/text%3E%3C/svg%3E`
+// Fallback is now imported from safeImgFallback (NEWS_FALLBACK)
 
 function formatDate(dateStr: string) {
   try {
@@ -181,7 +182,7 @@ export default function NewsDetailPage() {
         {/* Thumbnail */}
         {(article.thumbnail_url || article.thumbnail) && (
           <img
-            src={article.thumbnail_url || article.thumbnail || FALLBACK_IMG}
+            src={article.thumbnail_url || article.thumbnail || NEWS_FALLBACK}
             alt={article.title}
             style={{
               width: '100%',
@@ -191,7 +192,7 @@ export default function NewsDetailPage() {
               marginBottom: 32,
               boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
             }}
-            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG }}
+            onError={(e) => handleImgError(e, NEWS_FALLBACK)}
           />
         )}
 

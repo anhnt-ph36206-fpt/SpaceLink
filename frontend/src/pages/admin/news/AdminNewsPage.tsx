@@ -44,7 +44,7 @@ function formatDate(d: string) {
     return d ? dayjs(d).format('DD/MM/YYYY HH:mm') : '—';
 }
 
-const FALLBACK_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='50' viewBox='0 0 80 50'%3E%3Crect width='80' height='50' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='9' fill='%23aaa'%3ENo Img%3C/text%3E%3C/svg%3E`;
+import { handleImgError, ADMIN_THUMB_FALLBACK } from '../../../utils/safeImgFallback';
 
 const AdminNewsPage: React.FC = () => {
     const [newsList, setNewsList] = useState<NewsItem[]>([]);
@@ -216,10 +216,10 @@ const AdminNewsPage: React.FC = () => {
             width: 100,
             render: (_, r) => (
                 <img
-                    src={r.thumbnail_url || r.thumbnail || FALLBACK_IMG}
+                    src={r.thumbnail_url || r.thumbnail || ADMIN_THUMB_FALLBACK}
                     alt={r.title}
                     style={{ width: 80, height: 50, objectFit: 'cover', borderRadius: 6, border: '1px solid #f0f0f0' }}
-                    onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
+                    onError={e => handleImgError(e, ADMIN_THUMB_FALLBACK)}
                 />
             ),
         },
@@ -469,7 +469,7 @@ const AdminNewsPage: React.FC = () => {
                                             borderRadius: 8,
                                             border: '2px solid #1677ff',
                                         }}
-                                        onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
+                                        onError={e => handleImgError(e, ADMIN_THUMB_FALLBACK)}
                                     />
                                     <CloseCircleOutlined
                                         style={{

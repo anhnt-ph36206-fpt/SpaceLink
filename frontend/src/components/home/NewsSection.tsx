@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { axiosInstance } from '../../api/axios'
+import { handleImgError, NEWS_FALLBACK } from '../../utils/safeImgFallback'
 
 interface NewsItem {
   id: number
@@ -14,7 +15,7 @@ interface NewsItem {
   published_at: string
 }
 
-const FALLBACK_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e9ecef'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='20' fill='%23adb5bd'%3ESpaceLink News%3C/text%3E%3C/svg%3E`
+// Fallback is now imported from safeImgFallback (NEWS_FALLBACK)
 
 function formatDate(d: string) {
   try { return new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
@@ -45,10 +46,10 @@ function NewsCard({ item }: { item: NewsItem }) {
         {/* Ảnh */}
         <img
           className="ns-img"
-          src={item.thumbnail_url || item.thumbnail || FALLBACK_IMG}
+          src={item.thumbnail_url || item.thumbnail || NEWS_FALLBACK}
           alt={item.title}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.38s ease' }}
-          onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG }}
+          onError={e => handleImgError(e, NEWS_FALLBACK)}
         />
 
         {/* Badge nổi bật */}
