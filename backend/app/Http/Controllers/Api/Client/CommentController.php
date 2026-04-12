@@ -40,12 +40,17 @@ class CommentController extends Controller
     {
         $data = $request->validated();
 
+        $status = 'pending';
+        if ($request->user()->role_id == 1) {
+            $status = "approved";
+        }
+
         $comment = Comment::create([
             'product_id' => $data['product_id'],
             'content'    => $data['content'],
             'parent_id'  => $data['parent_id'] ?? null,
             'user_id'    => auth()->id(),
-            'status'     => 'pending',
+            'status'     => $status,
         ]);
 
         $comment->load('user:id,fullname,avatar,role_id');

@@ -28,6 +28,7 @@ import AdminOrderDetailPage from './pages/admin/AdminOrderDetailPage';
 import AdminUserPage from './pages/admin/AdminUserPage';
 import AdminReviewPage from './pages/admin/reviews/AdminReviewPage';
 import AdminCommentPage from './pages/admin/comments/AdminCommentPage';
+import AdminCommentDetailPage from './pages/admin/comments/AdminCommentDetailPage';
 import AdminVoucherPage from './pages/admin/vouchers/AdminVoucherPage';
 import AdminComplaintPage from './pages/admin/complaints/AdminComplaintPage';
 import ProductList from "./pages/admin/products/list";
@@ -85,6 +86,7 @@ function App() {
                                 <Route path="users" element={<AdminUserPage />} />
                                 <Route path="reviews" element={<AdminReviewPage />} />
                                 <Route path="comments" element={<AdminCommentPage />} />
+                                <Route path="comments/:id" element={<AdminCommentDetailPage />} />
                                 <Route path="vouchers" element={<AdminVoucherPage />} />
                                 <Route path="complaints" element={<AdminComplaintPage />} />
                             </Route>

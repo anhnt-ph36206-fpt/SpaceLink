@@ -44,7 +44,6 @@ class Comment extends Model
     }
 
     // Self-reference: replies (giới hạn 5 replies gần nhất, tải đầy đủ qua API riêng)
-    // Self-reference: replies (giới hạn 5 replies gần nhất, tải đầy đủ qua API riêng)
     public function replies()
     {
         return $this->hasMany(Comment::class , 'parent_id')
@@ -53,6 +52,14 @@ class Comment extends Model
             ->with('user:id,fullname,avatar,role_id')
             ->latest()
             ->limit(5);
+    }
+
+    // All replies for admin (no status/hidden filter)
+    public function allReplies()
+    {
+        return $this->hasMany(Comment::class, 'parent_id')
+            ->with('user:id,fullname,avatar,role_id')
+            ->latest();
     }
 
     // Comment has many reports
