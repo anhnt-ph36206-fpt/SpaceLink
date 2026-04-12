@@ -197,6 +197,11 @@ const Header: React.FC = () => {
                                             </Link>
                                             <div className="dropdown-divider"></div>
                                             <Link to="/profile" className="dropdown-item"><i className="fas fa-user-circle me-2 text-primary"></i>Tài khoản của tôi</Link>
+                                            {
+                                                user.role == 'admin' && (
+                                                    <Link to="/admin" className="dropdown-item"><i className="fas fa-user-shield me-2 text-primary"></i>Trang quản trị</Link>
+                                                )
+                                            }
                                             <button onClick={logout} className="dropdown-item w-100 text-start bg-transparent border-0"><i className="fas fa-sign-out-alt me-2 text-danger"></i>Đăng xuất</button>
                                         </>
                                     )}
