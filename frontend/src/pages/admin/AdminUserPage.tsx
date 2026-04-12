@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Table, Button, Modal, Form, Input, Space, Tag,
   Typography, Popconfirm, message, Card, Row, Col, Tooltip,
-  Select, Avatar,
+  Select, Avatar, Switch,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
   SearchOutlined, TeamOutlined, ReloadOutlined,
-  UserOutlined, CrownOutlined,
+  UserOutlined, CrownOutlined, UndoOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { User } from '../../types/user';
 import { axiosInstance } from '../../api/axios';
 import { userPrefix } from '../../api/apiAdminPrefix';
@@ -20,18 +20,13 @@ const API_PREFIX = userPrefix;
 
 const ROLE_CONFIG: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
   admin: { color: 'gold', label: 'Admin', icon: <CrownOutlined /> },
-  staff: { color: 'purple', label: 'Nhân viên', icon: <UserOutlined /> },
   customer: { color: 'blue', label: 'Khách hàng', icon: <UserOutlined /> },
 };
 
 const ROLE_NAME_TO_ID: Record<string, number> = {
   admin: 1,
-  staff: 2,
   customer: 3,
 };
-
-
-
 
 const AdminUserPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -40,27 +35,101 @@ const AdminUserPage: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('');
+  const [showTrashed, setShowTrashed] = useState(false);
   const [form] = Form.useForm();
 
-  const fetchUsers = async () => {
+  // Server-side pagination
+  const [pagination, setPagination] = useState<TablePaginationConfig>({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+    showSizeChanger: false,
+    showTotal: (t: number) => `Tổng ${t} người dùng`,
+  });
+
+  // Stats
+  const [stats, setStats] = useState({ total: 0, admin: 0, customer: 0, active: 0 });
+
+  const fetchUsers = useCallback(async (page = 1, searchVal?: string, roleVal?: string, trashed?: boolean) => {
     setLoading(true);
     try {
-      const res = await axiosInstance.get(API_PREFIX, {
-        params: {
-          per_page: 100,
-        },
-      });
-      const data = (res.data && res.data.data) ? res.data.data : res.data;
+      const params: Record<string, unknown> = {
+        per_page: pagination.pageSize,
+        page,
+        trashed: trashed ?? showTrashed,
+      };
+      if ((searchVal ?? search).trim()) params.search = (searchVal ?? search).trim();
+      if (roleVal ?? roleFilter) {
+        const roleId = ROLE_NAME_TO_ID[roleVal ?? roleFilter];
+        if (roleId) params.role_id = roleId;
+      }
+
+      const res = await axiosInstance.get(API_PREFIX, { params });
+      const responseData = res.data;
+
+      const data = responseData?.data ?? responseData;
       setUsers(data as User[]);
+
+      // Update pagination from backend meta
+      const meta = responseData?.meta ?? responseData;
+      setPagination(prev => ({
+        ...prev,
+        current: meta?.current_page ?? page,
+        total: meta?.total ?? data.length,
+      }));
     } catch (error) {
       console.error('Error fetching users:', error);
       message.error('Không thể tải danh sách người dùng');
     } finally {
       setLoading(false);
     }
+  }, [search, roleFilter, showTrashed, pagination.pageSize]);
+
+  // Fetch stats (always from non-trashed, no filters)
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await axiosInstance.get(API_PREFIX, { params: { per_page: 1, page: 1 } });
+      const totalAll = res.data?.meta?.total ?? 0;
+
+      const [adminRes, customerRes] = await Promise.all([
+        axiosInstance.get(API_PREFIX, { params: { per_page: 1, role_id: 1 } }),
+        axiosInstance.get(API_PREFIX, { params: { per_page: 1, role_id: 3 } }),
+      ]);
+
+      setStats({
+        total: totalAll,
+        admin: adminRes.data?.meta?.total ?? 0,
+        customer: customerRes.data?.meta?.total ?? 0,
+        active: totalAll, // approximate
+      });
+    } catch { /* ignore stats error */ }
+  }, []);
+
+  useEffect(() => { fetchUsers(1); fetchStats(); }, []);
+
+  const handleTableChange = (pag: TablePaginationConfig) => {
+    fetchUsers(pag.current ?? 1);
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  // Debounced search
+  const searchTimeoutRef = React.useRef<ReturnType<typeof setTimeout>>();
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchUsers(1, val);
+    }, 400);
+  };
+
+  const handleRoleFilterChange = (val: string) => {
+    setRoleFilter(val || '');
+    fetchUsers(1, undefined, val || '');
+  };
+
+  const handleTrashedToggle = (checked: boolean) => {
+    setShowTrashed(checked);
+    fetchUsers(1, undefined, undefined, checked);
+  };
 
   const openAdd = () => {
     setEditingUser(null);
@@ -76,7 +145,6 @@ const AdminUserPage: React.FC = () => {
       email: u.email,
       role: u.role || 'customer',
       status: u.status || 'active',
-      avatar: u.avatar || '',
       password: '',
     });
     setModalOpen(true);
@@ -87,59 +155,47 @@ const AdminUserPage: React.FC = () => {
       const values = await form.validateFields();
 
       if (editingUser) {
+        // === EDIT MODE ===
         const payload: Record<string, unknown> = {};
 
-        if (values.fullname) {
-          payload.fullname = values.fullname;
-        }
-        if (values.status) {
-          payload.status = values.status;
-        }
+        if (values.fullname) payload.fullname = values.fullname;
+        if (values.status) payload.status = values.status;
+
         if (values.role) {
           const roleId = ROLE_NAME_TO_ID[values.role];
-          if (roleId) {
-            payload.role_id = roleId;
-          }
+          if (roleId) payload.role_id = roleId;
+        }
+
+        // Gửi password nếu admin nhập
+        if (values.password && values.password.trim()) {
+          payload.password = values.password;
         }
 
         await axiosInstance.put(`${API_PREFIX}/${editingUser.id}`, payload);
         message.success('Cập nhật người dùng thành công!');
       } else {
-        // Đăng ký user mới qua backend
-        const registerRes = await axiosInstance.post('/auth/register', {
-          name: values.fullname,
+        // === ADD MODE — Dùng admin endpoint ===
+        const payload: Record<string, unknown> = {
+          fullname: values.fullname,
           email: values.email,
           password: values.password,
-          password_confirmation: values.password,
-        });
+        };
 
-        const newUser: User | undefined = registerRes.data?.data?.user;
-
-        // Nếu admin chọn role/status khác mặc định thì cập nhật lại qua admin users
-        if (newUser?.id) {
-          const updatePayload: Record<string, unknown> = {};
-
-          if (values.role) {
-            const roleId = ROLE_NAME_TO_ID[values.role];
-            if (roleId) {
-              updatePayload.role_id = roleId;
-            }
-          }
-
-          if (values.status) {
-            updatePayload.status = values.status;
-          }
-
-          if (Object.keys(updatePayload).length > 0) {
-            await axiosInstance.put(`${API_PREFIX}/${newUser.id}`, updatePayload);
-          }
+        if (values.role) {
+          const roleId = ROLE_NAME_TO_ID[values.role];
+          if (roleId) payload.role_id = roleId;
+        }
+        if (values.status) {
+          payload.status = values.status;
         }
 
+        await axiosInstance.post(API_PREFIX, payload);
         message.success('Thêm người dùng thành công!');
       }
 
       setModalOpen(false);
-      fetchUsers();
+      fetchUsers(pagination.current ?? 1);
+      fetchStats();
     } catch (error: any) {
       console.error('Error saving user:', error);
       const msg = error?.response?.data?.message ?? 'Có lỗi xảy ra khi lưu người dùng';
@@ -151,10 +207,24 @@ const AdminUserPage: React.FC = () => {
     try {
       await axiosInstance.delete(`${API_PREFIX}/${id}`);
       message.success('Đã xóa người dùng');
-      fetchUsers();
+      fetchUsers(pagination.current ?? 1);
+      fetchStats();
     } catch (error: any) {
       console.error('Error deleting user:', error);
       const msg = error?.response?.data?.message ?? 'Xóa thất bại';
+      message.error(msg);
+    }
+  };
+
+  const handleRestore = async (id: string | number) => {
+    try {
+      await axiosInstance.post(`${API_PREFIX}/${id}/restore`);
+      message.success('Đã khôi phục người dùng');
+      fetchUsers(pagination.current ?? 1, undefined, undefined, true);
+      fetchStats();
+    } catch (error: any) {
+      console.error('Error restoring user:', error);
+      const msg = error?.response?.data?.message ?? 'Khôi phục thất bại';
       message.error(msg);
     }
   };
@@ -167,9 +237,7 @@ const AdminUserPage: React.FC = () => {
         return;
       }
 
-      const res = await axiosInstance.put(`${API_PREFIX}/${userId}`, {
-        role_id: roleId,
-      });
+      const res = await axiosInstance.put(`${API_PREFIX}/${userId}`, { role_id: roleId });
 
       if (res.data && res.data.status === false) {
         message.error(res.data.message || 'Cập nhật quyền thất bại');
@@ -180,50 +248,42 @@ const AdminUserPage: React.FC = () => {
         prev.map(u => (u.id === userId ? { ...u, role: newRole } : u))
       );
       message.success('Đã cập nhật quyền!');
+      fetchStats();
     } catch (error: any) {
       console.error('Error updating role:', error);
       const msg = error?.response?.data?.message ?? 'Có lỗi xảy ra khi cập nhật quyền';
       message.error(msg);
     }
   };
- 
 
-    const handleQuickStatus = async (userId: string | number, newStatus: string) => {
-      try {
-        const res = await axiosInstance.put(`${API_PREFIX}/${userId}`, {
-          status: newStatus,
-        });
+  const handleQuickStatus = async (userId: string | number, newStatus: string) => {
+    try {
+      const res = await axiosInstance.put(`${API_PREFIX}/${userId}`, { status: newStatus });
 
-        if (res.data && res.data.status === false) {
-          message.error(res.data.message || 'Cập nhật trạng thái thất bại');
-          return;
-        }
-
-        setUsers(prev =>
-          prev.map(u => (u.id === userId ? { ...u, status: newStatus } : u))
-        );
-        message.success('Đã cập nhật trạng thái!');
-      } catch (error: any) {
-        console.error('Error updating status:', error);
-        const msg = error?.response?.data?.message ?? 'Có lỗi xảy ra khi cập nhật trạng thái';
-        message.error(msg);
+      if (res.data && res.data.status === false) {
+        message.error(res.data.message || 'Cập nhật trạng thái thất bại');
+        return;
       }
-    };
 
- 
+      setUsers(prev =>
+        prev.map(u => (u.id === userId ? { ...u, status: newStatus } : u))
+      );
+      message.success('Đã cập nhật trạng thái!');
+    } catch (error: any) {
+      console.error('Error updating status:', error);
+      const msg = error?.response?.data?.message ?? 'Có lỗi xảy ra khi cập nhật trạng thái';
+      message.error(msg);
+    }
+  };
 
-  const filtered = users.filter(u => {
-    const matchSearch =
-      (u.fullname || '').toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase());
-    const matchRole = roleFilter ? u.role === roleFilter : true;
-    return matchSearch && matchRole;
-  });
-
-  const columns: ColumnsType<User> = [
+  // === Columns for ACTIVE users ===
+  const activeColumns: ColumnsType<User> = [
     {
       title: '#', key: 'index', width: 50,
-      render: (_: unknown, __: User, i: number) => <Text type="secondary">{i + 1}</Text>,
+      render: (_: unknown, __: User, i: number) => {
+        const pageOffset = ((pagination.current ?? 1) - 1) * (pagination.pageSize ?? 10);
+        return <Text type="secondary">{pageOffset + i + 1}</Text>;
+      },
     },
     {
       title: 'Người dùng', key: 'user',
@@ -288,7 +348,7 @@ const AdminUserPage: React.FC = () => {
       ),
     },
     {
-      title: 'Hành động', key: 'action', width: 110, align: 'center',
+      title: 'Hành động', key: 'action', width: 120, align: 'center',
       render: (_: unknown, r: User) => (
         <Space>
           <Tooltip title="Sửa">
@@ -298,24 +358,84 @@ const AdminUserPage: React.FC = () => {
               onClick={() => openEdit(r)}
             />
           </Tooltip>
-          {/* <Tooltip title="Xóa">
+          <Tooltip title="Xóa">
             <Popconfirm
               title="Xóa người dùng này?"
-              description="Hành động này không thể hoàn tác"
+              description="Người dùng sẽ bị vô hiệu hóa (có thể khôi phục)"
               onConfirm={() => handleDelete(r.id)}
               okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }}
             >
               <Button danger size="small" icon={<DeleteOutlined />} style={{ borderRadius: 8 }} />
             </Popconfirm>
-          </Tooltip> */}
+          </Tooltip>
         </Space>
       ),
     },
   ];
 
-  const adminCount = users.filter(u => u.role === 'admin').length;
-  const customerCount = users.filter(u => u.role === 'customer').length;
-  const activeCount = users.filter(u => !u.status || u.status === 'active').length;
+  // === Columns for TRASHED users ===
+  const trashedColumns: ColumnsType<User> = [
+    {
+      title: '#', key: 'index', width: 50,
+      render: (_: unknown, __: User, i: number) => {
+        const pageOffset = ((pagination.current ?? 1) - 1) * (pagination.pageSize ?? 10);
+        return <Text type="secondary">{pageOffset + i + 1}</Text>;
+      },
+    },
+    {
+      title: 'Người dùng', key: 'user',
+      render: (_: unknown, r: User) => (
+        <Space>
+          <Avatar
+            icon={<UserOutlined />}
+            size={40}
+            style={{
+              border: '2px solid #d9d9d9',
+              background: '#f5f5f5',
+              color: '#bfbfbf',
+              flexShrink: 0,
+              opacity: 0.6,
+            }}
+          />
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14, color: '#999' }}>{r.fullname || '—'}</div>
+            <Text type="secondary" style={{ fontSize: 12 }}>{r.email}</Text>
+          </div>
+        </Space>
+      ),
+    },
+    {
+      title: 'Phân quyền', dataIndex: 'role', key: 'role', width: 150,
+      render: (v: string) => {
+        const cfg = ROLE_CONFIG[v] || ROLE_CONFIG.customer;
+        return <Tag color="default" style={{ borderRadius: 20 }}>{cfg.label}</Tag>;
+      },
+    },
+    {
+      title: 'Trạng thái', key: 'status', width: 120,
+      render: () => <Tag color="error" style={{ borderRadius: 20 }}>Đã xóa</Tag>,
+    },
+    {
+      title: 'Hành động', key: 'action', width: 110, align: 'center',
+      render: (_: unknown, r: User) => (
+        <Tooltip title="Khôi phục">
+          <Popconfirm
+            title="Khôi phục người dùng này?"
+            description="Người dùng sẽ được kích hoạt lại"
+            onConfirm={() => handleRestore(r.id)}
+            okText="Khôi phục" cancelText="Hủy"
+          >
+            <Button
+              type="primary" size="small" icon={<UndoOutlined />}
+              style={{ borderRadius: 8, background: '#52c41a', border: 'none' }}
+            >
+              Khôi phục
+            </Button>
+          </Popconfirm>
+        </Tooltip>
+      ),
+    },
+  ];
 
   return (
     <div style={{ padding: 24 }}>
@@ -327,69 +447,87 @@ const AdminUserPage: React.FC = () => {
             Quản lí Người dùng
           </Title>
           <Text type="secondary" style={{ fontSize: 13 }}>
-            Hiển thị {filtered.length} / {users.length} người dùng
+            {showTrashed
+              ? `Hiển thị ${users.length} người dùng đã xóa`
+              : `Hiển thị ${pagination.total} người dùng`}
           </Text>
         </div>
-        <Button
-          type="primary" icon={<PlusOutlined />} onClick={openAdd}
-          style={{
-            background: 'linear-gradient(135deg,#0d6efd,#084298)',
-            border: 'none', borderRadius: 10, height: 40, fontWeight: 600,
-            boxShadow: '0 4px 12px rgba(13,110,253,0.35)',
-          }}
-        >
-          Thêm người dùng
-        </Button>
+        {!showTrashed && (
+          <Button
+            type="primary" icon={<PlusOutlined />} onClick={openAdd}
+            style={{
+              background: 'linear-gradient(135deg,#0d6efd,#084298)',
+              border: 'none', borderRadius: 10, height: 40, fontWeight: 600,
+              boxShadow: '0 4px 12px rgba(13,110,253,0.35)',
+            }}
+          >
+            Thêm người dùng
+          </Button>
+        )}
       </div>
 
       {/* Summary Row */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        {[
-          { label: 'Tổng người dùng', value: users.length, color: '#0d6efd' },
-          { label: 'Admin', value: adminCount, color: '#ffc107' },
-          { label: 'Khách hàng', value: customerCount, color: '#198754' },
-          { label: 'Đang hoạt động', value: activeCount, color: '#0dcaf0' },
-        ].map((item) => (
-          <Col xs={12} sm={6} key={item.label}>
-            <Card
-              style={{ borderRadius: 12, border: '1px solid #f0f0f0', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
-              bodyStyle={{ padding: '16px 12px' }}
-            >
-              <div style={{ fontSize: 28, fontWeight: 700, color: item.color }}>{item.value}</div>
-              <div style={{ fontSize: 12, color: '#868e96', marginTop: 2 }}>{item.label}</div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+      {!showTrashed && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+          {[
+            { label: 'Tổng người dùng', value: stats.total, color: '#0d6efd' },
+            { label: 'Admin', value: stats.admin, color: '#ffc107' },
+            { label: 'Khách hàng', value: stats.customer, color: '#198754' },
+            { label: 'Đang hoạt động', value: stats.active, color: '#0dcaf0' },
+          ].map((item) => (
+            <Col xs={12} sm={6} key={item.label}>
+              <Card
+                style={{ borderRadius: 12, border: '1px solid #f0f0f0', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+                styles={{ body: { padding: '16px 12px' } }}
+              >
+                <div style={{ fontSize: 28, fontWeight: 700, color: item.color }}>{item.value}</div>
+                <div style={{ fontSize: 12, color: '#868e96', marginTop: 2 }}>{item.label}</div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
 
       {/* Filters */}
-      <Card style={{ borderRadius: 14, border: '1px solid #f0f0f0', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }} bodyStyle={{ padding: '14px 20px' }}>
+      <Card style={{ borderRadius: 14, border: '1px solid #f0f0f0', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }} styles={{ body: { padding: '14px 20px' } }}>
         <Row gutter={12} align="middle">
           <Col flex="auto">
             <Input
               placeholder="Tìm tên, email người dùng..."
               prefix={<SearchOutlined style={{ color: '#adb5bd' }} />}
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => handleSearchChange(e.target.value)}
               style={{ borderRadius: 10, height: 38 }}
               allowClear
             />
           </Col>
+          {!showTrashed && (
+            <Col>
+              <Select
+                placeholder="Lọc theo quyền"
+                style={{ width: 160, borderRadius: 10 }}
+                allowClear
+                value={roleFilter || undefined}
+                onChange={v => handleRoleFilterChange(v || '')}
+                options={Object.entries(ROLE_CONFIG).map(([k, cfg]) => ({
+                  value: k,
+                  label: <Tag color={cfg.color} style={{ margin: 0, borderRadius: 20 }}>{cfg.label}</Tag>,
+                }))}
+              />
+            </Col>
+          )}
           <Col>
-            <Select
-              placeholder="Lọc theo quyền"
-              style={{ width: 160, borderRadius: 10 }}
-              allowClear
-              value={roleFilter || undefined}
-              onChange={v => setRoleFilter(v || '')}
-              options={Object.entries(ROLE_CONFIG).map(([k, cfg]) => ({
-                value: k,
-                label: <Tag color={cfg.color} style={{ margin: 0, borderRadius: 20 }}>{cfg.label}</Tag>,
-              }))}
-            />
+            <Space>
+              <Text type="secondary" style={{ fontSize: 13 }}>Đã xóa:</Text>
+              <Switch
+                checked={showTrashed}
+                onChange={handleTrashedToggle}
+                size="small"
+              />
+            </Space>
           </Col>
           <Col>
-            <Button icon={<ReloadOutlined />} onClick={fetchUsers} style={{ borderRadius: 10, height: 38 }}>
+            <Button icon={<ReloadOutlined />} onClick={() => fetchUsers(1)} style={{ borderRadius: 10, height: 38 }}>
               Làm mới
             </Button>
           </Col>
@@ -397,13 +535,14 @@ const AdminUserPage: React.FC = () => {
       </Card>
 
       {/* Table */}
-      <Card style={{ borderRadius: 14, border: '1px solid #f0f0f0', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }} bodyStyle={{ padding: 0 }}>
+      <Card style={{ borderRadius: 14, border: '1px solid #f0f0f0', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }} styles={{ body: { padding: 0 } }}>
         <Table
-          columns={columns}
-          dataSource={filtered}
+          columns={showTrashed ? trashedColumns : activeColumns}
+          dataSource={users}
           rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 8, showSizeChanger: false, showTotal: t => `Tổng ${t} người dùng` }}
+          pagination={pagination}
+          onChange={handleTableChange}
         />
       </Card>
 
@@ -436,15 +575,19 @@ const AdminUserPage: React.FC = () => {
             name="email" label="Email"
             rules={[{ required: true, message: 'Nhập email' }, { type: 'email', message: 'Email không hợp lệ' }]}
           >
-            <Input placeholder="VD: user@gmail.com" style={{ borderRadius: 8 }} />
+            <Input
+              placeholder="VD: user@gmail.com"
+              style={{ borderRadius: 8 }}
+              disabled={!!editingUser}
+            />
           </Form.Item>
 
           <Form.Item
             name="password"
-            label={editingUser ? 'Mật khẩu mới (để trống nếu không đổi)' : 'Mật khẩu'}
-            rules={editingUser ? [] : [{ required: true, message: 'Nhập mật khẩu' }]}
+            label={editingUser ? 'Đặt lại mật khẩu (để trống nếu không đổi)' : 'Mật khẩu'}
+            rules={editingUser ? [] : [{ required: true, message: 'Nhập mật khẩu' }, { min: 6, message: 'Mật khẩu tối thiểu 6 ký tự' }]}
           >
-            <Input.Password placeholder="Nhập mật khẩu" style={{ borderRadius: 8 }} />
+            <Input.Password placeholder={editingUser ? 'Nhập mật khẩu mới...' : 'Nhập mật khẩu'} style={{ borderRadius: 8 }} />
           </Form.Item>
 
           <Row gutter={16}>
@@ -469,10 +612,6 @@ const AdminUserPage: React.FC = () => {
               </Form.Item>
             </Col>
           </Row>
-
-          <Form.Item name="avatar" label="Avatar URL">  
-            <Input placeholder="https://..." style={{ borderRadius: 8 }} />
-          </Form.Item>
         </Form>
       </Modal>
     </div>

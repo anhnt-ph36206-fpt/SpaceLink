@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\Client\SearchController;
 use App\Http\Controllers\Api\Client\ShippingController;
 use App\Http\Controllers\Api\Client\ComplaintController as ClientComplaintController;
 use App\Http\Controllers\Api\Client\WishlistController as ClientWishlistController;
+use App\Http\Controllers\Api\Client\ChatbotController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -91,6 +92,9 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::get('/search/autocomplete', [SearchController::class, 'autocomplete']);
 });
 
+// --- Chatbot (Public) ---
+Route::post('/chat', [ChatbotController::class, 'chat']);
+
 // ========================================================================
 // 2. CLIENT ROUTES — /api/client/*
 // ========================================================================
@@ -128,6 +132,7 @@ Route::prefix('client')->name('client.')->group(function () {
         Route::post('/orders/{id}/return-request', [ClientOrderController::class, 'requestReturn']);
         Route::get('/orders/{id}/retry-vnpay', [ClientOrderController::class, 'retryVnpayPayment']);
         Route::post('/orders/{id}/switch-to-cod', [ClientOrderController::class, 'switchToCod']);
+        Route::put('/orders/{id}/update-shipping', [ClientOrderController::class, 'updateShipping']);
 
         // Khiếu nại đơn hàng
         Route::get('/orders/{id}/complaint', [ClientComplaintController::class, 'show']);
@@ -145,6 +150,11 @@ Route::prefix('client')->name('client.')->group(function () {
         Route::get('/wishlist', [ClientWishlistController::class, 'index']);
         Route::post('/wishlist', [ClientWishlistController::class, 'store']);
         Route::delete('/wishlist/{id}', [ClientWishlistController::class, 'destroy']);
+
+        // Notifications (client)
+        Route::get('/notifications', [\App\Http\Controllers\Api\Client\UserNotificationController::class, 'index']);
+        Route::patch('/notifications/read-all', [\App\Http\Controllers\Api\Client\UserNotificationController::class, 'readAll']);
+        Route::patch('/notifications/{id}/read', [\App\Http\Controllers\Api\Client\UserNotificationController::class, 'read']);
     });
 });
 
@@ -172,15 +182,22 @@ Route::get('payment/vnpay-ipn', [\App\Http\Controllers\Api\Client\CheckoutContro
 // ========================================================================
 // 4. ADMIN ROUTES — /api/admin/*
 // ========================================================================
-Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->group(function () {
 
+// ── 4a. Staff + Admin: quản lý sản phẩm, đơn hàng, nội dung ─────────────
+Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'staff'])->group(function () {
+
+    Route::delete('categories/{category}/force', [AdminCategoryController::class, 'forceDelete']);
+    Route::post('categories/{category}/reassign-products', [AdminCategoryController::class, 'reassignProducts']);
     Route::apiResource('categories', AdminCategoryController::class);
     Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class);
     Route::apiResource('attribute-groups', AdminAttributeGroupController::class);
     Route::apiResource('specification-groups', \App\Http\Controllers\Api\Admin\SpecificationGroupController::class);
 
+    // Product — dùng Policy để phân biệt delete / forceDelete / restore
     Route::post('products/bulk-action', [\App\Http\Controllers\Api\Admin\ProductController::class, 'bulkAction']);
     Route::patch('products/{product}/toggle-active', [\App\Http\Controllers\Api\Admin\ProductController::class, 'toggleActive']);
+    // forceDelete & restore — Policy sẽ chặn Staff trong Controller
+    Route::delete('products/{product}/force', [\App\Http\Controllers\Api\Admin\ProductController::class, 'forceDelete']);
     Route::post('products/{product}/restore', [\App\Http\Controllers\Api\Admin\ProductController::class, 'restore']);
     Route::get('products/{product}/specifications', [\App\Http\Controllers\Api\Admin\ProductController::class, 'getSpecifications']);
     Route::put('products/{product}/specifications', [\App\Http\Controllers\Api\Admin\ProductController::class, 'syncSpecifications']);
@@ -197,36 +214,34 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     Route::put('products/{product}/specifications/{specification}', [ProductSpecificationController::class, 'update']);
     Route::delete('products/{product}/specifications/{specification}', [ProductSpecificationController::class, 'destroy']);
 
-
     Route::post('products/{product}/images', [\App\Http\Controllers\Api\Admin\ProductImageController::class, 'store']);
     Route::delete('products/{product}/images/{image}', [\App\Http\Controllers\Api\Admin\ProductImageController::class, 'destroy']);
 
+    // Đơn hàng — Staff chỉ cập nhật status, không được sửa total_amount (logic trong Controller/Policy)
     Route::get('orders', [\App\Http\Controllers\Api\Admin\OrderController::class, 'index']);
     Route::get('orders/{order}', [\App\Http\Controllers\Api\Admin\OrderController::class, 'show']);
     Route::patch('orders/{order}/status', [\App\Http\Controllers\Api\Admin\OrderController::class, 'updateStatus']);
     Route::patch('orders/{order}/payment-status', [\App\Http\Controllers\Api\Admin\OrderController::class, 'updatePaymentStatus']);
     Route::post('orders/{order}/return/approve', [\App\Http\Controllers\Api\Admin\OrderController::class, 'approveReturn']);
     Route::post('orders/{order}/return/reject', [\App\Http\Controllers\Api\Admin\OrderController::class, 'rejectReturn']);
-    // Cancel requests
     Route::get('orders/{order}/cancel-requests', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'cancelRequests']);
     Route::post('orders/{order}/cancel-requests/{req}/approve', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'approveCancelRequest']);
     Route::post('orders/{order}/cancel-requests/{req}/reject', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'rejectCancelRequest']);
-    // Admin Notifications
+
     Route::get('notifications', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'index']);
     Route::patch('notifications/read-all', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'readAll']);
     Route::patch('notifications/{id}/read', [\App\Http\Controllers\Api\Admin\AdminNotificationController::class, 'markRead']);
 
-    Route::apiResource('vouchers', \App\Http\Controllers\Api\Admin\VoucherController::class);
+    // Complaints
+    Route::apiResource('complaints', \App\Http\Controllers\Api\Admin\ComplaintController::class)->only(['index', 'show', 'update']);
 
-    Route::apiResource('users', AdminUserController::class)->except(['store']);
-    Route::post('users/{user}/restore', [AdminUserController::class, 'restore']);
+    Route::apiResource('vouchers', \App\Http\Controllers\Api\Admin\VoucherController::class);
 
     Route::get('reviews', [AdminReviewController::class, 'index']);
     Route::patch('reviews/{id}/reply', [AdminReviewController::class, 'reply']);
     Route::patch('reviews/{id}/toggle-visibility', [AdminReviewController::class, 'toggleVisibility']);
     Route::delete('reviews/{id}', [AdminReviewController::class, 'destroy']);
 
-    // --- Admin Comments (đã xóa đoạn trùng lặp) ---
     Route::get('comments', [AdminCommentController::class, 'index']);
     Route::patch('comments/{comment}/approve', [AdminCommentController::class, 'approve']);
     Route::patch('comments/{comment}/reject', [AdminCommentController::class, 'reject']);
@@ -244,6 +259,19 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     Route::apiResource('banners', AdminBannerController::class);
     Route::patch('banners/{banner}/toggle', [AdminBannerController::class, 'toggle']);
 
+    // Stats cơ bản — Staff được xem
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+});
+
+// ── 4b. Admin-only: Quản lý người dùng & báo cáo doanh thu ───────────────
+Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->group(function () {
+
+    // Quản lý User/Staff/Admin — CHỈ Admin
+    Route::apiResource('users', AdminUserController::class);
+    Route::post('users/{user}/restore', [AdminUserController::class, 'restore']);
+
+    // Báo cáo doanh thu cấp cao — CHỈ Admin
     Route::get('dashboard/revenue', [DashboardController::class, 'revenue']);
+    Route::get('dashboard/sales-by-category', [DashboardController::class, 'salesByCategory']);
+    Route::get('dashboard/top-products', [DashboardController::class, 'topProducts']);
 });

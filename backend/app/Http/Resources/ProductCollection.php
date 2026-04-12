@@ -37,19 +37,10 @@ class ProductCollection extends ResourceCollection
                         'id'   => $product->brand->id,
                         'name' => $product->brand->name,
                     ] : null,
-                    'is_featured' => $product->is_featured,
+                 'is_featured' => $product->is_featured,
                     'is_active'   => $product->is_active,
                 ];
-            }),
-            'meta' => [
-                'total'        => $this->resource->total(),
-                'per_page'     => $this->resource->perPage(),
-                'current_page' => $this->resource->currentPage(),
-                'last_page'    => $this->resource->lastPage(),
-            ],
-            'links' => [
-                'self' => 'link-value',
-            ],
+            })->all()
         ];
     }
 }

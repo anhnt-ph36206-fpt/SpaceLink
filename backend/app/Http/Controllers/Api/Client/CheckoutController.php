@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Client;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CheckoutRequest;
 use App\Models\AdminNotification;
+use App\Models\UserNotification;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -248,7 +249,8 @@ class CheckoutController extends Controller
                     $voucher->increment('used_count');
                 }
 
-                OrderStatusHistory::create(['order_id' => $order->id, 'to_status' => 'pending', 'note' => 'Đơn hàng được khởi tạo.', 'changed_by' => $user?->id]);
+                // Bug #8 Fix: thêm from_status để nhất quán với các chỗ khác
+                OrderStatusHistory::create(['order_id' => $order->id, 'from_status' => null, 'to_status' => 'pending', 'note' => 'Đơn hàng được khởi tạo.', 'changed_by' => $user?->id]);
 
                 // Admin notification: đơn hàng mới
                 AdminNotification::notify(
@@ -350,25 +352,15 @@ class CheckoutController extends Controller
                 $voucherDiscount = 0;
                 $voucher = null;
 
+                // Bug #5 Fix: sử dụng applyVoucher() thay inline logic để đảm bảo
+                // đầy đủ các check: used_count, usage_limit_per_user, product_id, category_id
                 if ($request->filled('voucher_code')) {
-                    $voucher = Voucher::where('code', $request->voucher_code)->where('is_active', true)
-                        ->where('start_date', '<=', now())->where('end_date', '>=', now())->lockForUpdate()->first();
-                    if (! $voucher) {
-                        throw new \Exception('Mã giảm giá không hợp lệ hoặc đã hết hạn.');
-                    }
-                    if ($subtotal < $voucher->min_order_amount) {
-                        throw new \Exception('Đơn hàng chưa đạt mức tối thiểu.');
-                    }
-
-                    if ($voucher->discount_type === 'percent') {
-                        $discount = $subtotal * ($voucher->discount_value / 100);
-                        if ($voucher->max_discount && $discount > $voucher->max_discount) {
-                            $discount = $voucher->max_discount;
-                        }
-                        $voucherDiscount = $discount;
-                    } else {
-                        $voucherDiscount = $voucher->discount_value;
-                    }
+                    [$voucher, $voucherDiscount] = $this->applyVoucher(
+                        $request->voucher_code,
+                        $subtotal,
+                        $user->id,
+                        $cartItems
+                    );
                 }
 
                 $totalAmount = max(0, $subtotal + $shippingFee - $voucherDiscount);
@@ -396,17 +388,25 @@ class CheckoutController extends Controller
                     $effectivePrice = $this->resolvePrice($item, $lockedVariants);
                     $variant = $item->variant_id ? $lockedVariants->find($item->variant_id) : null;
 
-                    // Lazy deduction: KHÔNG trừ kho — sẽ trừ trong vnpayIpn() khi thanh toán thành công
+                    // Bug #1 Fix: dùng đúng field names theo OrderItem::$fillable
+                    // Thêm product_image, product_sku (thay 'sku'), total
+                    $variantInfo = $variant ? [
+                        'sku'   => $variant->sku,
+                        'image' => $variant->image,
+                        'attrs' => $variant->attributes?->map(fn($a) => ['name' => $a->name, 'value' => $a->value])?->toArray(),
+                    ] : null;
 
                     OrderItem::create([
-                        'order_id'     => $order->id,
-                        'product_id'   => $item->product_id,
-                        'variant_id'   => $item->variant_id,
-                        'product_name' => $item->product->name,
-                        'variant_info' => null,
-                        'sku'          => $variant->sku,
-                        'quantity'     => $item->quantity,
-                        'price'        => $effectivePrice,
+                        'order_id'      => $order->id,
+                        'product_id'    => $item->product_id,
+                        'variant_id'    => $item->variant_id,
+                        'product_name'  => $item->product->name,
+                        'product_image' => $item->product->images->first()?->image_url ?? $variant?->image,
+                        'product_sku'   => $variant?->sku ?? $item->product->sku,
+                        'variant_info'  => $variantInfo,
+                        'price'         => $effectivePrice,
+                        'quantity'      => $item->quantity,
+                        'total'         => $effectivePrice * $item->quantity,
                     ]);
                 }
 
@@ -622,6 +622,201 @@ class CheckoutController extends Controller
         }
 
         return response()->json(['status' => 'error', 'message' => 'Chữ ký không hợp lệ'], 400);
+    }
+
+    // =========================================================================
+    // POST /api/client/checkout/verify-vnpay-payment
+    // Xác minh thanh toán VNPAY — KHÔNG cần VNPAY signature
+    // Chỉ cần auth + order_code + vnp_TransactionNo
+    // Dùng làm FALLBACK khi IPN/return bị lỗi signature do encoding
+    // =========================================================================
+    public function verifyVnpayPayment(\Illuminate\Http\Request $request)
+    {
+        $user = auth('sanctum')->user();
+        $orderCode = $request->input('order_code');
+        $transactionNo = $request->input('transaction_no', '');
+
+        if (!$orderCode) {
+            return response()->json(['status' => 'error', 'message' => 'Thiếu mã đơn hàng.'], 400);
+        }
+
+        $order = Order::where('order_code', $orderCode)
+            ->where('user_id', $user->id)
+            ->where('payment_method', 'vnpay')
+            ->first();
+
+        if (!$order) {
+            return response()->json(['status' => 'error', 'message' => 'Đơn hàng không tồn tại.'], 404);
+        }
+
+        // Nếu chưa xử lý → xử lý payment + check stock
+        if ($order->payment_status === 'unpaid') {
+            $this->processVnpaySuccessPayment($order, $transactionNo);
+            $order->refresh();
+        }
+
+        // Trả về trạng thái thực tế
+        if ($order->status === 'cancelled' && $order->cancelled_reason === 'out_of_stock_after_payment') {
+            return response()->json([
+                'status' => 'stock_depleted',
+                'message' => 'Rất tiếc, sản phẩm đã hết hàng trong lúc bạn thanh toán. Chúng tôi sẽ hoàn tiền lại cho bạn trong thời gian sớm nhất.',
+                'order_id' => $order->id,
+                'order_code' => $order->order_code,
+                'payment_status' => $order->payment_status,
+            ]);
+        }
+
+        return response()->json([
+            'status' => $order->payment_status === 'paid' ? 'success' : 'pending',
+            'message' => $order->payment_status === 'paid' ? 'Thanh toán thành công' : 'Đơn hàng đang chờ xử lý',
+            'order_id' => $order->id,
+            'order_code' => $order->order_code,
+            'payment_status' => $order->payment_status,
+            'order_status' => $order->status,
+        ]);
+    }
+
+    // =========================================================================
+    // Xử lý thanh toán VNPAY thành công: set paid, kiểm tra stock, trừ kho hoặc cancel
+    // Được gọi từ cả vnpayIpn() và vnpayReturn() (fallback)
+    // Idempotent: nếu đã xử lý rồi thì skip
+    // =========================================================================
+    private function processVnpaySuccessPayment(Order $order, string $transactionNo): bool
+    {
+        $stockDepleted = false;
+
+        DB::transaction(function () use ($order, $transactionNo, &$stockDepleted) {
+            // Lock order để tránh xử lý trùng lặp (IPN + Return chạy đồng thời)
+            $freshOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+            if (!$freshOrder) return;
+
+            // Đã xử lý rồi (idempotent) → chỉ check kết quả
+            if ($freshOrder->payment_status !== 'unpaid') {
+                $stockDepleted = ($freshOrder->status === 'cancelled'
+                    && $freshOrder->cancelled_reason === 'out_of_stock_after_payment');
+                return;
+            }
+
+            // 1. Đánh dấu đã thanh toán
+            $freshOrder->update(['payment_status' => 'paid']);
+            OrderStatusHistory::create([
+                'order_id' => $freshOrder->id,
+                'to_status' => $freshOrder->status,
+                'note' => 'Thanh toán VNPAY thành công. Mã GD: ' . $transactionNo,
+            ]);
+
+            // 1.5. Kiểm tra nếu kho đã bị trừ (do admin xác nhận đơn trước khi IPN tới)
+            $isStockAlreadyDeducted = in_array($freshOrder->status, ['confirmed', 'processing', 'shipping', 'delivered', 'completed'], true);
+
+            if (!$isStockAlreadyDeducted) {
+                // 2. Kiểm tra stock
+                $orderItems = $freshOrder->items()->with('variant')->get();
+                $stockIssues = [];
+
+                foreach ($orderItems as $item) {
+                    if (!$item->variant_id) continue;
+
+                    $variant = ProductVariant::where('id', $item->variant_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$variant || $variant->quantity < $item->quantity) {
+                        $stockIssues[] = [
+                            'product_name' => $item->product_name,
+                            'variant_id' => $item->variant_id,
+                            'needed' => $item->quantity,
+                            'available' => $variant ? $variant->quantity : 0,
+                        ];
+                    }
+                }
+
+                if (!empty($stockIssues)) {
+                    // =====================================================
+                    // HẾT HÀNG → Cancel đơn + đánh dấu cần hoàn tiền
+                    // =====================================================
+                    $stockDepleted = true;
+                    $issueDetails = collect($stockIssues)->map(function ($issue) {
+                        return "{$issue['product_name']} (cần {$issue['needed']}, còn {$issue['available']})";
+                    })->implode(', ');
+
+                    $freshOrder->update([
+                        'status' => 'cancelled',
+                        'cancelled_at' => now(),
+                        'cancelled_reason' => 'out_of_stock_after_payment',
+                        'admin_note' => 'HẾT HÀNG SAU THANH TOÁN VNPAY: ' . $issueDetails . '. Cần hoàn tiền cho khách.',
+                    ]);
+
+                    OrderStatusHistory::create([
+                        'order_id' => $freshOrder->id,
+                        'from_status' => 'pending',
+                        'to_status' => 'cancelled',
+                        'note' => 'Hệ thống tự động hủy: sản phẩm đã hết hàng trong lúc khách thanh toán VNPAY. ' . $issueDetails,
+                    ]);
+
+                    // Hoàn trả voucher nếu có
+                    if ($freshOrder->voucher_id) {
+                        Voucher::where('id', $freshOrder->voucher_id)
+                            ->where('used_count', '>', 0)
+                            ->decrement('used_count');
+                        VoucherUsage::where('voucher_id', $freshOrder->voucher_id)
+                            ->where('order_id', $freshOrder->id)
+                            ->delete();
+                    }
+
+                    AdminNotification::notify(
+                        'stock_issue_vnpay',
+                        '⚠️ VNPAY đã thanh toán nhưng hết hàng — cần hoàn tiền',
+                        "Đơn #{$freshOrder->order_code}: {$issueDetails}. Đơn đã tự động hủy, cần xử lý hoàn tiền cho khách.",
+                        $freshOrder->id
+                    );
+                } else {
+                    // =====================================================
+                    // ĐỦ STOCK → Trừ kho bình thường
+                    // =====================================================
+                    foreach ($orderItems as $item) {
+                        if (!$item->variant_id) continue;
+
+                        $variant = ProductVariant::where('id', $item->variant_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($variant) {
+                            $variant->decrement('quantity', $item->quantity);
+                            // Sync product.quantity = tổng variant (nhất quán với hoàn kho)
+                            $product = Product::find($item->product_id);
+                            if ($product) {
+                                $product->update(['quantity' => ProductVariant::where('product_id', $product->id)->sum('quantity')]);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        $order->refresh();
+
+        // Thông báo cho khách
+        if ($order->user_id) {
+            if ($stockDepleted) {
+                UserNotification::notify(
+                    $order->user_id,
+                    'order_cancelled',
+                    '❌ Đơn hàng đã bị hủy do hết hàng',
+                    "Đơn #{$order->order_code} đã được thanh toán nhưng sản phẩm đã hết hàng. Vui lòng gửi yêu cầu hoàn tiền.",
+                    $order->id
+                );
+            } else {
+                UserNotification::notify(
+                    $order->user_id,
+                    'payment_success',
+                    '💳 Thanh toán VNPAY thành công',
+                    "Đơn #{$order->order_code} đã thanh toán thành công. Đơn hàng đang chờ shop xác nhận.",
+                    $order->id
+                );
+            }
+        }
+
+        return $stockDepleted;
     }
 
     private function resolvePrice($item, $lockedVariants): float

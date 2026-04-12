@@ -18,9 +18,11 @@ import {
     PictureOutlined,
     FileTextOutlined,
     CommentOutlined,
+    MessageOutlined,
     GiftOutlined,
     CheckOutlined,
     ToolOutlined,
+    CustomerServiceOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -86,9 +88,19 @@ const menuItems = [
         label: 'Đánh giá',
     },
     {
+        key: '/admin/comments',
+        icon: <MessageOutlined />,
+        label: 'Hỏi và đáp',
+    },
+    {
         key: '/admin/vouchers',
         icon: <GiftOutlined />,
         label: 'Mã giảm giá',
+    },
+    {
+        key: '/admin/complaints',
+        icon: <CustomerServiceOutlined />,
+        label: 'Khiếu nại',
     },
 ];
 
@@ -104,7 +116,9 @@ const breadcrumbMap: Record<string, string> = {
     '/admin/orders': 'Đơn hàng',
     '/admin/users': 'Người dùng',
     '/admin/reviews': 'Đánh giá',
+    '/admin/comments': 'Bình luận',
     '/admin/vouchers': 'Mã giảm giá',
+    '/admin/complaints': 'Khiếu nại',
 };
 
 const AdminLayout: React.FC = () => {

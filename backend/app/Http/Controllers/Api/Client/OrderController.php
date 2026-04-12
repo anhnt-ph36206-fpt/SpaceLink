@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Client\Order\RequestReturnRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\AdminNotification;
+use App\Models\UserNotification;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
@@ -157,6 +158,15 @@ class OrderController extends Controller
             ], 403);
         }
 
+        // Nếu đơn đã được tự động hoàn thành (AutoComplete) → trả về success
+        if ($order->status === 'completed') {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Đơn hàng đã được xác nhận hoàn tất.',
+                'data' => new OrderResource($order),
+            ]);
+        }
+
         if ($order->status !== 'delivered') {
             return response()->json([
                 'status' => 'error',
@@ -178,6 +188,23 @@ class OrderController extends Controller
                 'changed_by' => $user->id,
             ]);
         });
+
+        // Thông báo cho khách
+        UserNotification::notify(
+            $user->id,
+            'order_completed',
+            '🎉 Đơn hàng hoàn tất',
+            "Đơn #{$order->order_code} đã được xác nhận hoàn tất. Cảm ơn bạn đã mua hàng!",
+            $order->id
+        );
+
+        // Thông báo cho admin
+        AdminNotification::notify(
+            'order_completed',
+            '🎉 Khách hàng xác nhận nhận hàng',
+            "#{$order->order_code} — {$user->fullname} đã xác nhận nhận được hàng.",
+            $order->id
+        );
 
         return response()->json([
             'status' => 'success',
@@ -266,7 +293,8 @@ class OrderController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Bạn không có quyền truy cập đơn hàng này.'], 403);
         }
 
-        // Chỉ cho phép hủy đơn VNPAY chưa thanh toán
+        // Bug #3 Fix: chỉ cho phép hủy đơn VNPAY chưa thanh toán và đang ở trạng thái pending
+        // Ngăn race condition: đơn đã confirmed (kho đã trừ) nhưng payment vẫn unpaid
         if ($order->payment_method !== 'vnpay' || $order->payment_status !== 'unpaid') {
             return response()->json([
                 'status' => 'error',
@@ -274,11 +302,11 @@ class OrderController extends Controller
             ], 422);
         }
 
-        // Bảo vệ: không hủy nếu đã cancelled hoặc đã có trạng thái khác
-        if (in_array($order->status, ['cancelled', 'completed', 'shipping', 'delivered'])) {
+        // Chỉ cho phép hủy khi đang pending (giống cancel() của COD)
+        if ($order->status !== 'pending') {
             return response()->json([
                 'status' => 'error',
-                'message' => "Không thể hủy đơn đang ở trạng thái \"{$order->status}\".",
+                'message' => "Không thể hủy đơn đang ở trạng thái \"{$order->status}\". Chỉ có thể hủy khi đơn đang chờ xử lý (pending).",
             ], 422);
         }
 
@@ -471,9 +499,9 @@ class OrderController extends Controller
         }
 
         DB::transaction(function () use ($order, $user) {
+            // Bug #2 Fix: bỏ 'vnpay_expired_at' — field này không có trong Order::$fillable
             $order->update([
-                'payment_method'  => 'cod',
-                'vnpay_expired_at' => null,
+                'payment_method' => 'cod',
             ]);
 
             OrderStatusHistory::create([
@@ -489,6 +517,85 @@ class OrderController extends Controller
             'status'  => 'success',
             'message' => 'Đã chuyển sang thanh toán COD thành công.',
             'data'    => new OrderResource($order->fresh()),
+        ]);
+    }
+
+    // =========================================================================
+    // PUT /api/client/orders/{id}/update-shipping — Cập nhật địa chỉ giao hàng
+    // Chỉ cho phép khi đơn chưa được giao cho vận chuyển
+    // =========================================================================
+    public function updateShipping(Request $request, string $id): JsonResponse
+    {
+        $user = $request->user();
+        $order = Order::findOrFail($id);
+
+        // Kiểm tra quyền sở hữu
+        if ($order->user_id !== $user->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bạn không có quyền chỉnh sửa đơn hàng này.',
+            ], 403);
+        }
+
+        // Chỉ cho phép sửa khi chưa giao cho vận chuyển
+        $allowedStatuses = ['pending', 'confirmed', 'processing'];
+        if (!in_array($order->status, $allowedStatuses, true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Không thể thay đổi địa chỉ khi đơn hàng đã được giao cho đơn vị vận chuyển.',
+            ], 422);
+        }
+
+        $request->validate([
+            'fullname' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'province' => 'required|string|max:255',
+            'ward' => 'required|string|max:255',
+            'address_detail' => 'required|string|max:500',
+        ]);
+
+        // Lưu địa chỉ cũ để ghi log
+        $oldAddress = implode(', ', array_filter([
+            $order->shipping_address,
+            $order->shipping_ward,
+            $order->shipping_province,
+        ]));
+
+        $order->update([
+            'shipping_name' => $request->fullname,
+            'shipping_phone' => $request->phone,
+            'shipping_province' => $request->province,
+            'shipping_ward' => $request->ward,
+            'shipping_address' => $request->address_detail,
+        ]);
+
+        // Ghi lịch sử
+        OrderStatusHistory::create([
+            'order_id' => $order->id,
+            'from_status' => $order->status,
+            'to_status' => $order->status,
+            'note' => 'Khách hàng cập nhật địa chỉ giao hàng.',
+            'changed_by' => $user->id,
+        ]);
+
+        // Thông báo cho admin
+        $newAddress = implode(', ', array_filter([
+            $request->address_detail,
+            $request->ward,
+            $request->province,
+        ]));
+
+        AdminNotification::notify(
+            'order_updated',
+            '📍 Khách thay đổi địa chỉ giao hàng',
+            "#{$order->order_code} — {$request->fullname} — {$newAddress}",
+            $order->id
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Đã cập nhật địa chỉ giao hàng thành công.',
+            'data' => new OrderResource($order->fresh()),
         ]);
     }
 }

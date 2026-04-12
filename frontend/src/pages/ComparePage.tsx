@@ -15,6 +15,81 @@ interface DetailedProduct extends CompareProduct {
 const formatVND = (v: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
+const CSS = `
+.cp-wrapper { min-height: 80vh; background: #f8f9fa; padding-bottom: 80px; font-family: 'Inter', sans-serif; }
+.cp-header { background: #fff; padding: 16px 0; border-bottom: 1px solid #e2e8f0; }
+
+.cp-empty-state { text-align: center; padding: 60px 20px; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); }
+.cp-empty-state img { width: 140px; opacity: 0.5; margin-bottom: 24px; }
+.cp-empty-state h4 { color: #334155; font-weight: 700; margin-bottom: 8px; font-size: 20px; }
+.cp-empty-state p { color: #64748b; margin-bottom: 24px; font-size: 14px; }
+.cp-empty-btn { background: #ff7a00; color: #fff; padding: 10px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.cp-empty-btn:hover { background: #e85d00; color: #fff; }
+
+.cp-container { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); padding: 24px; }
+.cp-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.cp-title { font-size: 20px; font-weight: 700; color: #1e293b; margin: 0; }
+.cp-actions { display: flex; gap: 12px; }
+.cp-btn-add { background: #fff; border: 1.5px solid #ff7a00; color: #ff7a00; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+.cp-btn-add:hover { background: #fff8f0; }
+.cp-btn-clear { background: #fee2e2; border: none; color: #dc2626; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.cp-btn-clear:hover { background: #fca5a5; }
+
+.cp-table-wrap { border: 1px solid #e2e8f0; border-radius: 12px; overflow-x: auto; overflow-y: hidden; background: #fff; }
+.cp-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+.cp-table th, .cp-table td { border: 1px solid #f1f5f9; padding: 16px; }
+
+/* Sticky Header */
+.cp-th-head { position: sticky; top: 0; background: #fff; z-index: 10; vertical-align: top; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04); }
+.cp-th-label { width: 15%; min-width: 150px; background: #f8f9fa; color: #ff7a00; font-weight: 700; text-align: center; font-size: 14px; vertical-align: middle; }
+.cp-th-product { width: 28.33%; min-width: 250px; text-align: center; position: relative; }
+
+/* Product Card in Header */
+.cp-head-rm { position: absolute; top: 12px; right: 12px; width: 28px; height: 28px; border-radius: 50%; background: #f1f5f9; border: none; color: #64748b; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; z-index: 2; }
+.cp-head-rm:hover { background: #fee2e2; color: #dc2626; transform: scale(1.1); }
+.cp-head-img { height: 160px; display: flex; justify-content: center; align-items: center; margin-bottom: 16px; padding: 10px; background: #fff; border-radius: 8px; }
+.cp-head-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.cp-head-name { font-size: 14.5px; font-weight: 700; color: #1e293b; text-decoration: none; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 42px; line-height: 1.4; margin-bottom: 16px; transition: color 0.2s; }
+.cp-head-name:hover { color: #ff7a00; }
+.cp-head-btn { width: 100%; background: #d70018; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+.cp-head-btn:hover { background: #b90014; }
+.cp-head-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+/* Empty Slot in Header */
+.cp-head-empty { height: 100%; min-height: 260px; border: 2px dashed #cbd5e1; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; color: #94a3b8; background: transparent; }
+.cp-head-empty:hover { border-color: #ff7a00; color: #ff7a00; background: #fff8f0; }
+.cp-head-empty i.icon-big { font-size: 40px; margin-bottom: 12px; }
+.cp-head-empty span { font-weight: 600; font-size: 14px; }
+
+/* Data Rows */
+.cp-row:hover td { background: #fafafa; }
+.cp-td-label { background: #f8f9fa; font-weight: 600; color: #475569; font-size: 13.5px; padding: 16px; }
+.cp-td-val { text-align: center; color: #334155; font-size: 14px; vertical-align: middle; }
+
+/* Price Row */
+.cp-price { color: #d70018; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.cp-oldprice { color: #94a3b8; font-size: 12px; text-decoration: line-through; }
+
+/* Spec Group */
+.cp-group-row td { background: #f1f5f9 !important; color: #ff7a00; font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px; padding: 12px 16px; border-top: 2px solid #e2e8f0; }
+
+.cp-empty-td { background: #f8f9fa; }
+
+/* Responsive Mobile */
+@media (max-width: 768px) {
+    .cp-top { flex-direction: column; align-items: stretch; gap: 16px; }
+    .cp-title { text-align: center; }
+    .cp-actions { width: 100%; justify-content: space-between; }
+    .cp-btn-add, .cp-btn-clear { flex: 1; justify-content: center; text-align: center; font-size: 14px; }
+    .cp-container { padding: 16px; min-height: 50vh; }
+    .cp-wrapper { padding-bottom: 30px; }
+    .cp-table-wrap {
+        border-radius: 8px; /* Slightly smaller radius on mobile */
+    }
+    .cp-table th, .cp-table td { padding: 12px 8px; }
+}
+`;
+
 const ComparePage: React.FC = () => {
     const { compareList, removeFromCompare, clearCompare } = useCompare();
     const { addToCart } = useCart();
@@ -130,17 +205,21 @@ const ComparePage: React.FC = () => {
                             <i className="fas fa-store me-2" />Đến cửa hàng
                         </button>
                     </div>
-                )}
-
-                {/* Compare table */}
-                {compareList.length > 0 && (
-                    <>
-                        {/* Controls */}
-                        <div className="d-flex justify-content-between align-items-center mb-4">
-                            <span className="text-muted">Đang so sánh <strong>{compareList.length}</strong> sản phẩm</span>
-                            <div className="d-flex gap-2">
-                                <button onClick={() => navigate('/shop')} className="btn btn-outline-primary btn-sm" style={{ borderRadius: 8 }}>
-                                    <i className="fas fa-plus me-1" />Thêm sản phẩm
+                ) : (
+                    <div className="cp-container">
+                        <div className="cp-top">
+                            <h2 className="cp-title">So sánh {compareList.length} sản phẩm</h2>
+                            <div className="cp-actions">
+                                <button 
+                                    onClick={() => setShowPicker(true)} 
+                                    className="cp-btn-add"
+                                    disabled={compareList.length >= 3}
+                                    style={{ 
+                                        opacity: compareList.length >= 3 ? 0.5 : 1, 
+                                        cursor: compareList.length >= 3 ? 'not-allowed' : 'pointer' 
+                                    }}
+                                >
+                                    <i className="fas fa-plus" /> Thêm sản phẩm
                                 </button>
                                 <button onClick={clearCompare} className="btn btn-outline-danger btn-sm" style={{ borderRadius: 8 }}>
                                     <i className="fas fa-trash me-1" />Xóa tất cả

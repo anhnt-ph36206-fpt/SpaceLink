@@ -81,16 +81,43 @@ interface ClientOrder {
   };
 }
 
-// ── Cầu hình thời đạn ──────────────────────────────────────────
-const AUTO_COMPLETE_DAYS = 3;   // delivered → completed sau N ngày
+// ── Cầu hình thời gian ──────────────────────────────────────────
+const AUTO_COMPLETE_MINUTES = 2;  // delivered → completed sau N phút
 const RETURN_WINDOW_DAYS = 7;   // cửa sổ hoàn trả kể từ khi completed
 
-/** Tính số ngày giữa 2 đốc thức (bựng Math.floor, làm tròn xuống) */
+/**
+ * Parse ngày từ API (format DD-MM-YYYY HH:mm:ss) sang Date object.
+ * API trả về format 'd-m-Y H:i:s' (PHP) → JS cần convert sang ISO.
+ */
+const parseApiDate = (dateStr: string | undefined): Date | null => {
+  if (!dateStr) return null;
+  // Thử parse trực tiếp (ISO format: 2026-04-02 08:00:00)
+  const direct = new Date(dateStr);
+  if (!isNaN(direct.getTime())) {
+    // Kiểm tra xem có phải DD-MM-YYYY không (tháng > 12 = chắc chắn DD-MM)
+    const parts = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})\s+(.*)$/);
+    if (parts) {
+      // Format: DD-MM-YYYY HH:mm:ss → convert sang YYYY-MM-DD
+      const [, dd, mm, yyyy, time] = parts;
+      return new Date(`${yyyy}-${mm}-${dd} ${time}`);
+    }
+    return direct;
+  }
+  return null;
+};
+
+/** Tính số ngày giữa 2 thời điểm */
 const daysSince = (dateStr: string | undefined): number => {
-  if (!dateStr) return 0;
-  const then = new Date(dateStr).getTime();
-  const now = Date.now();
-  return Math.floor((now - then) / 86_400_000);
+  const d = parseApiDate(dateStr);
+  if (!d) return 0;
+  return Math.floor((Date.now() - d.getTime()) / 86_400_000);
+};
+
+/** Tính số phút đã trôi qua kể từ một thời điểm */
+const minutesSince = (dateStr: string | undefined): number => {
+  const d = parseApiDate(dateStr);
+  if (!d) return 0;
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 60_000));
 };
 
 /** Trả về số ngày còn lại trong cửa sổ hoàn trả (dương = còn, 0 = đúng ngày, âm = hết hạn) */
@@ -274,9 +301,14 @@ const OrderDetailPage: React.FC = () => {
   const [complaintContent, setComplaintContent] = useState('');
   const [complaintLoading, setComplaintLoading] = useState(false);
   const [existingComplaint, setExistingComplaint] = useState<{
-    type?: string; subject?: string; content?: string;
+    type?: string; subject?: string; content?: string; images?: string[];
     status?: string; admin_reply?: string | null; created_at?: string;
   } | null>(null);
+
+  // Shipping address edit
+  const [shippingEditOpen, setShippingEditOpen] = useState(false);
+  const [shippingEditLoading, setShippingEditLoading] = useState(false);
+  const [shippingForm, setShippingForm] = useState({ fullname: '', phone: '', province: '', ward: '', address_detail: '' });
 
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -285,34 +317,47 @@ const OrderDetailPage: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // ── Fetch ──────────────────────────────────────────────────
+  // Fetches
   const fetchOrder = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setError('');
-    const [orderRes, cancelReqRes] = await Promise.allSettled([
-      axiosInstance.get(`/client/orders/${id}`),
-      axiosInstance.get(`/client/orders/${id}/cancel-request`),
-    ]);
-    if (orderRes.status === 'fulfilled') {
-      const d: ClientOrder = orderRes.value.data?.data ?? orderRes.value.data;
-      setOrder(d);
-    } else {
-      const e = (orderRes as PromiseRejectedResult).reason as { response?: { status?: number; data?: { message?: string } } };
+    try {
+      const [orderRes, cancelReqRes, complaintRes] = await Promise.allSettled([
+        axiosInstance.get(`/client/orders/${id}`),
+        axiosInstance.get(`/client/orders/${id}/cancel-request`),
+        axiosInstance.get(`/client/orders/${id}/complaint`),
+      ]);
+      
+      if (orderRes.status === 'fulfilled') {
+        const d: ClientOrder = orderRes.value.data?.data ?? orderRes.value.data;
+        setOrder(d);
+      } else {
+        throw (orderRes as PromiseRejectedResult).reason;
+      }
+      
+      if (cancelReqRes.status === 'fulfilled') {
+        const cr = cancelReqRes.value.data?.data;
+        setCancelReqData(cr ? {
+          status: cr.status,
+          reason: cr.reason,
+          admin_note: cr.admin_note,
+          transaction_code: cr.transaction_code,
+        } : null);
+      }
+      
+      if (complaintRes.status === 'fulfilled') {
+        setExistingComplaint(complaintRes.value.data?.data ?? null);
+      } else {
+        setExistingComplaint(null);
+      }
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number; data?: { message?: string } } };
       if (e?.response?.status === 403 || e?.response?.status === 404) {
         setError(e?.response?.data?.message ?? 'Không tìm thấy đơn hàng.');
       } else {
         setError('Không thể tải thông tin đơn hàng. Vui lòng thử lại.');
       }
-    }
-    if (cancelReqRes.status === 'fulfilled') {
-      const cr = cancelReqRes.value.data?.data;
-      setCancelReqData(cr ? {
-        status: cr.status,
-        reason: cr.reason,
-        admin_note: cr.admin_note,
-        transaction_code: cr.transaction_code,
-      } : null);
     }
     setLoading(false);
   }, [id]);
@@ -511,22 +556,31 @@ const OrderDetailPage: React.FC = () => {
   };
 
   // ── Submit Complaint ──────────────────────────────────────
+  const [complaintImages, setComplaintImages] = useState<File[]>([]);
+
   const handleSubmitComplaint = async () => {
     if (!order) return;
     if (!complaintSubject.trim()) { showToast('Vui lòng nhập tiêu đề khiếu nại.', 'error'); return; }
     if (!complaintContent.trim()) { showToast('Vui lòng nhập nội dung khiếu nại.', 'error'); return; }
     setComplaintLoading(true);
     try {
-      await axiosInstance.post(`/client/orders/${order.id}/complaint`, {
-        type: complaintType,
-        subject: complaintSubject,
-        content: complaintContent,
+      const fd = new FormData();
+      fd.append('type', complaintType);
+      fd.append('subject', complaintSubject);
+      fd.append('content', complaintContent);
+      complaintImages.forEach(f => fd.append('images[]', f));
+
+      await axiosInstance.post(`/client/orders/${order.id}/complaint`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
+
       showToast('Đã gửi khiếu nại thành công. Chúng tôi sẽ phản hồi sớm nhất!', 'success');
       setComplaintOpen(false);
       setComplaintSubject('');
       setComplaintContent('');
       setComplaintType('other');
+      setComplaintImages([]);
+      
       // Reload complaint
       const res = await axiosInstance.get(`/client/orders/${order.id}/complaint`);
       setExistingComplaint(res.data?.data ?? null);
@@ -535,6 +589,41 @@ const OrderDetailPage: React.FC = () => {
       showToast(e?.response?.data?.message ?? 'Không thể gửi khiếu nại.', 'error');
     } finally {
       setComplaintLoading(false);
+    }
+  };
+
+  // ── Update Shipping Address ────────────────────────────────
+  const canEditShipping = ['pending', 'confirmed', 'processing'].includes(order?.status ?? '');
+
+  const openShippingEdit = () => {
+    if (!order) return;
+    setShippingForm({
+      fullname: order.shipping?.fullname ?? '',
+      phone: order.shipping?.phone ?? '',
+      province: order.shipping?.province ?? '',
+      ward: order.shipping?.ward ?? '',
+      address_detail: order.shipping?.address ?? '',
+    });
+    setShippingEditOpen(true);
+  };
+
+  const handleUpdateShipping = async () => {
+    if (!order) return;
+    if (!shippingForm.fullname.trim() || !shippingForm.phone.trim() || !shippingForm.province.trim() || !shippingForm.ward.trim() || !shippingForm.address_detail.trim()) {
+      showToast('Vui lòng điền đầy đủ thông tin địa chỉ.', 'error');
+      return;
+    }
+    setShippingEditLoading(true);
+    try {
+      await axiosInstance.put(`/client/orders/${order.id}/update-shipping`, shippingForm);
+      showToast('Đã cập nhật địa chỉ giao hàng thành công!', 'success');
+      setShippingEditOpen(false);
+      fetchOrder();
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showToast(e?.response?.data?.message ?? 'Không thể cập nhật địa chỉ.', 'error');
+    } finally {
+      setShippingEditLoading(false);
     }
   };
 
@@ -582,11 +671,13 @@ const OrderDetailPage: React.FC = () => {
   // 1. Hủy trực tiếp: COD pending + chưa TT VNPAY
   const canCancelDirect = order.status === 'pending' &&
     !(order.payment_method === 'vnpay' && order.payment_status === 'paid');
-  // 2. Yêu cầu hủy: VNPAY đã thanh toán, đơn còn pending/confirmed
-  const canRequestCancel = order.payment_method === 'vnpay' &&
-    order.payment_status === 'paid' &&
-    ['pending', 'confirmed'].includes(order.status) &&
-    cancelReqData?.status !== 'pending';
+  // 2. Yêu cầu hủy:
+  // - Hoặc (bất kỳ thanh toán nào) đã ở trạng thái confirmed -> cần request
+  // - Hoặc VNPAY đã TT và đang ở pending -> cần request
+  const canRequestCancel = (
+    order.status === 'confirmed' ||
+    (order.payment_method === 'vnpay' && order.payment_status === 'paid' && order.status === 'pending')
+  ) && cancelReqData?.status !== 'pending';
   const hasPendingCancelReq = cancelReqData?.status === 'pending';
   const canConfirmReceived = order.status === 'delivered';
 
@@ -594,9 +685,9 @@ const OrderDetailPage: React.FC = () => {
   const daysLeft = returnDaysLeft(order);
   const returnExpired = daysLeft <= 0;            // hết hạn 7 ngày
 
-  // Nếu delivered: countdown từ delivered_at (3 ngày tự động hoàn thành)
-  const daysUntilAutoComplete = order.status === 'delivered'
-    ? Math.max(0, AUTO_COMPLETE_DAYS - daysSince(order.delivered_at))
+  // Nếu delivered: countdown từ delivered_at (2 phút tự động hoàn thành)
+  const minutesUntilAutoComplete = order.status === 'delivered'
+    ? Math.max(0, AUTO_COMPLETE_MINUTES - minutesSince(order.delivered_at))
     : null;
 
   const hasReviewedItem = order.items?.some(item => item.is_reviewed) ?? false;
@@ -750,14 +841,16 @@ const OrderDetailPage: React.FC = () => {
                   <div className="od-cta-title">Bạn đã nhận được hàng chưa?</div>
                   <div className="od-cta-sub">
                     Đơn vị vận chuyển báo đã giao hàng thành công. Nhấn xác nhận để hoàn tất giao dịch.
-                    {daysUntilAutoComplete !== null && daysUntilAutoComplete > 0 && (
+                    {minutesUntilAutoComplete !== null && minutesUntilAutoComplete > 0 && (
                       <span style={{ color: '#b45309', marginLeft: 6 }}>
-                        (Tự động hoàn thành sau <strong>{daysUntilAutoComplete}</strong> ngày)
+                        (Tự động hoàn thành sau <strong>{minutesUntilAutoComplete >= 60
+                          ? `${Math.floor(minutesUntilAutoComplete / 60)} giờ ${minutesUntilAutoComplete % 60} phút`
+                          : `${minutesUntilAutoComplete} phút`}</strong>)
                       </span>
                     )}
-                    {daysUntilAutoComplete === 0 && (
+                    {minutesUntilAutoComplete === 0 && (
                       <span style={{ color: '#b91c1c', marginLeft: 6 }}>
-                        (Sắp được tự động hoàn thành hôm nay)
+                        (Sắp được tự động hoàn thành)
                       </span>
                     )}
                   </div>
@@ -838,6 +931,39 @@ const OrderDetailPage: React.FC = () => {
             </div>
           )}
 
+          {/* ── CTA: Đánh giá sản phẩm (delivered / completed + có item chưa đánh giá) ── */}
+          {['delivered', 'completed'].includes(order.status) && (order.items ?? []).some(it => !it.is_reviewed) && (
+            <div className="od-review-cta-card">
+              <div className="od-review-cta-left">
+                <div style={{ fontSize: 28 }}>⭐</div>
+                <div>
+                  <div className="od-review-cta-title">Đánh giá sản phẩm để nhận ưu đãi!</div>
+                  <div className="od-review-cta-sub">
+                    Chia sẻ trải nghiệm giúp người mua khác và cải thiện chất lượng Shop.
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {(order.items ?? []).filter(it => !it.is_reviewed).map(it => (
+                  <button
+                    key={it.id}
+                    className="od-btn-review-cta"
+                    onClick={() => {
+                      setReviewItem(it);
+                      setWriteRating(5);
+                      setHoverRating(0);
+                      setReviewContent('');
+                      setReviewOpen(true);
+                    }}
+                  >
+                    <i className="fas fa-star me-1" />
+                    {it.product_name.length > 22 ? it.product_name.slice(0, 22) + '…' : it.product_name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ── Stepper (only non-cancelled) ── */}
           {!isCancelled && (
             <div className="od-card od-stepper-card">
@@ -903,16 +1029,24 @@ const OrderDetailPage: React.FC = () => {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                         <div className="od-item-total">{formatVND(item.total)}</div>
-                        {order.status === 'completed' && (
+                        {['delivered', 'completed'].includes(order.status) && (
                           <button
-                            className="od-btn-review-sm"
+                            className={`od-btn-review-sm${!item.is_reviewed ? ' od-btn-review-sm--glow' : ''}`}
                             disabled={item.is_reviewed}
                             onClick={() => {
-                              setReviewItem(item);
-                              setReviewOpen(true);
+                              if (!item.is_reviewed) {
+                                setReviewItem(item);
+                                setWriteRating(5);
+                                setHoverRating(0);
+                                setReviewContent('');
+                                setReviewOpen(true);
+                              }
                             }}
                           >
-                            {item.is_reviewed ? <><i className="fas fa-check me-1" />Đã đánh giá</> : 'Đánh giá'}
+                            {item.is_reviewed
+                              ? <><i className="fas fa-check-circle me-1" />Đã đánh giá</>
+                              : <><i className="fas fa-star me-1" />Đánh giá ngay</>
+                            }
                           </button>
                         )}
                       </div>
@@ -990,8 +1124,23 @@ const OrderDetailPage: React.FC = () => {
 
               {/* Shipping address */}
               <div className="od-card">
-                <div className="od-card-title">
-                  <i className="fas fa-map-marker-alt me-2" style={{ color: '#ea580c' }} />Địa chỉ giao hàng
+                <div className="od-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span><i className="fas fa-map-marker-alt me-2" style={{ color: '#ea580c' }} />Địa chỉ giao hàng</span>
+                  {canEditShipping && (
+                    <button
+                      onClick={openShippingEdit}
+                      style={{
+                        background: 'none', border: '1.5px solid #ea580c', color: '#ea580c',
+                        borderRadius: 8, padding: '4px 12px', fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = '#ea580c'; (e.target as HTMLButtonElement).style.color = '#fff'; }}
+                      onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = 'none'; (e.target as HTMLButtonElement).style.color = '#ea580c'; }}
+                    >
+                      <i className="fas fa-pen" style={{ fontSize: 10 }} /> Thay đổi
+                    </button>
+                  )}
                 </div>
                 <div className="od-info-row"><i className="fas fa-user" /><span><strong>{order.shipping?.fullname ?? '—'}</strong></span></div>
                 <div className="od-info-row"><i className="fas fa-phone-alt" /><span>{order.shipping?.phone ?? '—'}</span></div>
@@ -1000,6 +1149,73 @@ const OrderDetailPage: React.FC = () => {
                   <span>{[order.shipping?.address, order.shipping?.ward, order.shipping?.district, order.shipping?.province].filter(Boolean).join(', ') || '—'}</span>
                 </div>
               </div>
+
+              {/* ── Modal sửa địa chỉ giao hàng ── */}
+              {shippingEditOpen && (
+                <div className="od-overlay" onClick={e => { if (e.target === e.currentTarget) setShippingEditOpen(false); }}>
+                  <div className="od-modal" style={{ maxWidth: 520 }}>
+                    <div className="od-modal-hd">
+                      <div>
+                        <div className="od-modal-title">
+                          <i className="fas fa-map-marker-alt me-2" style={{ color: '#ea580c' }} />Thay đổi địa chỉ giao hàng
+                        </div>
+                        <div className="od-modal-sub">Cập nhật thông tin nhận hàng cho đơn này</div>
+                      </div>
+                      <button className="od-modal-x" onClick={() => setShippingEditOpen(false)}><i className="fas fa-times" /></button>
+                    </div>
+                    <div className="od-modal-bd">
+                      <div style={{ marginBottom: 14 }}>
+                        <label className="od-modal-label">Họ và tên *</label>
+                        <input className="od-textarea" style={{ minHeight: 'auto', padding: '10px 14px' }} placeholder="Ví dụ: Nguyễn Văn A"
+                          value={shippingForm.fullname}
+                          onChange={e => setShippingForm(p => ({ ...p, fullname: e.target.value }))}
+                        />
+                      </div>
+                      <div style={{ marginBottom: 14 }}>
+                        <label className="od-modal-label">Số điện thoại *</label>
+                        <input className="od-textarea" style={{ minHeight: 'auto', padding: '10px 14px' }} placeholder="Ví dụ: 0987654321"
+                          value={shippingForm.phone}
+                          onChange={e => setShippingForm(p => ({ ...p, phone: e.target.value }))}
+                        />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                        <div>
+                          <label className="od-modal-label">Tỉnh / Thành phố *</label>
+                          <input className="od-textarea" style={{ minHeight: 'auto', padding: '10px 14px' }} placeholder="Ví dụ: Hà Nội"
+                            value={shippingForm.province}
+                            onChange={e => setShippingForm(p => ({ ...p, province: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="od-modal-label">Quận / Huyện / Phường / Xã *</label>
+                          <input className="od-textarea" style={{ minHeight: 'auto', padding: '10px 14px' }} placeholder="Ví dụ: Quận Cầu Giấy"
+                            value={shippingForm.ward}
+                            onChange={e => setShippingForm(p => ({ ...p, ward: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: 4 }}>
+                        <label className="od-modal-label">Địa chỉ chi tiết *</label>
+                        <input className="od-textarea" style={{ minHeight: 'auto', padding: '10px 14px' }} placeholder="Số nhà, tên đường, ngõ ngách..."
+                          value={shippingForm.address_detail}
+                          onChange={e => setShippingForm(p => ({ ...p, address_detail: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="od-modal-ft">
+                      <button className="od-modal-btn-no" onClick={() => setShippingEditOpen(false)} disabled={shippingEditLoading}>Hủy bỏ</button>
+                      <button className="od-modal-btn-yes" disabled={shippingEditLoading} onClick={handleUpdateShipping}
+                        style={{
+                          background: shippingEditLoading ? '#d1d5db' : 'linear-gradient(135deg,#ea580c,#c2410c)',
+                          boxShadow: shippingEditLoading ? 'none' : '0 4px 14px rgba(234,88,12,0.3)',
+                        }}
+                      >
+                        {shippingEditLoading ? <><i className="fas fa-spinner fa-spin me-2"/> Đang lưu...</> : <><i className="fas fa-save me-2"/> Lưu thay đổi</>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Payment */}
               <div className="od-card">
@@ -1192,7 +1408,8 @@ const OrderDetailPage: React.FC = () => {
                     style={{ background: '#fff7ed', border: '1.5px solid #fd7e14', color: '#b45309' }}
                     onClick={() => setCancelReqOpen(true)}
                   >
-                    <i className="fas fa-rotate-left me-2" />Yêu cầu hủy &amp; hoàn tiền
+                    <i className="fas fa-rotate-left me-2" />
+                    {order.payment_status === 'paid' ? 'Yêu cầu hủy & hoàn tiền' : 'Tôi muốn hủy đơn'}
                   </button>
                 )}
 
@@ -1253,13 +1470,13 @@ const OrderDetailPage: React.FC = () => {
                     )}
                   </>
                 )}
-                {['confirmed', 'processing', 'shipping'].includes(order.status) && (
+                {['processing', 'shipping'].includes(order.status) && (
                   <div className="od-lock-hint">
-                    <i className="fas fa-lock me-2" />Đơn hàng đang xử lý, không thể hủy
+                    <i className="fas fa-lock me-2" />Đơn hàng đã được bàn giao đóng gói/vận chuyển, không thể hủy
                   </div>
                 )}
                 {/* Nút Khiếu nại */}
-                {order.status !== 'pending' && (
+                {['delivered', 'completed'].includes(order.status) && (
                   <>
                     {existingComplaint ? (
                       <div style={{
@@ -1283,6 +1500,13 @@ const OrderDetailPage: React.FC = () => {
                           </span>
                         </div>
                         <div style={{ color: '#334155' }}>{existingComplaint.subject}</div>
+                        {existingComplaint.images && existingComplaint.images.length > 0 && (
+                          <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                            {existingComplaint.images.map((img, i) => (
+                              <img key={i} src={img} alt="Evidence" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', border: '1px solid #bae6fd' }} />
+                            ))}
+                          </div>
+                        )}
                         {existingComplaint.admin_reply && (
                           <div style={{ marginTop: 6, color: '#15803d', fontSize: 12 }}>
                             <i className="fas fa-reply me-1" />Phản hồi: {existingComplaint.admin_reply}
@@ -1367,6 +1591,46 @@ const OrderDetailPage: React.FC = () => {
               <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, textAlign: 'right' }}>
                 {complaintContent.length}/2000
               </div>
+
+              <label className="od-modal-label" style={{ marginTop: 12 }}>Hình ảnh minh chứng (Tối đa 5 ảnh)</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                {complaintImages.map((file, idx) => (
+                  <div key={idx} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, border: '1px solid #eaecf0', overflow: 'hidden' }}>
+                    <img src={URL.createObjectURL(file)} alt="Evidence" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button
+                      onClick={() => setComplaintImages(prev => prev.filter((_, i) => i !== idx))}
+                      style={{
+                        position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,.5)', color: '#fff', border: 'none',
+                        borderRadius: '50%', width: 20, height: 20, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                      }}
+                    >
+                      <i className="fas fa-times" />
+                    </button>
+                  </div>
+                ))}
+                {complaintImages.length < 5 && (
+                  <label style={{ 
+                    width: 64, height: 64, borderRadius: 8, border: '1.5px dashed #eaecf0', display: 'flex', alignItems: 'center', 
+                    justifyContent: 'center', color: '#8590a3', cursor: 'pointer', flexDirection: 'column', gap: 4, fontSize: 10 
+                  }}>
+                    <i className="fas fa-camera" style={{ fontSize: 16 }} />
+                    <input 
+                      type="file" multiple accept="image/*" style={{ display: 'none' }}
+                      onChange={e => {
+                        if (e.target.files) {
+                          const files = Array.from(e.target.files);
+                          if (complaintImages.length + files.length > 5) {
+                            showToast('Chỉ được chọn tối đa 5 hình ảnh.', 'error');
+                            return;
+                          }
+                          setComplaintImages(prev => [...prev, ...files]);
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+
             </div>
             <div className="od-modal-ft">
               <button className="od-modal-btn-no" onClick={() => setComplaintOpen(false)} disabled={complaintLoading}>Hủy</button>
@@ -1393,9 +1657,12 @@ const OrderDetailPage: React.FC = () => {
             <div className="od-modal-hd">
               <div>
                 <div className="od-modal-title">
-                  <i className="fas fa-rotate-left me-2" style={{ color: '#fd7e14' }} />Yêu cầu hủy &amp; hoàn tiền
+                  <i className="fas fa-rotate-left me-2" style={{ color: '#fd7e14' }} />Yêu cầu hủy đơn hàng
                 </div>
-                <div className="od-modal-sub">Đơn <strong>#{order.order_code}</strong> đã thanh toán VNPAY. Admin sẽ xử lý hoàn tiền thủ công.</div>
+                <div className="od-modal-sub">
+                  Đơn <strong>#{order.order_code}</strong> sẽ được gửi yêu cầu hủy đến Admin.
+                  {order.payment_status === 'paid' && ' Admin sẽ liên hệ và xử lý hoàn tiền.'}
+                </div>
               </div>
               <button className="od-modal-x" onClick={() => setCancelReqOpen(false)}><i className="fas fa-times" /></button>
             </div>
@@ -1411,17 +1678,19 @@ const OrderDetailPage: React.FC = () => {
               />
               <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>{cancelReqReason.length}/1000</div>
 
-              <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff7ed', borderRadius: 10, border: '1px solid #fed7aa' }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: '#b45309', marginBottom: 10 }}>
-                  <i className="fas fa-university me-2" />Thông tin tài khoản nhận hoàn tiền
+              {order.payment_status === 'paid' && (
+                <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff7ed', borderRadius: 10, border: '1px solid #fed7aa' }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: '#b45309', marginBottom: 10 }}>
+                    <i className="fas fa-university me-2" />Thông tin tài khoản nhận hoàn tiền
+                  </div>
+                  <label className="od-modal-label">Ngân hàng</label>
+                  <input className="od-textarea" style={{ minHeight: 38 }} placeholder="Vd: Vietcombank, MB Bank..." value={cancelReqBank.bank} onChange={e => setCancelReqBank(b => ({ ...b, bank: e.target.value }))} />
+                  <label className="od-modal-label" style={{ marginTop: 8 }}>Tên chủ tài khoản</label>
+                  <input className="od-textarea" style={{ minHeight: 38 }} placeholder="Nguyễn Văn A" value={cancelReqBank.accountName} onChange={e => setCancelReqBank(b => ({ ...b, accountName: e.target.value }))} />
+                  <label className="od-modal-label" style={{ marginTop: 8 }}>Số tài khoản</label>
+                  <input className="od-textarea" style={{ minHeight: 38 }} placeholder="0123456789" value={cancelReqBank.accountNumber} onChange={e => setCancelReqBank(b => ({ ...b, accountNumber: e.target.value }))} />
                 </div>
-                <label className="od-modal-label">Ngân hàng</label>
-                <input className="od-textarea" style={{ minHeight: 38 }} placeholder="Vd: Vietcombank, MB Bank..." value={cancelReqBank.bank} onChange={e => setCancelReqBank(b => ({ ...b, bank: e.target.value }))} />
-                <label className="od-modal-label" style={{ marginTop: 8 }}>Tên chủ tài khoản</label>
-                <input className="od-textarea" style={{ minHeight: 38 }} placeholder="Nguyễn Văn A" value={cancelReqBank.accountName} onChange={e => setCancelReqBank(b => ({ ...b, accountName: e.target.value }))} />
-                <label className="od-modal-label" style={{ marginTop: 8 }}>Số tài khoản</label>
-                <input className="od-textarea" style={{ minHeight: 38 }} placeholder="0123456789" value={cancelReqBank.accountNumber} onChange={e => setCancelReqBank(b => ({ ...b, accountNumber: e.target.value }))} />
-              </div>
+              )}
 
               <div style={{ marginTop: 12, fontSize: 12, color: '#6c757d', background: '#f8f9fa', padding: '10px 12px', borderRadius: 8 }}>
                 <i className="fas fa-info-circle me-1" /> Sau khi gửi yêu cầu, chúng tôi sẽ liên hệ xác nhận và hoàn tiền trong <strong>3–5 ngày làm việc</strong>.
@@ -1690,56 +1959,92 @@ const OrderDetailPage: React.FC = () => {
       {/* ── Review Modal ── */}
       {reviewOpen && reviewItem && (
         <div className="od-overlay" onClick={e => { if (e.target === e.currentTarget) setReviewOpen(false); }}>
-          <div className="od-modal">
+          <div className="od-modal" style={{ maxWidth: 480 }}>
             <div className="od-modal-hd">
               <div>
                 <div className="od-modal-title">
-                  <i className="fas fa-star me-2" style={{ color: '#eab308' }} />Đánh giá sản phẩm
+                  <i className="fas fa-star me-2" style={{ color: '#f59e0b' }} />Đánh giá sản phẩm
                 </div>
-                <div className="od-modal-sub">Bạn cảm thấy thế nào về sản phẩm này?</div>
+                <div className="od-modal-sub">Chia sẻ trải nghiệm của bạn về sản phẩm này</div>
               </div>
               <button className="od-modal-x" onClick={() => setReviewOpen(false)}><i className="fas fa-times" /></button>
             </div>
             <div className="od-modal-bd">
-              <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                <img src={reviewItem.product_image || 'https://via.placeholder.com/60'} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid #eee' }} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1d23', marginBottom: 4 }}>{reviewItem.product_name}</div>
-                  <div style={{ fontSize: 12, color: '#8590a3' }}>Phân loại: {parseVariantAttrs(reviewItem.variant_info).map(a => `${a.name}: ${a.value}`).join(', ') || 'Mặc định'}</div>
+              {/* Product info */}
+              <div style={{ display: 'flex', gap: 12, marginBottom: 18, background: '#f8fafc', borderRadius: 12, padding: '12px 14px' }}>
+                <img
+                  src={reviewItem.product_image || 'https://via.placeholder.com/56'}
+                  alt=""
+                  style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 10, border: '1.5px solid #e5e7eb', flexShrink: 0 }}
+                />
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#111827', marginBottom: 5, lineHeight: 1.4 }}>
+                    {reviewItem.product_name}
+                  </div>
+                  {parseVariantAttrs(reviewItem.variant_info).length > 0 && (
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, background: '#f0fdf4',
+                      border: '1px solid #86efac', color: '#15803d',
+                      borderRadius: 99, padding: '2px 10px', display: 'inline-flex', alignItems: 'center', gap: 4,
+                    }}>
+                      <i className="fas fa-tag" style={{ fontSize: 9 }} />
+                      {parseVariantAttrs(reviewItem.variant_info).map(a => `${a.name}: ${a.value}`).join(' · ')}
+                    </span>
+                  )}
                 </div>
               </div>
 
+              {/* Star picker */}
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Mức độ hài lòng</div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 10 }}>Mức độ hài lòng của bạn</div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
                   {[1, 2, 3, 4, 5].map(star => (
                     <i
                       key={star}
                       className={star <= (hoverRating || writeRating) ? 'fas fa-star' : 'far fa-star'}
-                      style={{ fontSize: 28, color: '#eab308', cursor: 'pointer', transition: 'transform 0.1s' }}
+                      style={{
+                        fontSize: 32, color: star <= (hoverRating || writeRating) ? '#f59e0b' : '#d1d5db',
+                        cursor: 'pointer', transition: 'transform .15s, color .1s',
+                        transform: star <= (hoverRating || writeRating) ? 'scale(1.2)' : 'scale(1)',
+                      }}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(0)}
                       onClick={() => setWriteRating(star)}
                     />
                   ))}
                 </div>
+                {(hoverRating || writeRating) > 0 && (
+                  <span style={{ fontSize: 13.5, fontWeight: 700, color: '#f59e0b' }}>
+                    {['', 'Rất tệ', 'Tệ', 'Bình thường', 'Tốt', 'Xuất sắc'][hoverRating || writeRating]}
+                  </span>
+                )}
               </div>
 
-              <label className="od-modal-label">Nhận xét chi tiết</label>
+              <label className="od-modal-label">Nhận xét của bạn <span style={{ fontWeight: 400, color: '#9ca3af' }}>(tuỳ chọn)</span></label>
               <textarea
                 className="od-textarea"
-                placeholder="Hãy chia sẻ những điều bạn thích về sản phẩm này nhé..."
+                placeholder="Hãy chia sẻ những điều bạn thích (hoặc không thích) về sản phẩm..."
                 value={reviewContent}
                 onChange={e => setReviewContent(e.target.value)}
-                style={{ minHeight: 100 }}
+                style={{ minHeight: 100, fontSize: 14 }}
+                maxLength={1000}
               />
+              <div style={{ fontSize: 11.5, color: '#9ca3af', textAlign: 'right', marginTop: 4 }}>{reviewContent.length}/1000</div>
             </div>
             <div className="od-modal-ft">
-              <button className="od-modal-btn-no" onClick={() => setReviewOpen(false)} disabled={reviewLoading}>Trở lại</button>
-              <button className="od-modal-btn-yes" style={{ background: 'linear-gradient(135deg, #1d4ed8, #1e3a8a)' }} onClick={handleSubmitReview} disabled={reviewLoading}>
+              <button className="od-modal-btn-no" onClick={() => setReviewOpen(false)} disabled={reviewLoading}>Huỷ</button>
+              <button
+                className="od-modal-btn-yes"
+                style={{
+                  background: reviewLoading ? '#d1d5db' : 'linear-gradient(135deg,#f59e0b,#d97706)',
+                  boxShadow: reviewLoading ? 'none' : '0 4px 14px rgba(245,158,11,0.4)',
+                }}
+                onClick={handleSubmitReview}
+                disabled={reviewLoading}
+              >
                 {reviewLoading
                   ? <><span className="od-spin me-2" />Đang gửi...</>
-                  : <><i className="fas fa-paper-plane me-2" />Hoàn thành</>
+                  : <><i className="fas fa-star me-2" />Gửi đánh giá</>
                 }
               </button>
             </div>
@@ -1922,9 +2227,30 @@ const CSS = `
   .od-note-box { font-size: 13px; color: #5a6275; font-style: italic; line-height: 1.65; background: var(--od-primary-light); border-radius: 8px; padding: 10px 12px; }
 
   /* Action buttons */
-  .od-btn-review-sm { background: #fff; border: 1.5px solid var(--od-primary); color: var(--od-primary); font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; }
-  .od-btn-review-sm:hover:not(:disabled) { background: var(--od-primary); color: #fff; }
-  .od-btn-review-sm:disabled { border-color: #eaecf0; color: #8590a3; cursor: not-allowed; background: #f8f9fc; }
+  .od-btn-review-sm { background: #fff; border: 1.5px solid #f59e0b; color: #b45309; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 7px; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 4px; }
+  .od-btn-review-sm:hover:not(:disabled) { background: #f59e0b; color: #fff; box-shadow: 0 4px 12px rgba(245,158,11,0.35); }
+  .od-btn-review-sm:disabled { border-color: #d1fae5; color: #15803d; cursor: default; background: #f0fdf4; font-weight: 600; }
+  .od-btn-review-sm--glow { animation: reviewGlow 2s infinite; }
+  @keyframes reviewGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); } 50% { box-shadow: 0 0 0 4px rgba(245,158,11,0.25); } }
+
+  /* Review CTA banner */
+  .od-review-cta-card {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+    background: linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);
+    border: 2px solid #fcd34d; border-radius: var(--od-radius);
+    padding: 16px 22px; margin-bottom: 16px;
+    box-shadow: 0 4px 20px rgba(245,158,11,0.15);
+  }
+  .od-review-cta-left { display: flex; align-items: flex-start; gap: 12px; }
+  .od-review-cta-title { font-weight: 800; font-size: 14.5px; color: #92400e; margin-bottom: 3px; }
+  .od-review-cta-sub { font-size: 12.5px; color: #78350f; }
+  .od-btn-review-cta {
+    background: linear-gradient(135deg,#f59e0b,#d97706); border: none; color: #fff;
+    border-radius: 9px; padding: 8px 16px; font-size: 12.5px; font-weight: 700;
+    cursor: pointer; transition: all .2s; display: inline-flex; align-items: center;
+    box-shadow: 0 3px 10px rgba(245,158,11,0.35); white-space: nowrap;
+  }
+  .od-btn-review-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(245,158,11,0.5); }
   .od-btn-full { width: 100%; display: flex; align-items: center; justify-content: center; border-radius: 10px; padding: 11px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s; margin-bottom: 10px; }
   .od-btn-full:last-child { margin-bottom: 0; }
   .od-btn-cancel { background: #fff5f5; border: 1.5px solid #dc3545; color: #dc3545; }

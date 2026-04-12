@@ -951,7 +951,12 @@ const ProductEdit: React.FC = () => {
                                         <img
                                             src={img.image_url || `http://localhost:8000/storage/${img.image_path}`}
                                             alt="" style={{ width: '100%', height: 150, objectFit: 'cover', display: 'block' }}
-                                            onError={(e) => { (e.target as any).src = 'https://placehold.co/300x200?text=Error'; }}
+                                            onError={(e) => {
+                                                const img = e.target as HTMLImageElement;
+                                                if (img.dataset.fallbackApplied) return;
+                                                img.dataset.fallbackApplied = '1';
+                                                img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='14' fill='%23aaa'%3EError%3C/text%3E%3C/svg%3E`;
+                                            }}
                                         />
                                         {(img as any).isExisting === false && (
                                             <div style={{ padding: '2px 8px', background: '#e6f7ff', fontSize: 11, color: '#1677ff' }}>

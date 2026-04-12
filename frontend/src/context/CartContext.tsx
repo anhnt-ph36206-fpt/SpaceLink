@@ -135,6 +135,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [isAuthenticated]);
 
     const addToCart = async (variantId: number, quantity: number = 1) => {
+        if (!isAuthenticated) {
+            toast.warning('Vui lòng đăng nhập để thêm vào giỏ hàng!');
+            return;
+        }
+
         // Chống race condition: nếu đang gọi API cho variantId này thì bỏ qua
         if (addingRef.current.has(variantId)) return;
         addingRef.current.add(variantId);

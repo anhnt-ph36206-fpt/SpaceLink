@@ -12,6 +12,7 @@ use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\UserNotification;
 use App\Models\Voucher;
 use App\Models\VoucherUsage;
 use Illuminate\Http\JsonResponse;
@@ -153,8 +154,11 @@ class OrderController extends Controller
 
                 // ===================================================================
                 // Lazy deduction: TRỪ KHO khi xác nhận đơn (pending → confirmed)
+                // NGOẠI TRỪ: Đơn VNPAY đã thanh toán (vì đã trừ kho trong IPN)
                 // ===================================================================
-                if ($newStatus === 'confirmed') {
+                $isVnpayPaid = $order->payment_method === 'vnpay' && $order->payment_status === 'paid';
+
+                if ($newStatus === 'confirmed' && !$isVnpayPaid) {
                     $stockErrors = [];
                     foreach ($order->items()->with('variant')->get() as $item) {
                         if (! $item->variant_id) continue;
@@ -192,8 +196,11 @@ class OrderController extends Controller
                     $updateData['cancelled_reason'] = $request->cancelled_reason;
                     $updateData['cancelled_by'] = $admin->id;
 
+                    $isVnpayPaid = $order->payment_method === 'vnpay' && $order->payment_status === 'paid';
+
                     // Lazy deduction: CHỈ hoàn kho nếu đơn đã confirmed+ (stock đã bị trừ)
-                    if (in_array($oldStatus, self::STOCK_DEDUCTED_STATUSES, true)) {
+                    // HOẶC đơn VNPAY đã thanh toán (vì IPN của VNPAY đã tự động trừ kho)
+                    if (in_array($oldStatus, self::STOCK_DEDUCTED_STATUSES, true) || $isVnpayPaid) {
                         foreach ($order->items()->with('variant')->get() as $item) {
                             if ($item->variant_id && $item->variant) {
                                 $item->variant->increment('quantity', $item->quantity);
@@ -213,6 +220,13 @@ class OrderController extends Controller
                             ->where('order_id', $order->id)
                             ->delete();
                     }
+                }
+
+                // ===================================================================
+                // COD: tự động paid khi delivered (khách trả tiền khi nhận hàng)
+                // ===================================================================
+                if ($newStatus === 'delivered' && $order->payment_method === 'cod' && $order->payment_status !== 'paid') {
+                    $updateData['payment_status'] = 'paid';
                 }
 
 
@@ -244,6 +258,23 @@ class OrderController extends Controller
                 ]);
 
                 $order->load(['user:id,fullname,email', 'items', 'statusHistory']);
+
+                // ===================================================================
+                // Gửi thông báo cho khách hàng khi thay đổi trạng thái
+                // ===================================================================
+                if ($order->user_id) {
+                    $notifMap = [
+                        'confirmed'  => ['order_confirmed',  '✅ Đơn hàng đã được xác nhận',  "Đơn #{$order->order_code} đã được shop xác nhận và đang chuẩn bị hàng."],
+                        'processing' => ['order_processing', '📦 Đơn hàng đang được đóng gói', "Đơn #{$order->order_code} đang được đóng gói để giao cho đơn vị vận chuyển."],
+                        'shipping'   => ['order_shipping',   '🚚 Đơn hàng đang vận chuyển',   "Đơn #{$order->order_code} đã được giao cho đơn vị vận chuyển."],
+                        'delivered'  => ['order_delivered',  '📬 Đơn hàng đã giao thành công', "Đơn #{$order->order_code} đã được giao thành công. Hãy xác nhận nếu bạn đã nhận được hàng!"],
+                        'cancelled'  => ['order_cancelled',  '❌ Đơn hàng đã bị hủy',         "Đơn #{$order->order_code} đã bị hủy. Lý do: " . ($request->cancelled_reason ?? 'Admin hủy đơn')],
+                    ];
+                    if (isset($notifMap[$newStatus])) {
+                        [$type, $title, $body] = $notifMap[$newStatus];
+                        UserNotification::notify($order->user_id, $type, $title, $body, $order->id);
+                    }
+                }
 
                 return $order;
             });
@@ -309,23 +340,55 @@ class OrderController extends Controller
         }
 
         DB::transaction(function () use ($order, $updateData, $newPaymentStatus, $productReturn): void {
-            $order->update($updateData);
+            // Lock order để tránh race condition (admin double-click)
+            $freshOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+            if (!$freshOrder) return;
+
+            $freshOrder->update($updateData);
 
             if (in_array($newPaymentStatus, ['refunded', 'partial_refund'], true) && $productReturn) {
-                $productReturn->status = 'refunded';
-                $productReturn->refund_amount = $newPaymentStatus === 'refunded' ? $order->total_amount : $productReturn->refund_amount;
-                $productReturn->save();
+                // Re-lock productReturn bên trong transaction để đảm bảo idempotent
+                $freshReturn = \App\Models\ProductReturn::where('id', $productReturn->id)
+                    ->lockForUpdate()->first();
+
+                // ĐÃ refunded rồi → KHÔNG hoàn kho lần 2 (chống double-click)
+                if (!$freshReturn || $freshReturn->status === 'refunded') {
+                    return;
+                }
+
+                $freshReturn->status = 'refunded';
+                $freshReturn->refund_amount = $newPaymentStatus === 'refunded'
+                    ? $freshOrder->total_amount
+                    : $freshReturn->refund_amount;
+                $freshReturn->save();
 
                 // Lazy deduction: Hoàn kho khi refund (vì stock đã bị trừ khi confirmed/paid)
-                foreach ($order->items()->with('variant')->get() as $item) {
-                    if ($item->variant_id && $item->variant) {
-                        $item->variant->increment('quantity', $item->quantity);
+                foreach ($freshOrder->items()->with('variant')->get() as $item) {
+                    if ($item->variant_id) {
+                        // Lock variant trước khi increment để tránh race condition
+                        $variant = ProductVariant::where('id', $item->variant_id)
+                            ->lockForUpdate()->first();
+                        if ($variant) {
+                            $variant->increment('quantity', $item->quantity);
+                        }
                     }
                     Product::where('id', $item->product_id)
                         ->increment('quantity', $item->quantity);
                 }
             }
         });
+
+        // Thông báo cho khách khi hoàn tiền
+        if (in_array($newPaymentStatus, ['refunded', 'partial_refund'], true) && $order->user_id) {
+            $label = $newPaymentStatus === 'refunded' ? 'toàn bộ' : 'một phần';
+            UserNotification::notify(
+                $order->user_id,
+                'payment_refunded',
+                "💰 Đã hoàn tiền {$label} cho đơn hàng",
+                "Đơn #{$order->order_code} đã được hoàn tiền {$label}.",
+                $order->id
+            );
+        }
 
         return response()->json([
             'status' => true,
@@ -377,6 +440,17 @@ class OrderController extends Controller
 
         $order->load(['productReturn.evidences']);
 
+        // Thông báo cho khách
+        if ($order->user_id) {
+            UserNotification::notify(
+                $order->user_id,
+                'return_approved',
+                '✅ Yêu cầu hoàn trả đã được duyệt',
+                "Yêu cầu hoàn trả cho đơn #{$order->order_code} đã được admin duyệt. Chờ xử lý hoàn tiền.",
+                $order->id
+            );
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'Đã duyệt hoàn trả. Tiếp theo admin có thể cập nhật hoàn tiền.',
@@ -421,7 +495,14 @@ class OrderController extends Controller
             $productReturn->reason_for_refusal = $reason;
             $productReturn->save();
 
-            $restoreStatus = $order->completed_at ? 'completed' : 'delivered';
+            // Bug #6 Fix: dùng delivered_at thay completed_at
+            // completed_at chỉ set khi khách xác nhận nhận hàng — không phải mốc giao hàng
+            // delivered_at đáng tin cậy hơn: có để restore 'delivered', không có là chưa giao
+            $restoreStatus = $order->delivered_at ? 'delivered' : 'completed';
+            // Fallback: nếu quả thực đã completed (có cả 2 mốc) thì restore về completed
+            if ($order->delivered_at && $order->completed_at) {
+                $restoreStatus = 'completed';
+            }
             $order->update(['status' => $restoreStatus]);
 
             OrderStatusHistory::create([
@@ -435,10 +516,82 @@ class OrderController extends Controller
 
         $order->load(['productReturn.evidences']);
 
+        // Thông báo cho khách
+        if ($order->user_id) {
+            UserNotification::notify(
+                $order->user_id,
+                'return_rejected',
+                '❌ Yêu cầu hoàn trả bị từ chối',
+                "Yêu cầu hoàn trả cho đơn #{$order->order_code} đã bị từ chối. Lý do: {$reason}",
+                $order->id
+            );
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'Đã từ chối hoàn trả. Trạng thái đơn hàng đã được khôi phục.',
             'data' => new OrderResource($order),
+        ]);
+    }
+    // =========================================================================
+    // POST /api/admin/orders/{id}/refund-out-of-stock
+    // Bug #7 Fix: Luồng hoàn tiền riêng cho đơn bị hủy do hết hàng sau VNPAY
+    // Khác với updatePaymentStatus(): không yêu cầu status='returned' + productReturn
+    // =========================================================================
+    public function refundOutOfStock(\Illuminate\Http\Request $request, string $id): JsonResponse
+    {
+        $admin = $request->user();
+        $order = Order::findOrFail($id);
+
+        // Chỉ dành cho đơn bị hủy đúng lý do hết hàng sau thanh toán VNPAY
+        if ($order->status !== 'cancelled' || $order->cancelled_reason !== 'out_of_stock_after_payment') {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Endpoint này chỉ dành cho đơn bị hủy do hết hàng sau thanh toán VNPAY.',
+            ], 422);
+        }
+
+        // Không cần thanh toán lại nếu đã refunded rồi
+        if (in_array($order->payment_status, ['refunded', 'partial_refund'], true)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Đơn hàng này đã được hoàn tiền.',
+            ], 422);
+        }
+
+        $transactionCode = $request->input('transaction_code', '');
+        $note = $request->input('note', 'Admin xác nhận đã hoàn tiền cho khách.');
+
+        DB::transaction(function () use ($order, $admin, $transactionCode, $note): void {
+            $order->update([
+                'payment_status' => 'refunded',
+                'admin_note'     => $note . ($transactionCode ? ' | Mã GD hoàn tiền: ' . $transactionCode : ''),
+            ]);
+
+            OrderStatusHistory::create([
+                'order_id'    => $order->id,
+                'from_status' => 'cancelled',
+                'to_status'   => 'cancelled',
+                'note'        => 'Admin xác nhận đã hoàn tiền cho đơn hết hàng sau VNPAY.' . ($transactionCode ? ' Mã GD: ' . $transactionCode : ''),
+                'changed_by'  => $admin->id,
+            ]);
+        });
+
+        // Thông báo cho khách
+        if ($order->user_id) {
+            UserNotification::notify(
+                $order->user_id,
+                'payment_refunded',
+                '💰 Đã hoàn tiền cho đơn hàng hết hàng',
+                "Đơn #{$order->order_code} đã được hoàn tiền toàn bộ sau khi bị hủy do hết hàng. Xin lỗi về sự cố này.",
+                $order->id
+            );
+        }
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Đã cập nhật trạng thái hoàn tiền thành công.',
+            'data'    => new OrderResource($order->fresh()),
         ]);
     }
 }

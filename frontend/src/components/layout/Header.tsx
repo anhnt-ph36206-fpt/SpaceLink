@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { useUserNotifications } from '../../hooks/useUserNotifications';
 import { axiosInstance } from '../../api/axios';
 
 const formatVND = (v: number) =>
@@ -21,6 +22,9 @@ const Header: React.FC = () => {
     const { user, logout } = useAuth();
     const { totalItems } = useCart();
     const { totalItems: totalWishlistItems } = useWishlist();
+    const { notifications, unreadCount, markAllRead, markRead } = useUserNotifications(!!user);
+    const [notifOpen, setNotifOpen] = useState(false);
+    const notifRef = useRef<HTMLDivElement>(null);
 
 
     // --- STATE CHO TÌM KIẾM ---
@@ -71,6 +75,9 @@ const Header: React.FC = () => {
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
                 setShowSuggestions(false);
+            }
+            if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+                setNotifOpen(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
@@ -130,8 +137,24 @@ const Header: React.FC = () => {
                             <span className="text-muted mx-2">|</span>
 
                             <div className="dropdown">
-                                <span className="dropdown-toggle text-muted ms-2" data-bs-toggle="dropdown" style={{ cursor: 'pointer' }}>
-                                    <small><i className="fa fa-user me-2"></i> {user ? `Xin Chào, ${user.fullname}` : 'Tài khoản'}</small>
+                                <span className="dropdown-toggle text-muted ms-2 d-inline-flex align-items-center" data-bs-toggle="dropdown" style={{ cursor: 'pointer' }}>
+                                    {user?.avatar ? (
+                                        <img
+                                            src={user.avatar}
+                                            alt={user.fullname}
+                                            style={{
+                                                width: 30, height: 30,
+                                                borderRadius: '50%',
+                                                objectFit: 'cover',
+                                                border: '2px solid #0d6efd',
+                                                marginRight: 8,
+                                                boxShadow: '0 2px 8px rgba(13,110,253,0.2)',
+                                            }}
+                                        />
+                                    ) : (
+                                        <i className="fa fa-user me-2"></i>
+                                    )}
+                                    <small>{user ? `Xin Chào, ${user.fullname}` : 'Tài khoản'}</small>
                                 </span>
                                 <div className="dropdown-menu rounded">
                                     {!user ? (
@@ -141,12 +164,45 @@ const Header: React.FC = () => {
                                         </>
                                     ) : (
                                         <>
-                                            <Link to="/profile" className="dropdown-item">Tài khoản của tôi</Link>
-                                            <button onClick={logout} className="dropdown-item w-100 text-start bg-transparent border-0">Đăng xuất</button>
+                                            <Link to="/profile" className="dropdown-item">
+                                                <div className="d-flex align-items-center py-1">
+                                                    {user.avatar ? (
+                                                        <img
+                                                            src={user.avatar}
+                                                            alt={user.fullname}
+                                                            style={{
+                                                                width: 36, height: 36,
+                                                                borderRadius: '50%',
+                                                                objectFit: 'cover',
+                                                                border: '2px solid #e8f0fe',
+                                                                marginRight: 10,
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div style={{
+                                                            width: 36, height: 36,
+                                                            borderRadius: '50%',
+                                                            background: 'linear-gradient(135deg, #0d6efd, #084298)',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            color: '#fff', fontSize: 14, marginRight: 10,
+                                                        }}>
+                                                            <i className="fas fa-user" />
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <div style={{ fontWeight: 600, fontSize: 13, color: '#1a1a2e' }}>{user.fullname}</div>
+                                                        <div style={{ fontSize: 11, color: '#8590a3' }}>{user.email}</div>
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                            <div className="dropdown-divider"></div>
+                                            <Link to="/profile" className="dropdown-item"><i className="fas fa-user-circle me-2 text-primary"></i>Tài khoản của tôi</Link>
+                                            <button onClick={logout} className="dropdown-item w-100 text-start bg-transparent border-0"><i className="fas fa-sign-out-alt me-2 text-danger"></i>Đăng xuất</button>
                                         </>
                                     )}
-                                    <Link to="/wishlist" className="dropdown-item">Yêu thích</Link>
-                                    <Link to="/cart" className="dropdown-item">Giỏ hàng</Link>
+                                    <div className="dropdown-divider"></div>
+                                    <Link to="/wishlist" className="dropdown-item"><i className="fas fa-heart me-2 text-primary"></i>Yêu thích</Link>
+                                    <Link to="/cart" className="dropdown-item"><i className="fas fa-shopping-bag me-2 text-primary"></i>Giỏ hàng</Link>
                                 </div>
                             </div>
                         </div >
@@ -155,12 +211,12 @@ const Header: React.FC = () => {
             </div >
 
             <div
-                className="container-fluid px-5 py-4 d-none d-lg-block bg-white shadow-sm position-relative"
+                className="container-fluid px-2 px-lg-5 py-3 py-lg-4 bg-white shadow-sm position-relative"
                 style={{ zIndex: 100 }}
             >
                 <div className="row gx-0 align-items-center text-center">
 
-                    <div className="col-md-4 col-lg-3 text-center text-lg-start">
+                    <div className="col-12 col-lg-3 text-center text-lg-start d-none d-lg-block">
                         <Link to="/" className="navbar-brand p-0">
                             <h1 className="display-5 text-primary m-0 fw-bold">
                                 <i className="fas fa-satellite-dish text-secondary me-2"></i>
@@ -175,15 +231,15 @@ const Header: React.FC = () => {
                         </Link>
                     </div>
 
-                    <div className="col-md-4 col-lg-6 text-center">
-                        <div className="position-relative ps-4" ref={wrapperRef}>
+                    <div className="col-8 col-lg-6 text-center">
+                        <div className="position-relative ps-lg-4" ref={wrapperRef}>
 
                             <div className="d-flex border border-2 border-primary rounded-pill overflow-hidden bg-white position-relative" style={{ zIndex: 102 }}>
                                 <input
-                                    className="form-control border-0 py-3 ps-4"
+                                    className="form-control border-0 py-2 py-lg-3 ps-2 ps-lg-4"
                                     type="text"
-                                    placeholder="Tìm kiếm iPhone, Samsung..."
-                                    style={{ outline: 'none', boxShadow: 'none' }}
+                                    placeholder="Tìm kiếm..."
+                                    style={{ outline: 'none', boxShadow: 'none', fontSize: '0.9rem' }}
                                     value={keyword}
                                     onChange={(e) => setKeyword(e.target.value)}
                                     onKeyDown={handleKeyDown}
@@ -192,7 +248,7 @@ const Header: React.FC = () => {
 
                                 <button
                                     type="button"
-                                    className="btn btn-primary rounded-0 py-3 px-4 border-0"
+                                    className="btn btn-primary rounded-0 py-2 py-lg-3 px-3 px-lg-4 border-0"
                                     onClick={handleSearch}
                                 >
                                     <i className="fas fa-search fs-5"></i>
@@ -266,32 +322,149 @@ const Header: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="col-md-4 col-lg-3 text-center text-lg-end">
-                        <div className="d-inline-flex align-items-center">
+                    <div className="col-4 col-lg-3 text-end d-flex justify-content-end align-items-center pe-3 pe-lg-3">
+                        <div className="d-inline-flex align-items-center gap-3 gap-lg-4" style={{ transform: 'scale(0.95)', transformOrigin: 'right center' }}>
 
-                            <Link to="/login" className="me-4 text-muted d-block d-lg-none">
-                                <i className="fas fa-user fa-2x"></i>
+                            <Link to={user ? "/profile" : "/login"} className="text-muted d-block d-lg-none">
+                                <i className="fas fa-user fs-5"></i>
                             </Link>
 
-                            <Link to="/wishlist" className="d-flex align-items-center text-muted text-decoration-none me-4">
+                            <Link to="/wishlist" className="d-flex align-items-center text-muted text-decoration-none">
                                 <div className="position-relative">
-                                    <i className="fas fa-heart fa-2x text-primary"></i>
+                                    <i className="fas fa-heart fs-5 fs-lg-2 text-primary"></i>
                                     <span
-                                        className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark"
-                                        style={{ fontSize: '10px', border: '2px solid #fff' }}
+                                        className="position-absolute badge rounded-pill bg-warning text-dark"
+                                        style={{ fontSize: '10px', top: '-6px', right: '-8px', border: '1.5px solid #fff', padding: '2px 4px', transform: 'scale(0.9)' }}
                                     >
                                         {totalWishlistItems > 0 ? (totalWishlistItems > 99 ? '99+' : totalWishlistItems) : ''}
                                     </span>
                                 </div>
                             </Link>
 
+                            {/* 🔔 Notification Bell */}
+                            {user && (
+                                <div className="position-relative" ref={notifRef}>
+                                    <button
+                                        className="btn p-0 border-0 bg-transparent position-relative"
+                                        onClick={() => setNotifOpen(!notifOpen)}
+                                        title="Thông báo"
+                                        id="client-notification-bell"
+                                    >
+                                        <i className={`fas fa-bell fs-5 fs-lg-2 ${unreadCount > 0 ? 'text-primary' : 'text-muted'}`}
+                                            style={{ transition: 'color 0.2s' }} />
+                                        {unreadCount > 0 && (
+                                            <span
+                                                className="position-absolute badge rounded-pill bg-danger text-light"
+                                                style={{ fontSize: '10px', top: '-6px', right: '-8px', border: '1.5px solid #fff', padding: '2px 4px', transform: 'scale(0.9)' }}
+                                            >
+                                                {unreadCount > 99 ? '99+' : unreadCount}
+                                            </span>
+                                        )}
+                                    </button>
+
+                                    {notifOpen && (
+                                        <div
+                                            className="position-absolute shadow-lg bg-white border"
+                                            style={{
+                                                top: 'calc(100% + 12px)', right: 0, width: 370, borderRadius: 14,
+                                                zIndex: 9999, overflow: 'hidden',
+                                                animation: 'fadeInDown 0.2s ease',
+                                            }}
+                                        >
+                                            {/* Header */}
+                                            <div className="d-flex align-items-center justify-content-between px-3 py-2"
+                                                style={{ borderBottom: '1px solid #f0f0f0', background: '#fafbfc' }}>
+                                                <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>
+                                                    🔔 Thông báo
+                                                    {unreadCount > 0 && (
+                                                        <span style={{
+                                                            marginLeft: 8, background: '#ff4d4f', color: '#fff',
+                                                            borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 700,
+                                                        }}>{unreadCount}</span>
+                                                    )}
+                                                </span>
+                                                {unreadCount > 0 && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); markAllRead(); }}
+                                                        className="btn btn-sm p-0 border-0 bg-transparent"
+                                                        style={{ color: '#0d6efd', fontSize: 12, fontWeight: 600 }}
+                                                    >
+                                                        <i className="fas fa-check-double me-1" /> Đọc tất cả
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* Notification List */}
+                                            <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                                                {notifications.length === 0 ? (
+                                                    <div className="text-center py-5" style={{ color: '#adb5bd' }}>
+                                                        <i className="fas fa-bell-slash" style={{ fontSize: 32, display: 'block', marginBottom: 8 }} />
+                                                        Chưa có thông báo nào
+                                                    </div>
+                                                ) : notifications.map(n => {
+                                                    const typeIcon: Record<string, string> = {
+                                                        order_confirmed: '✅', order_processing: '📦', order_shipping: '🚚',
+                                                        order_delivered: '📬', order_cancelled: '❌', order_completed: '🎉',
+                                                        return_approved: '✅', return_rejected: '❌', payment_refunded: '💰',
+                                                        cancel_approved: '✅', cancel_rejected: '❌', payment_success: '💳',
+                                                    };
+                                                    const icon = typeIcon[n.type] ?? '📋';
+                                                    return (
+                                                        <div
+                                                            key={n.id}
+                                                            onClick={() => {
+                                                                if (!n.is_read) markRead(n.id);
+                                                                if (n.order_id) navigate(`/orders/${n.order_id}`);
+                                                                setNotifOpen(false);
+                                                            }}
+                                                            className="notif-item"
+                                                            style={{
+                                                                display: 'flex', gap: 10, padding: '12px 16px',
+                                                                background: n.is_read ? '#fff' : '#f0f6ff',
+                                                                borderBottom: '1px solid #f5f5f5',
+                                                                cursor: n.order_id ? 'pointer' : 'default',
+                                                                transition: 'background 0.15s',
+                                                            }}
+                                                            onMouseEnter={e => (e.currentTarget.style.background = n.is_read ? '#f8f9fa' : '#e8f0fe')}
+                                                            onMouseLeave={e => (e.currentTarget.style.background = n.is_read ? '#fff' : '#f0f6ff')}
+                                                        >
+                                                            <span style={{ fontSize: 18, flexShrink: 0, marginTop: 2 }}>{icon}</span>
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <div style={{
+                                                                    fontWeight: n.is_read ? 500 : 700, fontSize: 13,
+                                                                    color: '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                                }}>{n.title}</div>
+                                                                <div style={{
+                                                                    fontSize: 12, color: '#6c757d', marginTop: 2,
+                                                                    lineHeight: 1.4, display: '-webkit-box',
+                                                                    WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                                                                }}>{n.content}</div>
+                                                                <div style={{ fontSize: 11, color: '#adb5bd', marginTop: 4 }}>
+                                                                    {new Date(n.created_at).toLocaleString('vi-VN')}
+                                                                </div>
+                                                            </div>
+                                                            {!n.is_read && (
+                                                                <span style={{
+                                                                    width: 8, height: 8, borderRadius: '50%',
+                                                                    background: '#0d6efd', flexShrink: 0, marginTop: 6,
+                                                                }} />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             <Link to="/cart" className="d-flex align-items-center text-muted text-decoration-none">
                                 <div className="position-relative">
-                                    <i className="fas fa-shopping-bag fa-2x text-primary"></i>
+                                    <i className="fas fa-shopping-bag fs-5 fs-lg-2 text-primary"></i>
 
                                     <span
-                                        className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark"
-                                        style={{ fontSize: '10px', border: '2px solid #fff' }}
+                                        className="position-absolute badge rounded-pill bg-warning text-dark"
+                                        style={{ fontSize: '10px', top: '-6px', right: '-8px', border: '1.5px solid #fff', padding: '2px 4px', transform: 'scale(0.9)' }}
                                     >
                                         {totalItems > 0 ? (totalItems > 99 ? '99+' : totalItems) : ''}
                                     </span>

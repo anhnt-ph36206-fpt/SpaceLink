@@ -15,7 +15,9 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'phone' => $this->phone,
             'gender' => $this->gender,
-            'avatar' => $this->avatar,
+            'avatar' => $this->avatar
+                ? (str_starts_with($this->avatar, 'http') ? $this->avatar : url($this->avatar))
+                : null,
             'status' => $this->status,
             'role' => $this->whenLoaded('role', function() {
                  return $this->role->name; // Chỉ lấy tên role

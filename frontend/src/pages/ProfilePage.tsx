@@ -99,6 +99,7 @@ const ProfilePage: React.FC = () => {
   const [orderError, setOrderError] = useState('');
   const [orderSuccess, setOrderSuccess] = useState('');
   const [avatarPreview, setAvatarPreview] = useState<string>(user?.avatar || '');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string>('');
   const [saveError, setSaveError] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -185,6 +186,12 @@ const ProfilePage: React.FC = () => {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Ảnh quá lớn, tối đa 5MB', 'error');
+      return;
+    }
+    setAvatarFile(file);
     const reader = new FileReader();
     reader.onloadend = () => {
       setAvatarPreview(reader.result as string);
@@ -195,18 +202,27 @@ const ProfilePage: React.FC = () => {
   const onSaveInfo = async (data: ProfileForm) => {
     if (!user) return;
     try {
-      // PUT /api/profile — axiosInstance tự gắn Bearer token
-      const res = await axiosInstance.put('/profile', {
-        fullname: data.name,      // backend field: 'fullname'
-        phone:    data.phone,
-        gender:   data.gender,
-        email:    user.email,
+      // Dùng FormData để hỗ trợ upload file avatar
+      const formData = new FormData();
+      formData.append('fullname', data.name);
+      if (data.phone) formData.append('phone', data.phone);
+      if (data.gender) formData.append('gender', data.gender);
 
-        avatar:   avatarPreview || null,
+      // Gửi file avatar nếu có chọn ảnh mới
+      if (avatarFile) {
+        formData.append('avatar', avatarFile);
+      }
+
+      // POST with _method=PUT (Laravel hỗ trợ method spoofing cho FormData)
+      formData.append('_method', 'PUT');
+
+      const res = await axiosInstance.post('/profile', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      // Response: { status: true, data: UserResource }
+
       const freshUser: User = res.data.data;
       updateUser(freshUser);
+      setAvatarFile(null); // Reset file sau khi upload thành công
       showToast('Cập nhật thông tin thành công!', 'success');
     } catch (err) {
       const error = err as AxiosError<{ message?: string; errors?: Record<string, string[]> }>;
@@ -218,14 +234,12 @@ const ProfilePage: React.FC = () => {
   const onSavePassword = async (data: PasswordForm) => {
     if (!user) return;
     try {
-      // Gửi cùng endpoint PUT /api/profile — backend validate current_password
-      const res = await axiosInstance.put('/profile', {
+      // Gửi đến endpoint đổi mật khẩu chuyên dụng
+      await axiosInstance.post('/auth/change-password', {
         current_password:      data.currentPassword,
         password:              data.newPassword,
         password_confirmation: data.confirmPassword,
       });
-      const freshUser: User = res.data.data;
-      updateUser(freshUser);
       resetPwd();
       showToast('Đổi mật khẩu thành công!', 'success');
     } catch (err) {

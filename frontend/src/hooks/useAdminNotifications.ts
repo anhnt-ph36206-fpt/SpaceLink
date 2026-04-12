@@ -3,7 +3,7 @@ import { axiosInstance } from '../api/axios';
 
 export interface AdminNotif {
     id: number;
-    type: 'new_order' | 'order_cancelled' | 'cancel_request' | 'return_request' | 'complaint';
+    type: 'new_order' | 'order_cancelled' | 'cancel_request' | 'return_request' | 'complaint' | 'stock_issue_vnpay' | 'order_completed';
     title: string;
     body: string;
     order_id: number | null;
@@ -11,7 +11,7 @@ export interface AdminNotif {
     created_at: string;
 }
 
-const POLL_INTERVAL = 30_000; // 30 giây
+const POLL_INTERVAL = 3_000; // 3 giây — gần real-time
 
 export function useAdminNotifications() {
     const [notifications, setNotifications] = useState<AdminNotif[]>([]);

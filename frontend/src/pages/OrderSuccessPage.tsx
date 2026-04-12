@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button, Result, Card, Typography } from 'antd';
-import { HomeOutlined, CheckCircleOutlined, ShoppingOutlined } from '@ant-design/icons';
+import { HomeOutlined, CheckCircleOutlined, ShoppingOutlined, EyeOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -47,7 +47,7 @@ const OrderSuccessPage: React.FC = () => {
                             </div>
                         )}
 
-                        <div className="d-flex gap-3 justify-content-center">
+                        <div className="d-flex gap-3 justify-content-center flex-wrap">
                             <Button
                                 type="primary"
                                 size="large"
@@ -57,6 +57,22 @@ const OrderSuccessPage: React.FC = () => {
                             >
                                 Về Trang chủ
                             </Button>
+                            {orderData?.order_id && (
+                                <Button
+                                    size="large"
+                                    icon={<EyeOutlined />}
+                                    className="rounded-pill px-4 btn-track-order"
+                                    style={{
+                                        background: '#F28B00',
+                                        borderColor: '#F28B00',
+                                        color: '#fff',
+                                        fontWeight: 600,
+                                    }}
+                                    onClick={() => navigate(`/orders/${orderData.order_id}`)}
+                                >
+                                    Theo dõi đơn hàng
+                                </Button>
+                            )}
                             <Button
                                 size="large"
                                 icon={<ShoppingOutlined />}
@@ -71,6 +87,7 @@ const OrderSuccessPage: React.FC = () => {
             </div>
             <style>{`
                 .order-summary-box { background: #f0fdf4 !important; }
+                .btn-track-order:hover { background: #e07a00 !important; border-color: #e07a00 !important; color: #fff !important; box-shadow: 0 4px 14px rgba(242, 139, 0, 0.35); }
             `}</style>
         </div>
     );

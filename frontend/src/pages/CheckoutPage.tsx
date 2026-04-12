@@ -615,6 +615,7 @@ const CheckoutPage: React.FC = () => {
                 onClose={() => setVoucherDrawerOpen(false)}
                 open={voucherDrawerOpen}
                 width={420}
+                zIndex={99999}
                 bodyStyle={{ padding: '16px', background: '#fafafa' }}
             >
                 <Spin spinning={loadingVouchers}>

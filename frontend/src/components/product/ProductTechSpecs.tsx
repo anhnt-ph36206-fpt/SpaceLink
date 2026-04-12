@@ -37,7 +37,6 @@ const ProductTechSpecs: React.FC<ProductTechSpecsProps> = ({ specifications }) =
                         <React.Fragment key={groupName}>
                             <tr className="table-light">
                                 <th colSpan={2} className="text-uppercase py-3" style={{ fontSize: 13, color: '#ff7a00', background: '#fffcf8', letterSpacing: '0.5px' }}>
-                                    <i className="fas fa-microchip me-2" />
                                     {groupName}
                                 </th>
                             </tr>

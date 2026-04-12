@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { axiosInstance } from '../../api/axios'
+import { handleImgError, BANNER_FALLBACK } from '../../utils/safeImgFallback'
 
 interface Banner {
   id: number
@@ -13,7 +14,7 @@ interface Banner {
   is_active: boolean
 }
 
-const FALLBACK_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='500' viewBox='0 0 1200 500'%3E%3Crect width='1200' height='500' fill='%23e9ecef'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='28' fill='%23adb5bd'%3EBanner%3C/text%3E%3C/svg%3E`
+// Fallback is now imported from safeImgFallback (BANNER_FALLBACK)
 
 const SLIDE_DURATION = 4500 // ms
 
@@ -181,9 +182,7 @@ export function ProductBanner() {
                   display: 'block',
                   userSelect: 'none',
                 }}
-                onError={e => {
-                  ;(e.target as HTMLImageElement).src = FALLBACK_IMG
-                }}
+                onError={e => handleImgError(e, BANNER_FALLBACK)}
                 draggable={false}
               />
 

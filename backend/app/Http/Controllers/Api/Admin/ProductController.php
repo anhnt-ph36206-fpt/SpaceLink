@@ -42,7 +42,11 @@ class ProductController extends Controller
         }
 
         if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+            $categoryId = $request->category_id;
+            // Lấy tất cả ID danh mục con (nếu là danh mục cha)
+            $childIds = \App\Models\Category::where('parent_id', $categoryId)->pluck('id')->toArray();
+            $categoryIds = array_merge([$categoryId], $childIds);
+            $query->whereIn('category_id', $categoryIds);
         }
 
         if ($request->filled('brand_id')) {
@@ -311,11 +315,13 @@ class ProductController extends Controller
     }
 
     // =========================================================================
-    // DELETE /api/admin/products/{id} — Soft delete sản phẩm
+    // DELETE /api/admin/products/{id} — Soft delete sản phẩm (Admin + Staff)
     // =========================================================================
     public function destroy(string $id): JsonResponse
     {
         $product = Product::findOrFail($id);
+        $this->authorize('delete', $product);
+
         $product->delete();
 
         return response()->json([
@@ -325,11 +331,28 @@ class ProductController extends Controller
     }
 
     // =========================================================================
-    // POST /api/admin/products/{id}/restore — Khôi phục sản phẩm đã xóa mềm
+    // DELETE /api/admin/products/{id}/force — Xóa vĩnh viễn (CHỈ Admin)
+    // =========================================================================
+    public function forceDelete(string $id): JsonResponse
+    {
+        $product = Product::withTrashed()->findOrFail($id);
+        $this->authorize('forceDelete', $product);
+
+        $product->forceDelete();
+
+        return response()->json([
+            'status'  => true,
+            'message' => "Đã xóa vĩnh viễn sản phẩm \"{$product->name}\". Không thể khôi phục.",
+        ]);
+    }
+
+    // =========================================================================
+    // POST /api/admin/products/{id}/restore — Khôi phục sản phẩm đã xóa mềm (CHỈ Admin)
     // =========================================================================
     public function restore(string $id): JsonResponse
     {
         $product = Product::withTrashed()->findOrFail($id);
+        $this->authorize('restore', $product);
 
         if (!$product->trashed()) {
             return response()->json([
@@ -379,6 +402,8 @@ class ProductController extends Controller
 
         switch ($action) {
             case 'delete':
+                // Staff + Admin đều được phép soft delete (policy 'delete')
+                $this->authorize('delete', new Product());
                 Product::whereIn('id', $ids)->delete();
                 return response()->json([
                     'status'  => true,
@@ -386,6 +411,8 @@ class ProductController extends Controller
                 ]);
 
             case 'restore':
+                // CHỈ Admin được restore (policy 'restore')
+                $this->authorize('restore', new Product());
                 Product::withTrashed()->whereIn('id', $ids)->restore();
                 return response()->json([
                     'status'  => true,

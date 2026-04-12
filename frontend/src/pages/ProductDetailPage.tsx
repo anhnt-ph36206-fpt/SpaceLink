@@ -5,9 +5,15 @@ import { useCart } from "../context/CartContext";
 import { useCompare } from "../context/CompareContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useAuth } from "../context/AuthContext";
+
 import ProductCard from "../components/common/ProductCard";
 import ProductTechSpecs from "../components/product/ProductTechSpecs";
 import type { ProductSpecification } from "../components/product/ProductTechSpecs";
+import ProductReviews from "../components/product/ProductReviews";
+import type { ReviewStats } from "../components/product/ProductReviews";
+import ProductDescription from "../components/product/ProductDescription";
+import ProductContent from "../components/product/ProductContent";
+import ProductComments from "../components/product/ProductComments";
 import { toast } from "react-toastify";
 import { Spin } from "antd";
 import MDEditor from '@uiw/react-md-editor';
@@ -93,6 +99,7 @@ const ProductDetailPage: React.FC = () => {
     const { addToCart } = useCart();
     const { addToCompare, removeFromCompare, isInCompare, compareList } = useCompare();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+    const { isAuthenticated } = useAuth();
 
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
@@ -101,7 +108,6 @@ const ProductDetailPage: React.FC = () => {
     const [mainImg, setMainImg] = useState<string | null>(null);
     const [defaultMainImg, setDefaultMainImg] = useState<string | null>(null);
     const [qty, setQty] = useState(1);
-    const [activeTab, setActiveTab] = useState<'desc' | 'content' | 'specs' | 'tech_specs' | 'reviews'>('desc');
     const [relatedProducts, setRelatedProducts] = useState<{ id: string; name: string; image: string; price: number; oldPrice?: number; category?: string; rating?: number; isSale?: boolean; isNew?: boolean }[]>([]);
     const { isAuthenticated } = useAuth();
 
@@ -217,6 +223,12 @@ const ProductDetailPage: React.FC = () => {
                 const res = await axiosInstance.get(`/products/${id}`);
                 const p: Product = res.data.data;
                 setProduct(p);
+
+                // Fetch review stats immediately to show on the tab before it's clicked
+                axiosInstance.get(`/products/${id}/reviews`, { params: { per_page: 1 } })
+                    .then(r => {
+                        if (r.data?.stats) setReviewStats(r.data.stats);
+                    }).catch(() => {});
 
                 // Set default image
                 const primary = p.images?.find(i => i.is_primary) || p.images?.[0];
@@ -343,6 +355,11 @@ const ProductDetailPage: React.FC = () => {
     // ── Buy Now (Direct Checkout) ─────────────────────────────────────────
     const [isChecking, setIsChecking] = useState(false);
     const handleBuyNow = async () => {
+        if (!isAuthenticated) {
+            toast.warning('Vui lòng đăng nhập để đặt hàng!');
+            return;
+        }
+
         if (!product || !selectedVariant) {
             toast.warning('Vui lòng chọn các thuộc tính sản phẩm!');
             return;
@@ -516,14 +533,16 @@ const ProductDetailPage: React.FC = () => {
                             )}
 
                             {/* Price */}
-                            <div className="bg-light rounded-3 p-3 mb-4 d-flex align-items-center gap-3">
-                                <span className="fw-bold" style={{ fontSize: 30, color: '#ff7a00' }}>
+                            <div className="bg-light rounded-3 p-3 mb-4 d-flex align-items-center flex-wrap gap-2 gap-md-3">
+                                <span className="fw-bold" style={{ fontSize: 'clamp(24px, 5vw, 30px)', color: '#ff7a00' }}>
                                     {formatVND(displayPrice)}
                                 </span>
                                 {discountPct > 0 && (
                                     <>
-                                        <del className="text-muted fs-6">{formatVND(originalPrice)}</del>
-                                        <span className="badge rounded-pill" style={{ backgroundColor: '#ff7a00' }}>
+                                        <del className="text-muted" style={{ fontSize: 'clamp(14px, 3vw, 16px)' }}>
+                                            {formatVND(originalPrice)}
+                                        </del>
+                                        <span className="badge rounded-pill" style={{ backgroundColor: '#ff7a00', fontSize: '13px', padding: '6px 10px' }}>
                                             Tiết kiệm {discountPct}%
                                         </span>
                                     </>
@@ -607,69 +626,70 @@ const ProductDetailPage: React.FC = () => {
                                 )}
                             </p>
 
-                            <div className="d-flex align-items-center gap-3 pt-4 border-top mt-4 flex-wrap">
-                                {/* Qty picker - Premium Styled */}
-                                <div
-                                    className="d-flex align-items-center"
-                                    style={{
-                                        height: 48,
-                                        border: '1px solid #dee2e6',
-                                        borderRadius: 12,
-                                        overflow: 'hidden',
-                                        background: '#fff'
-                                    }}
-                                >
-                                    <button
-                                        className="btn btn-link text-dark text-decoration-none px-3 h-100 shadow-none"
-                                        style={{ border: 'none', background: 'transparent' }}
-                                        onClick={() => setQty(q => Math.max(1, q - 1))}
-                                        disabled={qty <= 1}
-                                    >
-                                        <i className="fas fa-minus small" />
-                                    </button>
-                                    <input
-                                        type="text"
-                                        className="form-control text-center border-0 fw-bold shadow-none"
-                                        style={{ width: 45, background: 'transparent', fontSize: 16 }}
-                                        value={qty}
-                                        onChange={e => {
-                                            const v = parseInt(e.target.value) || 1;
-                                            setQty(Math.min(maxQty, Math.max(1, v)));
+                            <div className="pt-4 border-top mt-4">
+                                <div className="d-flex align-items-center gap-3 mb-3">
+                                    {/* Qty picker - Premium Styled */}
+                                    <div
+                                        className="d-flex align-items-center"
+                                        style={{
+                                            height: 48,
+                                            border: '1px solid #dee2e6',
+                                            borderRadius: 12,
+                                            overflow: 'hidden',
+                                            background: '#fff'
                                         }}
-                                    />
-                                    <button
-                                        className="btn btn-link text-dark text-decoration-none px-3 h-100 shadow-none"
-                                        style={{ border: 'none', background: 'transparent' }}
-                                        onClick={() => setQty(q => Math.min(maxQty, q + 1))}
-                                        disabled={qty >= maxQty}
                                     >
-                                        <i className="fas fa-plus small" />
+                                        <button
+                                            className="btn btn-link text-dark text-decoration-none px-3 h-100 shadow-none"
+                                            style={{ border: 'none', background: 'transparent' }}
+                                            onClick={() => setQty(q => Math.max(1, q - 1))}
+                                            disabled={qty <= 1}
+                                        >
+                                            <i className="fas fa-minus small" />
+                                        </button>
+                                        <input
+                                            type="text"
+                                            className="form-control text-center border-0 fw-bold shadow-none"
+                                            style={{ width: 45, background: 'transparent', fontSize: 16 }}
+                                            value={qty}
+                                            onChange={e => {
+                                                const v = parseInt(e.target.value) || 1;
+                                                setQty(Math.min(maxQty, Math.max(1, v)));
+                                            }}
+                                        />
+                                        <button
+                                            className="btn btn-link text-dark text-decoration-none px-3 h-100 shadow-none"
+                                            style={{ border: 'none', background: 'transparent' }}
+                                            onClick={() => setQty(q => Math.min(maxQty, q + 1))}
+                                            disabled={qty >= maxQty}
+                                        >
+                                            <i className="fas fa-plus small" />
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        className="btn btn-lg flex-grow-1 shop-btn-outline-orange bg-white"
+                                        style={{
+                                            borderRadius: 12,
+                                            fontWeight: 600,
+                                            height: 48,
+                                            border: '2px solid #ff7a00',
+                                            color: '#ff7a00',
+                                            transition: 'all .3s ease'
+                                        }}
+                                        disabled={stock === 0}
+                                        onClick={() => handleAddToCart(false)}
+                                    >
+                                        <i className="fas fa-cart-plus me-2" />Giỏ hàng
                                     </button>
                                 </div>
 
                                 <button
-                                    className="btn btn-lg flex-grow-1 shop-btn-outline-orange"
-                                    style={{
-                                        borderRadius: 12,
-                                        fontWeight: 600,
-                                        height: 48,
-                                        border: '2px solid #ff7a00',
-                                        color: '#ff7a00',
-                                        transition: 'all .3s ease'
-                                    }}
-                                    disabled={stock === 0}
-                                    onClick={() => handleAddToCart(false)}
-                                >
-                                    <i className="fas fa-cart-plus me-2" />Giỏ hàng
-                                </button>
-
-                                <button
-                                    className="btn btn-lg shop-btn-orange"
+                                    className="btn btn-lg shop-btn-orange w-100"
                                     style={{
                                         borderRadius: 12,
                                         fontWeight: 700,
                                         height: 48,
-                                        padding: '0 32px',
                                         background: '#ff7a00',
                                         borderColor: '#ff7a00',
                                         color: '#fff',
@@ -764,258 +784,57 @@ const ProductDetailPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* ── Tabs: Description / Content / Specs ─────────────── */}
-                <div className="card border-0 shadow-sm p-4" style={{ borderRadius: 16 }}>
-                    <ul className="nav nav-tabs mb-4">
-                        <li className="nav-item">
-                            <button
-                                className={`nav-link ${activeTab === 'desc' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('desc')}
-                            >
-                                Mô tả
-                            </button>
-                        </li>
-                        <li className="nav-item">
-                            <button
-                                className={`nav-link ${activeTab === 'content' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('content')}
-                            >
-                                Nội dung chi tiết
-                            </button>
-                        </li>
-                        {selectedVariant && (
-                            <li className="nav-item">
-                                <button
-                                    className={`nav-link ${activeTab === 'specs' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('specs')}
-                                >
-                                    Thông số biến thể
-                                </button>
-                            </li>
-                        )}
-                        <li className="nav-item">
-                            <button
-                                className={`nav-link ${activeTab === 'tech_specs' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('tech_specs')}
-                            >
-                                <i className="fas fa-list-ul me-1" />
-                                Thông số kỹ thuật
-                            </button>
-                        </li>
-                        <li className="nav-item">
-                            <button
-                                className={`nav-link ${activeTab === 'reviews' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('reviews')}
-                            >
-                                <i className="fas fa-star me-1 text-warning" style={{ fontSize: 12 }} />
-                                Đánh giá ({reviewStats.total_reviews})
-                            </button>
-                        </li>
-                    </ul>
-
-                    {activeTab === 'desc' && (
-                        <div data-color-mode="light" style={{ padding: '8px 0' }}>
-                            {product.description
-                                ? <MDEditor.Markdown source={product.description} />
-                                : <p className="text-muted">Chưa có mô tả.</p>
-                            }
+                {/* ── Content Sections (Vertical Layout) ─────────────── */}
+                <div className="card border-0 shadow-sm p-4 p-md-5" style={{ borderRadius: 16 }}>
+                    
+                    {/* 1. Mô tả */}
+                    <div className="mb-5 pb-4 border-bottom">
+                        <div className="d-flex align-items-center gap-2 mb-4">
+                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <h3 className="fw-bold mb-0 h4">Mô tả sản phẩm</h3>
                         </div>
-                    )}
-                    {activeTab === 'content' && (
-                        <div data-color-mode="light" style={{ padding: '8px 0' }}>
-                            {product.content
-                                ? <MDEditor.Markdown source={product.content} />
-                                : <p className="text-muted">Chưa có nội dung chi tiết.</p>
-                            }
-                        </div>
-                    )}
-                    {activeTab === 'specs' && selectedVariant && (
-                        <table className="table table-bordered w-auto">
-                            <tbody>
-                                {selectedVariant.sku && (
-                                    <tr><th>SKU</th><td>{selectedVariant.sku}</td></tr>
-                                )}
-                                {selectedVariant.attributes.map(a => (
-                                    <tr key={a.id}>
-                                        <th>{a.group || 'Thuộc tính'}</th>
-                                        <td>
-                                            {a.color_code && (
-                                                <span
-                                                    style={{ width: 16, height: 16, borderRadius: '50%', background: a.color_code, display: 'inline-block', marginRight: 8, border: '1px solid #ccc' }}
-                                                />
-                                            )}
-                                            {a.value}
-                                        </td>
-                                    </tr>
-                                ))}
-                                <tr><th>Tồn kho</th><td>{selectedVariant.quantity}</td></tr>
-                            </tbody>
-                        </table>
-                    )}
+                        <ProductDescription description={product.description} />
+                    </div>
 
-                    {activeTab === 'tech_specs' && (
+                    {/* 2. Nội dung chi tiết */}
+                    <div className="mb-5 pb-4 border-bottom">
+                        <div className="d-flex align-items-center gap-2 mb-4">
+                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <h3 className="fw-bold mb-0 h4">Nội dung chi tiết</h3>
+                        </div>
+                        <ProductContent content={product.content} />
+                    </div>
+
+                    {/* 3. Thông số kỹ thuật */}
+                    <div className="mb-5 pb-4 border-bottom">
+                        <div className="d-flex align-items-center gap-2 mb-4">
+                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <h3 className="fw-bold mb-0 h4">Thông số kỹ thuật</h3>
+                        </div>
                         <ProductTechSpecs specifications={product.specifications} />
-                    )}
+                    </div>
 
-                    {/* ── Reviews Tab ────────────────────────────────── */}
-                    {activeTab === 'reviews' && (
-                        <div>
-                            {/* Stats overview */}
-                            <div className="row g-4 mb-5 align-items-center">
-                                <div className="col-auto text-center">
-                                    <div style={{ fontSize: 52, fontWeight: 800, lineHeight: 1, color: '#ff7a00' }}>
-                                        {reviewStats.average_rating > 0 ? reviewStats.average_rating.toFixed(1) : '—'}
-                                    </div>
-                                    <div className="d-flex gap-1 justify-content-center my-1">
-                                        {[1, 2, 3, 4, 5].map(s => (
-                                            <i key={s} className={`fas fa-star ${s <= Math.round(reviewStats.average_rating) ? 'text-warning' : 'text-muted'}`} style={{ fontSize: 18 }} />
-                                        ))}
-                                    </div>
-                                    <div className="text-muted small">{reviewStats.total_reviews} đánh giá</div>
-                                </div>
-                                <div className="col">
-                                    {[5, 4, 3, 2, 1].map(star => {
-                                        const count = reviews.filter(r => r.rating === star).length;
-                                        const pct = reviewStats.total_reviews > 0 ? Math.round((count / reviewStats.total_reviews) * 100) : 0;
-                                        return (
-                                            <div key={star} className="d-flex align-items-center gap-2 mb-1">
-                                                <span className="text-muted small" style={{ width: 12 }}>{star}</span>
-                                                <i className="fas fa-star text-warning small" />
-                                                <div className="flex-grow-1 bg-light rounded-pill" style={{ height: 8, overflow: 'hidden' }}>
-                                                    <div style={{ width: `${pct}%`, height: '100%', background: '#ffc107', borderRadius: 99, transition: 'width .4s' }} />
-                                                </div>
-                                                <span className="text-muted small" style={{ width: 24 }}>{count}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Write review form */}
-                            <div className="card border-0 mb-4" style={{ background: '#f8f9ff', borderRadius: 12, padding: '20px 24px' }}>
-                                <h6 className="fw-bold mb-3"><i className="fas fa-pen me-2 text-primary" />Viết đánh giá của bạn</h6>
-                                {!isAuthenticated ? (
-                                    <p className="text-muted mb-0">
-                                        <Link to="/login" className="text-primary fw-bold">Đăng nhập</Link> để đánh giá sản phẩm này.
-                                    </p>
-                                ) : eligibleOrderItemId === 'loading' ? (
-                                    <div className="text-muted small"><Spin size="small" className="me-2" />Đang kiểm tra lịch sử mua hàng...</div>
-                                ) : eligibleOrderItemId === null ? (
-                                    <p className="text-muted mb-0 small">
-                                        <i className="fas fa-info-circle me-1" />
-                                        Bạn cần <strong>mua và nhận hàng thành công</strong> sản phẩm này để có thể đánh giá.
-                                    </p>
-                                ) : (
-                                    <div>
-                                        {/* Star picker */}
-                                        <div className="d-flex gap-1 mb-3">
-                                            {[1, 2, 3, 4, 5].map(s => (
-                                                <i
-                                                    key={s}
-                                                    className={`fas fa-star ${s <= (hoverRating || writeRating) ? 'text-warning' : 'text-muted'}`}
-                                                    style={{ fontSize: 28, cursor: 'pointer', transition: 'color .15s' }}
-                                                    onMouseEnter={() => setHoverRating(s)}
-                                                    onMouseLeave={() => setHoverRating(0)}
-                                                    onClick={() => setWriteRating(s)}
-                                                />
-                                            ))}
-                                            <span className="ms-2 text-muted align-self-center small">
-                                                {['', 'Rất tệ', 'Tệ', 'Bình thường', 'Tốt', 'Xuất sắc'][hoverRating || writeRating]}
-                                            </span>
-                                        </div>
-                                        <textarea
-                                            className="form-control mb-3"
-                                            rows={3}
-                                            placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này... (tuỳ chọn)"
-                                            value={writeContent}
-                                            onChange={e => setWriteContent(e.target.value)}
-                                            maxLength={1000}
-                                            style={{ borderRadius: 10, resize: 'none' }}
-                                        />
-                                        <div className="d-flex justify-content-between align-items-center">
-                                            <span className="text-muted small">{writeContent.length}/1000</span>
-                                            <button
-                                                className="btn btn-primary px-4"
-                                                style={{ borderRadius: 8, fontWeight: 600 }}
-                                                onClick={handleSubmitReview}
-                                                disabled={submitting}
-                                            >
-                                                {submitting ? <Spin size="small" className="me-2" /> : <i className="fas fa-paper-plane me-2" />}
-                                                Gửi đánh giá
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Reviews list */}
-                            {reviewsLoading ? (
-                                <div className="text-center py-4"><Spin /></div>
-                            ) : reviews.length === 0 ? (
-                                <div className="text-center py-4 text-muted">
-                                    <i className="fas fa-comment-slash fa-2x mb-3" style={{ opacity: .3 }} />
-                                    <p className="mb-0">Chưa có đánh giá nào. Hãy là người đầu tiên!</p>
-                                </div>
-                            ) : (
-                                <>
-                                    {reviews.map(review => (
-                                        <div key={review.id} className="border-bottom pb-4 mb-4">
-                                            <div className="d-flex align-items-center gap-3 mb-2">
-                                                {/* Avatar */}
-                                                <div style={{
-                                                    width: 40, height: 40, borderRadius: '50%',
-                                                    background: 'linear-gradient(135deg,#0d6efd,#6610f2)',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    color: '#fff', fontWeight: 700, flexShrink: 0,
-                                                }}>
-                                                    {(review.user?.fullname ?? 'A').charAt(0).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <div className="fw-bold" style={{ fontSize: 14 }}>{review.user?.fullname ?? 'Ẩn danh'}</div>
-                                                    <div className="d-flex gap-1 align-items-center">
-                                                        {[1, 2, 3, 4, 5].map(s => (
-                                                            <i key={s} className={`fas fa-star small ${s <= review.rating ? 'text-warning' : 'text-muted'}`} />
-                                                        ))}
-                                                        <span className="text-muted ms-2" style={{ fontSize: 12 }}>
-                                                            {new Date(review.created_at).toLocaleDateString('vi-VN')}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {review.content && (
-                                                <p className="text-muted mb-2" style={{ fontSize: 14, lineHeight: 1.6 }}>{review.content}</p>
-                                            )}
-                                            {/* Admin reply */}
-                                            {review.admin_reply && (
-                                                <div style={{ background: '#fff9f2', borderLeft: '3px solid #ff7a00', borderRadius: '0 8px 8px 0', padding: '10px 14px', marginTop: 8 }}>
-                                                    <div className="fw-bold mb-1" style={{ fontSize: 12, color: '#ff7a00' }}>
-                                                        <i className="fas fa-store me-1" />Phản hồi từ Shop
-                                                    </div>
-                                                    <p className="mb-0" style={{ fontSize: 13, color: '#1a1a2e' }}>{review.admin_reply}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-
-                                    {/* Pagination */}
-                                    {reviewLastPage > 1 && (
-                                        <div className="d-flex justify-content-center gap-2 mt-2">
-                                            {Array.from({ length: reviewLastPage }, (_, i) => i + 1).map(p => (
-                                                <button
-                                                    key={p}
-                                                    className={`btn btn-sm ${reviewPage === p ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                                    style={{ borderRadius: 8, width: 36 }}
-                                                    onClick={() => setReviewPage(p)}
-                                                >
-                                                    {p}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </>
-                            )}
+                    {/* 4. Đánh giá */}
+                    <div className="mb-5 pb-4 border-bottom">
+                        <div className="d-flex align-items-center gap-2 mb-4">
+                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <h3 className="fw-bold mb-0 h4">Đánh giá sản phẩm ({reviewStats.total_reviews})</h3>
                         </div>
-                    )}
+                        <ProductReviews
+                            productId={id!}
+                            onStatsChange={setReviewStats}
+                        />
+                    </div>
+
+                    {/* 5. Hỏi đáp */}
+                    <div>
+                        <div className="d-flex align-items-center gap-2 mb-4">
+                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <h3 className="fw-bold mb-0 h4">Hỏi & Đáp</h3>
+                        </div>
+                        <ProductComments productId={id!} />
+                    </div>
+
                 </div>
 
                 {/* ── Related Products ─────────────────────────────── */}

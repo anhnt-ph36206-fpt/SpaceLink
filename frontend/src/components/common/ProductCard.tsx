@@ -1,4 +1,5 @@
 import React from 'react';
+import { handleImgError, NO_IMAGE_SVG } from '../../utils/safeImgFallback';
 import { Link } from 'react-router-dom';
 import { useCompare } from '../../context/CompareContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -101,7 +102,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
                         <img
                             src={product.image || undefined}
                             alt={product.name}
-                            onError={e => { (e.target as HTMLImageElement).src = '/assets/client/img/no-image.png' }}
+                            onError={e => handleImgError(e, NO_IMAGE_SVG)}
                         />
                     </Link>
 
