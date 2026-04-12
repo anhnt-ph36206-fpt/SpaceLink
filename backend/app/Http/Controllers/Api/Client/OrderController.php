@@ -519,4 +519,83 @@ class OrderController extends Controller
             'data'    => new OrderResource($order->fresh()),
         ]);
     }
+
+    // =========================================================================
+    // PUT /api/client/orders/{id}/update-shipping — Cập nhật địa chỉ giao hàng
+    // Chỉ cho phép khi đơn chưa được giao cho vận chuyển
+    // =========================================================================
+    public function updateShipping(Request $request, string $id): JsonResponse
+    {
+        $user = $request->user();
+        $order = Order::findOrFail($id);
+
+        // Kiểm tra quyền sở hữu
+        if ($order->user_id !== $user->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bạn không có quyền chỉnh sửa đơn hàng này.',
+            ], 403);
+        }
+
+        // Chỉ cho phép sửa khi chưa giao cho vận chuyển
+        $allowedStatuses = ['pending', 'confirmed', 'processing'];
+        if (!in_array($order->status, $allowedStatuses, true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Không thể thay đổi địa chỉ khi đơn hàng đã được giao cho đơn vị vận chuyển.',
+            ], 422);
+        }
+
+        $request->validate([
+            'fullname' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'province' => 'required|string|max:255',
+            'ward' => 'required|string|max:255',
+            'address_detail' => 'required|string|max:500',
+        ]);
+
+        // Lưu địa chỉ cũ để ghi log
+        $oldAddress = implode(', ', array_filter([
+            $order->shipping_address,
+            $order->shipping_ward,
+            $order->shipping_province,
+        ]));
+
+        $order->update([
+            'shipping_name' => $request->fullname,
+            'shipping_phone' => $request->phone,
+            'shipping_province' => $request->province,
+            'shipping_ward' => $request->ward,
+            'shipping_address' => $request->address_detail,
+        ]);
+
+        // Ghi lịch sử
+        OrderStatusHistory::create([
+            'order_id' => $order->id,
+            'from_status' => $order->status,
+            'to_status' => $order->status,
+            'note' => 'Khách hàng cập nhật địa chỉ giao hàng.',
+            'changed_by' => $user->id,
+        ]);
+
+        // Thông báo cho admin
+        $newAddress = implode(', ', array_filter([
+            $request->address_detail,
+            $request->ward,
+            $request->province,
+        ]));
+
+        AdminNotification::notify(
+            'order_updated',
+            '📍 Khách thay đổi địa chỉ giao hàng',
+            "#{$order->order_code} — {$request->fullname} — {$newAddress}",
+            $order->id
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Đã cập nhật địa chỉ giao hàng thành công.',
+            'data' => new OrderResource($order->fresh()),
+        ]);
+    }
 }

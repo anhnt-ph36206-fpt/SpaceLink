@@ -133,6 +133,7 @@ Route::prefix('client')->name('client.')->group(function () {
         Route::post('/orders/{id}/return-request', [ClientOrderController::class, 'requestReturn']);
         Route::get('/orders/{id}/retry-vnpay', [ClientOrderController::class, 'retryVnpayPayment']);
         Route::post('/orders/{id}/switch-to-cod', [ClientOrderController::class, 'switchToCod']);
+        Route::put('/orders/{id}/update-shipping', [ClientOrderController::class, 'updateShipping']);
 
         // Khiếu nại đơn hàng
         Route::get('/orders/{id}/complaint', [ClientComplaintController::class, 'show']);

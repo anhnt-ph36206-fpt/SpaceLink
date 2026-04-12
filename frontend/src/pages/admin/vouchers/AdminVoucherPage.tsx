@@ -112,6 +112,7 @@ const AdminVoucherPage: React.FC = () => {
             delete payload.dates;
 
             if (editingItem) {
+                delete payload.code; // Mã voucher không cho sửa sau khi tạo
                 await axiosInstance.put(`${voucherPrefix}/${editingItem.id}`, payload);
                 toast.success('Cập nhật voucher thành công');
             } else {
@@ -280,8 +281,8 @@ const AdminVoucherPage: React.FC = () => {
                 <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
                     <Row gutter={16}>
                         <Col span={12}>
-                            <Form.Item name="code" label="Mã Voucher" rules={[{ required: true, message: 'Nhập mã voucher' }, { max: 50, message: 'Tối đa 50 ký tự' }]}>
-                                <Input placeholder="Vd: SUMMER2023" style={{ textTransform: 'uppercase' }} />
+                            <Form.Item name="code" label="Mã Voucher" rules={[{ required: !editingItem, message: 'Nhập mã voucher' }, { max: 50, message: 'Tối đa 50 ký tự' }]}>
+                                <Input placeholder="Vd: SUMMER2023" style={{ textTransform: 'uppercase' }} disabled={!!editingItem} />
                             </Form.Item>
                         </Col>
                         <Col span={12}>

@@ -305,6 +305,11 @@ const OrderDetailPage: React.FC = () => {
     status?: string; admin_reply?: string | null; created_at?: string;
   } | null>(null);
 
+  // Shipping address edit
+  const [shippingEditOpen, setShippingEditOpen] = useState(false);
+  const [shippingEditLoading, setShippingEditLoading] = useState(false);
+  const [shippingForm, setShippingForm] = useState({ fullname: '', phone: '', province: '', ward: '', address_detail: '' });
+
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -584,6 +589,41 @@ const OrderDetailPage: React.FC = () => {
       showToast(e?.response?.data?.message ?? 'Không thể gửi khiếu nại.', 'error');
     } finally {
       setComplaintLoading(false);
+    }
+  };
+
+  // ── Update Shipping Address ────────────────────────────────
+  const canEditShipping = ['pending', 'confirmed', 'processing'].includes(order?.status ?? '');
+
+  const openShippingEdit = () => {
+    if (!order) return;
+    setShippingForm({
+      fullname: order.shipping?.fullname ?? '',
+      phone: order.shipping?.phone ?? '',
+      province: order.shipping?.province ?? '',
+      ward: order.shipping?.ward ?? '',
+      address_detail: order.shipping?.address ?? '',
+    });
+    setShippingEditOpen(true);
+  };
+
+  const handleUpdateShipping = async () => {
+    if (!order) return;
+    if (!shippingForm.fullname.trim() || !shippingForm.phone.trim() || !shippingForm.province.trim() || !shippingForm.ward.trim() || !shippingForm.address_detail.trim()) {
+      showToast('Vui lòng điền đầy đủ thông tin địa chỉ.', 'error');
+      return;
+    }
+    setShippingEditLoading(true);
+    try {
+      await axiosInstance.put(`/client/orders/${order.id}/update-shipping`, shippingForm);
+      showToast('Đã cập nhật địa chỉ giao hàng thành công!', 'success');
+      setShippingEditOpen(false);
+      fetchOrder();
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showToast(e?.response?.data?.message ?? 'Không thể cập nhật địa chỉ.', 'error');
+    } finally {
+      setShippingEditLoading(false);
     }
   };
 
@@ -1173,8 +1213,23 @@ const OrderDetailPage: React.FC = () => {
 
               {/* Shipping address */}
               <div className="od-card">
-                <div className="od-card-title">
-                  <i className="fas fa-map-marker-alt me-2" style={{ color: '#ea580c' }} />Địa chỉ giao hàng
+                <div className="od-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span><i className="fas fa-map-marker-alt me-2" style={{ color: '#ea580c' }} />Địa chỉ giao hàng</span>
+                  {canEditShipping && (
+                    <button
+                      onClick={openShippingEdit}
+                      style={{
+                        background: 'none', border: '1.5px solid #ea580c', color: '#ea580c',
+                        borderRadius: 8, padding: '4px 12px', fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = '#ea580c'; (e.target as HTMLButtonElement).style.color = '#fff'; }}
+                      onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = 'none'; (e.target as HTMLButtonElement).style.color = '#ea580c'; }}
+                    >
+                      <i className="fas fa-pen" style={{ fontSize: 10 }} /> Thay đổi
+                    </button>
+                  )}
                 </div>
                 <div className="od-info-row"><i className="fas fa-user" /><span><strong>{order.shipping?.fullname ?? '—'}</strong></span></div>
                 <div className="od-info-row"><i className="fas fa-phone-alt" /><span>{order.shipping?.phone ?? '—'}</span></div>
@@ -1183,6 +1238,73 @@ const OrderDetailPage: React.FC = () => {
                   <span>{[order.shipping?.address, order.shipping?.ward, order.shipping?.district, order.shipping?.province].filter(Boolean).join(', ') || '—'}</span>
                 </div>
               </div>
+
+              {/* ── Modal sửa địa chỉ giao hàng ── */}
+              {shippingEditOpen && (
+                <div className="od-overlay" onClick={e => { if (e.target === e.currentTarget) setShippingEditOpen(false); }}>
+                  <div className="od-modal" style={{ maxWidth: 520 }}>
+                    <div className="od-modal-hd">
+                      <div>
+                        <div className="od-modal-title">
+                          <i className="fas fa-map-marker-alt me-2" style={{ color: '#ea580c' }} />Thay đổi địa chỉ giao hàng
+                        </div>
+                        <div className="od-modal-sub">Cập nhật thông tin nhận hàng cho đơn này</div>
+                      </div>
+                      <button className="od-modal-x" onClick={() => setShippingEditOpen(false)}><i className="fas fa-times" /></button>
+                    </div>
+                    <div className="od-modal-bd">
+                      <div style={{ marginBottom: 14 }}>
+                        <label className="od-modal-label">Họ và tên *</label>
+                        <input className="od-textarea" style={{ minHeight: 'auto', padding: '10px 14px' }} placeholder="Ví dụ: Nguyễn Văn A"
+                          value={shippingForm.fullname}
+                          onChange={e => setShippingForm(p => ({ ...p, fullname: e.target.value }))}
+                        />
+                      </div>
+                      <div style={{ marginBottom: 14 }}>
+                        <label className="od-modal-label">Số điện thoại *</label>
+                        <input className="od-textarea" style={{ minHeight: 'auto', padding: '10px 14px' }} placeholder="Ví dụ: 0987654321"
+                          value={shippingForm.phone}
+                          onChange={e => setShippingForm(p => ({ ...p, phone: e.target.value }))}
+                        />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                        <div>
+                          <label className="od-modal-label">Tỉnh / Thành phố *</label>
+                          <input className="od-textarea" style={{ minHeight: 'auto', padding: '10px 14px' }} placeholder="Ví dụ: Hà Nội"
+                            value={shippingForm.province}
+                            onChange={e => setShippingForm(p => ({ ...p, province: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="od-modal-label">Quận / Huyện / Phường / Xã *</label>
+                          <input className="od-textarea" style={{ minHeight: 'auto', padding: '10px 14px' }} placeholder="Ví dụ: Quận Cầu Giấy"
+                            value={shippingForm.ward}
+                            onChange={e => setShippingForm(p => ({ ...p, ward: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: 4 }}>
+                        <label className="od-modal-label">Địa chỉ chi tiết *</label>
+                        <input className="od-textarea" style={{ minHeight: 'auto', padding: '10px 14px' }} placeholder="Số nhà, tên đường, ngõ ngách..."
+                          value={shippingForm.address_detail}
+                          onChange={e => setShippingForm(p => ({ ...p, address_detail: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="od-modal-ft">
+                      <button className="od-modal-btn-no" onClick={() => setShippingEditOpen(false)} disabled={shippingEditLoading}>Hủy bỏ</button>
+                      <button className="od-modal-btn-yes" disabled={shippingEditLoading} onClick={handleUpdateShipping}
+                        style={{
+                          background: shippingEditLoading ? '#d1d5db' : 'linear-gradient(135deg,#ea580c,#c2410c)',
+                          boxShadow: shippingEditLoading ? 'none' : '0 4px 14px rgba(234,88,12,0.3)',
+                        }}
+                      >
+                        {shippingEditLoading ? <><i className="fas fa-spinner fa-spin me-2"/> Đang lưu...</> : <><i className="fas fa-save me-2"/> Lưu thay đổi</>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Payment */}
               <div className="od-card">
