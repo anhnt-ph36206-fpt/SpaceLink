@@ -27,7 +27,13 @@ class CommentResource extends JsonResource
             'product_id' => $this->product_id,
             'parent_id'  => $this->parent_id,
 
+            'product'    => $this->when(
+                $this->resource->relationLoaded('product') && $this->product,
+                fn() => ['id' => $this->product->id, 'name' => $this->product->name]
+            ),
+
             'replies'       => CommentResource::collection($this->whenLoaded('replies')),
+            'allReplies'    => CommentResource::collection($this->whenLoaded('allReplies')),
             'replies_count' => $this->when(
                 isset($this->replies_count),
                 $this->replies_count

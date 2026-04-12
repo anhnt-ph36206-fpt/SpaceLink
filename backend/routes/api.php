@@ -243,6 +243,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'staff'])->g
     Route::delete('reviews/{id}', [AdminReviewController::class, 'destroy']);
 
     Route::get('comments', [AdminCommentController::class, 'index']);
+    Route::get('comments/{comment}', [AdminCommentController::class, 'show']);
     Route::patch('comments/{comment}/approve', [AdminCommentController::class, 'approve']);
     Route::patch('comments/{comment}/reject', [AdminCommentController::class, 'reject']);
     Route::patch('comments/{comment}/toggle-hide', [AdminCommentController::class, 'toggleHide']);
