@@ -23,6 +23,9 @@ class OrderController extends Controller
     // Trạng thái đã trừ kho (dùng để quyết định có hoàn kho khi cancel không)
     private const STOCK_DEDUCTED_STATUSES = ['confirmed', 'processing', 'shipping', 'delivered', 'completed'];
 
+    // Ngưỡng bắt buộc thanh toán VNPAY (đơn > 100 triệu)
+    private const VNPAY_REQUIRED_THRESHOLD = 100000000;
+
     // =========================================================================
     // GET /api/client/orders — Danh sách đơn hàng của user hiện tại
     // =========================================================================
@@ -495,6 +498,14 @@ class OrderController extends Controller
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Chỉ có thể chuyển COD khi đơn dùng VNPAY, chưa thanh toán và đang chờ xử lý.',
+            ], 422);
+        }
+
+        // Không cho chuyển COD nếu đơn hàng > 100 triệu
+        if ($order->total_amount > self::VNPAY_REQUIRED_THRESHOLD) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Đơn hàng trên 100 triệu đồng bắt buộc thanh toán qua VNPAY, không thể chuyển sang COD.',
             ], 422);
         }
 

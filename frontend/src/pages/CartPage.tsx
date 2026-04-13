@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCart, type CartItem } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { axiosInstance } from '../api/axios';
@@ -22,6 +22,7 @@ const CartPage: React.FC = () => {
     const { items, removeFromCart, updateQty, loading, updatingItems } = useCart();
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Chỉ dùng để hiển thị banner thông báo (không block)
     const [pendingOrderId, setPendingOrderId] = useState<string | null>(
@@ -98,6 +99,26 @@ const CartPage: React.FC = () => {
     const [editingItem, setEditingItem] = useState<CartItem | null>(null);
     const [selectedAttrs, setSelectedAttrs] = useState<Record<string, number>>({});
     const [isUpdating, setIsUpdating] = useState(false);
+    // Track items that show stock limit warning
+    const [stockWarningIds, setStockWarningIds] = useState<Set<number>>(new Set());
+    // Real-time stock issues (from check-stock API or from checkout redirect)
+    const [stockIssues, setStockIssues] = useState<Map<number, { status: string; available: number; message: string }>>(() => {
+        // Nhận stock issues từ CheckoutPage khi bấm "Quay lại giỏ hàng"
+        const fromCheckout = (location.state as any)?.stockIssues;
+        if (fromCheckout && Array.isArray(fromCheckout)) {
+            const map = new Map<number, { status: string; available: number; message: string }>();
+            fromCheckout.forEach((issue: any) => {
+                map.set(issue.variant_id, {
+                    status: issue.status || 'out_of_stock',
+                    available: issue.available ?? 0,
+                    message: issue.message || 'Sản phẩm đã hết hàng',
+                });
+            });
+            return map;
+        }
+        return new Map();
+    });
+    const [checkingStock, setCheckingStock] = useState(false);
 
     const handleDeleteSelected = async () => {
         for (const id of selectedIds) {
@@ -153,13 +174,61 @@ const CartPage: React.FC = () => {
         }
     };
 
-    const handleCheckout = () => {
+    const handleCheckout = async () => {
         if (!isAuthenticated) {
             toast.warning('Vui lòng đăng nhập để tiến hành thanh toán!');
             return;
         }
 
         if (selectedItems.length === 0) return;
+
+        // Kiểm tra local trước: nếu sản phẩm nào stock=0 trong cart, chặn ngay
+        const localIssues = selectedItems.filter(i => i.stock <= 0 || i.quantity > i.stock);
+        if (localIssues.length > 0) {
+            const issueMap = new Map<number, { status: string; available: number; message: string }>();
+            localIssues.forEach(item => {
+                issueMap.set(item.variantId!, {
+                    status: item.stock <= 0 ? 'out_of_stock' : 'insufficient',
+                    available: item.stock,
+                    message: item.stock <= 0
+                        ? `Sản phẩm "${item.name}" đã hết hàng.`
+                        : `Sản phẩm "${item.name}" chỉ còn ${item.stock} trong kho.`,
+                });
+            });
+            setStockIssues(issueMap);
+            toast.error('Một số sản phẩm đã hết hàng. Vui lòng kiểm tra lại giỏ hàng.');
+            return;
+        }
+
+        // Real-time stock check trước khi checkout (bắt thêm trường hợp race condition)
+        setCheckingStock(true);
+        setStockIssues(new Map());
+        try {
+            const res = await axiosInstance.post('/client/cart/check-stock', {
+                items: selectedItems.map(i => ({ variant_id: i.variantId, quantity: i.quantity }))
+            });
+
+            if (res.data.status === 'stock_issue' && res.data.issues?.length > 0) {
+                const issueMap = new Map<number, { status: string; available: number; message: string }>();
+                res.data.issues.forEach((issue: any) => {
+                    issueMap.set(issue.variant_id, {
+                        status: issue.status,
+                        available: issue.available,
+                        message: issue.message,
+                    });
+                });
+                setStockIssues(issueMap);
+                // Refresh cart để cập nhật stock mới nhất
+                await refreshCart();
+                toast.error('Một số sản phẩm đã hết hàng hoặc không đủ số lượng. Vui lòng kiểm tra lại.');
+                return;
+            }
+        } catch {
+            // Nếu API lỗi, vẫn cho checkout (backend sẽ validate lần nữa)
+        } finally {
+            setCheckingStock(false);
+        }
+
         navigate('/checkout', {
             state: {
                 selectedCartItemIds: Array.from(selectedIds),
@@ -264,7 +333,7 @@ const CartPage: React.FC = () => {
                             {items.map((item, idx) => (
                                 <div
                                     key={item.id}
-                                    className={`p-2 p-md-3 d-flex gap-2 gap-md-3 align-items-start align-items-md-center cart-item-row ${selectedIds.has(item.id) ? 'cart-item-selected' : ''} ${idx !== items.length - 1 ? 'border-bottom' : ''}`}
+                                    className={`p-2 p-md-3 d-flex gap-2 gap-md-3 align-items-start align-items-md-center cart-item-row ${selectedIds.has(item.id) ? 'cart-item-selected' : ''} ${idx !== items.length - 1 ? 'border-bottom' : ''} ${stockIssues.has(item.variantId!) ? 'cart-item-stock-issue' : ''}`}
                                 >
                                     {/* Checkbox */}
                                     <div style={{ flexShrink: 0 }}>
@@ -323,10 +392,19 @@ const CartPage: React.FC = () => {
 
                                             <div className="mt-2 text-danger fw-bold">{formatVND(item.price)}</div>
 
-                                            {item.stock < item.quantity && (
-                                                <div className="mt-1 text-danger small">
+                                            {stockWarningIds.has(item.id) && item.quantity >= item.stock && !stockIssues.has(item.variantId!) && (
+                                                <div className="mt-1 text-danger small" style={{ animation: 'fadeIn 0.3s ease' }}>
                                                     <InfoCircleOutlined className="me-1" />
-                                                    Chỉ còn {item.stock} sản phẩm trong kho
+                                                    Sản phẩm chỉ còn {item.stock} trong kho
+                                                </div>
+                                            )}
+                                            {stockIssues.has(item.variantId!) && (
+                                                <div className="stock-issue-badge mt-2" style={{ animation: 'fadeIn 0.3s ease' }}>
+                                                    <ExclamationCircleOutlined className="me-1" />
+                                                    {stockIssues.get(item.variantId!)!.status === 'out_of_stock'
+                                                        ? 'HẾT HÀNG'
+                                                        : `Chỉ còn ${stockIssues.get(item.variantId!)!.available} sản phẩm`
+                                                    }
                                                 </div>
                                             )}
                                         </div>
@@ -356,8 +434,19 @@ const CartPage: React.FC = () => {
                                                 />
                                                 <button
                                                     className="btn btn-light border-0 px-2"
-                                                    onClick={() => updateQty(item.id, item.quantity + 1)}
-                                                    disabled={item.quantity >= item.stock || updatingItems.has(item.id)}
+                                                    onClick={() => {
+                                                        if (item.quantity >= item.stock) {
+                                                            // Already at max, just flash the warning
+                                                            setStockWarningIds(prev => {
+                                                                const next = new Set(prev);
+                                                                next.add(item.id);
+                                                                return next;
+                                                            });
+                                                            return;
+                                                        }
+                                                        updateQty(item.id, item.quantity + 1);
+                                                    }}
+                                                    disabled={updatingItems.has(item.id)}
                                                 >
                                                     <PlusOutlined />
                                                 </button>
@@ -415,11 +504,11 @@ const CartPage: React.FC = () => {
                                 <button
                                     className="btn w-100 py-3 rounded-pill fw-bold btn-primary"
                                     onClick={handleCheckout}
-                                    disabled={selectedIds.size === 0}
+                                    disabled={selectedIds.size === 0 || checkingStock}
                                     style={{ fontSize: 16 }}
                                 >
-                                    <ShoppingCartOutlined className="me-2" />
-                                    THANH TOÁN ({selectedIds.size})
+                                    {checkingStock ? <Spin size="small" className="me-2" /> : <ShoppingCartOutlined className="me-2" />}
+                                    {checkingStock ? 'ĐANG KIỂM TRA...' : `THANH TOÁN (${selectedIds.size})`}
                                 </button>
                             </Tooltip>
 
@@ -559,6 +648,14 @@ const CartPage: React.FC = () => {
                 .cart-item-selected:hover { background: #e8f0fe; }
                 
                 .cart-item-img-wrapper { width: 80px; height: 80px; }
+                .cart-item-stock-issue { background: #fff5f5 !important; border-left: 3px solid #dc3545 !important; }
+                .cart-item-stock-issue:hover { background: #fee !important; }
+                .stock-issue-badge {
+                    display: inline-flex; align-items: center; gap: 4px;
+                    background: #dc3545; color: #fff; font-size: 12px; font-weight: 700;
+                    padding: 3px 10px; border-radius: 4px; letter-spacing: 0.3px;
+                }
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
                 @media (min-width: 768px) {
                     .cart-item-img-wrapper { width: 100px; height: 100px; }
                     .border-md-0 { border: none !important; }

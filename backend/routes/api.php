@@ -107,6 +107,7 @@ Route::prefix('client')->name('client.')->group(function () {
     Route::prefix('cart')->group(function () {
         Route::get('/', [CartController::class, 'index']);
         Route::post('/add', [CartController::class, 'addToCart']);
+        Route::post('/check-stock', [CartController::class, 'checkStock']);
         Route::put('/update/{cart_item_id}', [CartController::class, 'updateQuantity']);
         Route::delete('/remove/{cart_item_id}', [CartController::class, 'remove']);
         Route::delete('/clear', [CartController::class, 'clear']);

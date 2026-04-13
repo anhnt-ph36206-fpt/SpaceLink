@@ -21,7 +21,8 @@ import {
     Modal,
     Divider,
     Drawer,
-    Empty
+    Empty,
+    Result
 } from 'antd';
 import {
     ShoppingCartOutlined,
@@ -35,7 +36,8 @@ import {
     HomeOutlined, PlusOutlined,
     GiftOutlined,
     ClockCircleOutlined,
-    PercentageOutlined
+    PercentageOutlined,
+    ExclamationCircleOutlined
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -60,6 +62,9 @@ interface LocationData {
 
 const formatVND = (v: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
+
+// Ngưỡng bắt buộc thanh toán VNPAY (đơn > 100 triệu)
+const VNPAY_REQUIRED_THRESHOLD = 100000000;
 
 const imgUrl = (path?: string) => {
     if (!path) return '/assets/placeholder.png';
@@ -101,6 +106,10 @@ const CheckoutPage: React.FC = () => {
     const [lastOrderCode, setLastOrderCode] = useState<string>('');
     const [lastOrderData, setLastOrderData] = useState<any>(null);
 
+    // -- Stock Error State --
+    const [stockErrors, setStockErrors] = useState<any[]>([]);
+    const [showStockErrorModal, setShowStockErrorModal] = useState(false);
+
     // -- Determine Items to Checkout --
     const buyNowItem: CheckoutItem | null = location.state?.buyNowItem || null;
     const isBuyNow = !!buyNowItem;
@@ -137,6 +146,16 @@ const CheckoutPage: React.FC = () => {
     const discountAmount = appliedVoucher?.discount_amount || 0;
     const shippingFee = subtotal >= 500000 ? 0 : 30000;
     const total = Math.max(0, subtotal + shippingFee - discountAmount);
+
+    // Bắt buộc VNPAY nếu tổng tiền > 100 triệu
+    const isVnpayRequired = total > VNPAY_REQUIRED_THRESHOLD;
+
+    // Auto-switch sang VNPAY khi vượt ngưỡng
+    useEffect(() => {
+        if (isVnpayRequired && currentPaymentMethod !== 'vnpay') {
+            form.setFieldsValue({ payment_method: 'vnpay' });
+        }
+    }, [isVnpayRequired, currentPaymentMethod, form]);
 
     // -- Effects: Fetch Initial Data --
     useEffect(() => {
@@ -233,6 +252,24 @@ const CheckoutPage: React.FC = () => {
         }
 
         setSubmitting(true);
+        setStockErrors([]);
+
+        // Kiểm tra tồn kho real-time trước khi đặt hàng
+        try {
+            const stockRes = await axiosInstance.post('/client/cart/check-stock', {
+                items: displayItems.map(item => ({ variant_id: item.variantId, quantity: item.quantity }))
+            });
+
+            if (stockRes.data.status === 'stock_issue' && stockRes.data.issues?.length > 0) {
+                setStockErrors(stockRes.data.issues);
+                setShowStockErrorModal(true);
+                setSubmitting(false);
+                return;
+            }
+        } catch {
+            // Nếu check-stock API lỗi, vẫn tiếp tục checkout (backend sẽ validate lần nữa)
+        }
+
         try {
             const payload: any = {
                 ...values,
@@ -245,7 +282,6 @@ const CheckoutPage: React.FC = () => {
             };
 
             const res = await axiosInstance.post('/client/checkout', payload);
-            console.log(res.data.status === 'success')
             if (res.data.status === 'success') {
                 const orderData = res.data.data;
                 setLastOrderCode(orderData.order_code);
@@ -266,8 +302,18 @@ const CheckoutPage: React.FC = () => {
                 }
             }
         } catch (error: any) {
-            console.log(error)
-            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+            // Xử lý lỗi 409 từ backend (stock depleted)
+            if (error.response?.status === 409) {
+                const errors = error.response?.data?.errors;
+                if (errors && Array.isArray(errors)) {
+                    setStockErrors(errors.map((msg: string) => ({ message: msg })));
+                } else {
+                    setStockErrors([{ message: error.response?.data?.message || 'Sản phẩm đã hết hàng' }]);
+                }
+                setShowStockErrorModal(true);
+            } else {
+                toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+            }
         } finally {
             setSubmitting(false);
         }
@@ -465,11 +511,15 @@ const CheckoutPage: React.FC = () => {
                                     <Radio.Group className="w-100 payment-group">
                                         <Row gutter={[16, 16]}>
                                             <Col span={24}>
-                                                <div className={`payment-card p-3 rounded-3 border-2 transition-all ${currentPaymentMethod === 'cod' ? 'active' : ''}`}>
-                                                    <Radio value="cod" className="w-100">
+                                                <div className={`payment-card p-3 rounded-3 border-2 transition-all ${currentPaymentMethod === 'cod' ? 'active' : ''} ${isVnpayRequired ? 'payment-card-disabled' : ''}`}>
+                                                    <Radio value="cod" className="w-100" disabled={isVnpayRequired}>
                                                         <div className="ms-2">
-                                                            <Text strong>Thanh toán khi nhận hàng (COD)</Text>
-                                                            <div className="text-muted small">Cảm ơn bạn đã tin dùng sản phẩm của chúng tôi.</div>
+                                                            <Text strong style={isVnpayRequired ? { color: '#999' } : undefined}>Thanh toán khi nhận hàng (COD)</Text>
+                                                            <div className="text-muted small">
+                                                                {isVnpayRequired
+                                                                    ? 'Không khả dụng cho đơn hàng trên 100 triệu đồng.'
+                                                                    : 'Cảm ơn bạn đã tin dùng sản phẩm của chúng tôi.'}
+                                                            </div>
                                                         </div>
                                                     </Radio>
                                                 </div>
@@ -487,6 +537,14 @@ const CheckoutPage: React.FC = () => {
                                         </Row>
                                     </Radio.Group>
                                 </Form.Item>
+                                {isVnpayRequired && (
+                                    <div className="vnpay-required-notice mt-3 p-3 rounded-3">
+                                        <InfoCircleOutlined style={{ color: '#F28B00', marginRight: 8 }} />
+                                        <Text style={{ fontSize: 13, color: '#b45309' }}>
+                                            Đơn hàng trên <Text strong style={{ color: '#b45309' }}>100 triệu đồng</Text> bắt buộc thanh toán qua VNPAY để đảm bảo an toàn giao dịch.
+                                        </Text>
+                                    </div>
+                                )}
                             </Card>
 
                             <Form.Item label={<Text strong className="text-muted small">Ghi chú đơn hàng (Tùy chọn)</Text>} name="note">
@@ -601,6 +659,35 @@ const CheckoutPage: React.FC = () => {
                 </div>
                 <Title level={4}>Lưu địa chỉ này?</Title>
                 <Text type="secondary">Bạn có muốn lưu địa chỉ này vào sổ cá nhân cho lần mua sau không?</Text>
+            </Modal>
+
+            {/* Stock Error Modal */}
+            <Modal
+                open={showStockErrorModal}
+                onCancel={() => setShowStockErrorModal(false)}
+                footer={[
+                    <Button key="back" onClick={() => setShowStockErrorModal(false)} style={{ borderRadius: 8 }}>Đóng</Button>,
+                    <Button key="cart" type="primary" danger onClick={() => navigate('/cart', { state: { stockIssues: stockErrors } })} style={{ borderRadius: 8, fontWeight: 600 }}>
+                        Quay lại giỏ hàng
+                    </Button>
+                ]}
+                centered
+                width={480}
+            >
+                <Result
+                    status="error"
+                    title="Sản phẩm đã hết hàng"
+                    subTitle="Rất tiếc, một số sản phẩm trong đơn hàng không còn đủ số lượng."
+                    style={{ padding: '16px 0' }}
+                />
+                <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                    {stockErrors.map((err, idx) => (
+                        <div key={idx} className="d-flex align-items-start gap-2 p-3 mb-2 rounded-3" style={{ background: '#fff5f5', border: '1px solid #fecaca' }}>
+                            <ExclamationCircleOutlined style={{ color: '#dc3545', marginTop: 2, flexShrink: 0 }} />
+                            <Text style={{ fontSize: 13, color: '#991b1b' }}>{err.message}</Text>
+                        </div>
+                    ))}
+                </div>
             </Modal>
 
             {/* Voucher Drawer */}
@@ -754,6 +841,10 @@ const CheckoutPage: React.FC = () => {
                 .sticky-summary { position: sticky; top: 24px; }
                 .btn-checkout { height: 54px; border-radius: 8px; font-weight: 700; font-size: 16px; background: #F28B00; border: none; }
                 .btn-checkout:hover { background: #e07a00 !important; box-shadow: 0 6px 20px rgba(242, 139, 0, 0.3); }
+                
+                .payment-card-disabled { opacity: 0.55; cursor: not-allowed; pointer-events: none; background: #fafafa !important; }
+                .payment-card-disabled:hover { border-color: #f0f0f0 !important; }
+                .vnpay-required-notice { background: #fff7ed; border: 1px solid #fed7aa; }
                 
                 .animate-fade-in { animation: fadeIn 0.4s ease; }
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

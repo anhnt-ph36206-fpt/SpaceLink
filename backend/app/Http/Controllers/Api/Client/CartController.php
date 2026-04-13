@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AddToCartRequest;
 use App\Http\Requests\UpdateCartRequest;
 use App\Models\Cart;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Http\Request;
@@ -36,6 +38,29 @@ class CartController extends Controller
             return (float) ($item->variant->sale_price ?? $item->variant->price);
         }
         return (float) ($item->product->sale_price ?? $item->product->price);
+    }
+
+    /**
+     * Tính tồn kho hiệu lực: variant.quantity - tổng qty đang trong đơn pending của NGƯỜI KHÁC.
+     * Loại trừ đơn pending của chính user hiện tại (để không bị chặn bởi đơn cũ của mình).
+     */
+    private function getEffectiveStock(int $variantId, ?int $excludeUserId = null): int
+    {
+        $variant = ProductVariant::find($variantId);
+        if (!$variant) return 0;
+
+        // Tổng qty đang bị "soft reserve" bởi các đơn pending của NGƯỜI KHÁC
+        $query = OrderItem::where('variant_id', $variantId)
+            ->whereHas('order', function ($q) use ($excludeUserId) {
+                $q->where('status', 'pending');
+                if ($excludeUserId) {
+                    $q->where('user_id', '!=', $excludeUserId);
+                }
+            });
+
+        $pendingQty = $query->sum('quantity');
+
+        return max(0, $variant->quantity - $pendingQty);
     }
 
     // =========================================================================
@@ -70,7 +95,7 @@ class CartController extends Controller
         $cartItems = $query->latest()->get();
 
         // Tính toán lại giá theo DB mới nhất
-        $formattedItems = $cartItems->map(function (Cart $item) {
+        $formattedItems = $cartItems->map(function (Cart $item) use ($ctx) {
             $effectivePrice = $this->getEffectivePrice($item);
 
             $availableVariants = ProductVariant::where('product_id', $item->product_id)
@@ -110,8 +135,8 @@ class CartController extends Controller
                 'effective_price' => $effectivePrice,
                 'quantity'        => $item->quantity,
                 'line_total'      => $effectivePrice * $item->quantity,
-                // Lazy deduction: stock_available = DB quantity trực tiếp (không trừ kho khi add to cart)
-                'stock_available' => $item->variant?->quantity ?? 0,
+                // Tồn kho hiệu lực: trừ qty đang trong đơn pending của NGƯỜI KHÁC
+                'stock_available' => $this->getEffectiveStock($item->variant_id, $ctx['user_id']),
                 'available_variants' => $availableVariants,
             ];
         });
@@ -154,8 +179,11 @@ class CartController extends Controller
                     throw new \Exception('Biến thể sản phẩm không còn hoạt động hoặc không tồn tại.', 404);
                 }
 
-                // Kiểm tra tồn kho (validate only — KHÔNG trừ kho)
+                // Kiểm tra tồn kho thực (cho phép thêm giỏ nếu kho còn hàng)
                 if ($variant->quantity < $request->quantity) {
+                    if ($variant->quantity <= 0) {
+                        throw new \Exception('Sản phẩm đã hết hàng.', 409);
+                    }
                     throw new \Exception("Sản phẩm chỉ còn {$variant->quantity} trong kho.", 409);
                 }
 
@@ -248,8 +276,11 @@ class CartController extends Controller
                     throw new \Exception('Biến thể không hợp lệ hoặc đã bị vô hiệu hóa.', 400);
                 }
 
-                // Lazy deduction: chỉ validate stock, KHÔNG trừ/hoàn kho
+                // Kiểm tra tồn kho thực (cho phép cập nhật nếu kho còn hàng)
                 if ($variant->quantity < $newQuantity) {
+                    if ($variant->quantity <= 0) {
+                        throw new \Exception('Sản phẩm đã hết hàng.', 409);
+                    }
                     throw new \Exception("Sản phẩm chỉ còn {$variant->quantity} trong kho.", 409);
                 }
 
@@ -454,7 +485,56 @@ class CartController extends Controller
     }
 
     // =========================================================================
-    // 7. POST /api/client/cart/release-expired — Giải phóng giỏ hàng hết hạn (internal/scheduler)
+    // 7. POST /api/client/cart/check-stock — Kiểm tra tồn kho real-time
+    // Dùng trước khi checkout để cảnh báo sản phẩm đã hết hàng
+    // =========================================================================
+    public function checkStock(Request $request)
+    {
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.variant_id' => 'required|integer',
+            'items.*.quantity' => 'required|integer|min:1',
+        ]);
+
+        $results = [];
+        $currentUserId = auth('sanctum')->id();
+        foreach ($request->items as $item) {
+            $variant = ProductVariant::with('product:id,name')
+                ->select('id', 'product_id', 'quantity', 'is_active')
+                ->find($item['variant_id']);
+
+            if (!$variant || !$variant->is_active) {
+                $results[] = [
+                    'variant_id' => $item['variant_id'],
+                    'available' => 0,
+                    'requested' => $item['quantity'],
+                    'status' => 'unavailable',
+                    'message' => 'Sản phẩm đã ngừng bán.',
+                ];
+            } else {
+                $effectiveStock = $this->getEffectiveStock($item['variant_id'], $currentUserId);
+                if ($effectiveStock < $item['quantity']) {
+                    $results[] = [
+                        'variant_id' => $item['variant_id'],
+                        'available' => $effectiveStock,
+                        'requested' => $item['quantity'],
+                        'status' => $effectiveStock === 0 ? 'out_of_stock' : 'insufficient',
+                        'message' => $effectiveStock === 0
+                            ? "Sản phẩm \"{$variant->product->name}\" đã hết hàng."
+                            : "Sản phẩm \"{$variant->product->name}\" chỉ còn {$effectiveStock} trong kho.",
+                    ];
+                }
+            }
+        }
+
+        return response()->json([
+            'status' => empty($results) ? 'ok' : 'stock_issue',
+            'issues' => $results,
+        ]);
+    }
+
+    // =========================================================================
+    // 8. POST /api/client/cart/release-expired — Giải phóng giỏ hàng hết hạn (internal/scheduler)
     // Lazy deduction: Chỉ xóa cart items, KHÔNG hoàn kho
     // =========================================================================
     public function releaseExpiredReservations(): void

@@ -20,6 +20,8 @@ use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
+    // Ngưỡng bắt buộc thanh toán VNPAY (đơn > 100 triệu)
+    private const VNPAY_REQUIRED_THRESHOLD = 100000000;
     public function checkVoucher(\Illuminate\Http\Request $request)
     {
         $user = auth('sanctum')->user();
@@ -109,7 +111,7 @@ class CheckoutController extends Controller
         }
 
         // 2. Pre-flight stock check: validate nhanh toàn bộ items TRƯỚC khi vào transaction
-        // Lazy deduction: chỉ validate, KHÔNG trừ kho
+        // Tính tồn kho hiệu lực: variant.quantity - tổng qty trong đơn pending
         $stockErrors = [];
         foreach ($cartItems as $item) {
             if (!$item->variant_id)
@@ -121,12 +123,21 @@ class CheckoutController extends Controller
             if (!$currentVariant || !$currentVariant->is_active) {
                 $stockErrors[] = "Sản phẩm \"{$item->product->name}\" đã ngừng bán.";
             } else {
-                // Lazy deduction: so sánh trực tiếp variant.quantity với qty cần mua
-                if ($currentVariant->quantity < $item->quantity) {
-                    $available = $currentVariant->quantity;
-                    $stockErrors[] = $available === 0
+                // Tồn kho hiệu lực: trừ qty đang trong đơn pending của NGƯỜI KHÁC
+                $pendingQty = \App\Models\OrderItem::where('variant_id', $item->variant_id)
+                    ->whereHas('order', function ($q) use ($user) {
+                        $q->where('status', 'pending');
+                        if ($user) {
+                            $q->where('user_id', '!=', $user->id);
+                        }
+                    })
+                    ->sum('quantity');
+                $effectiveStock = max(0, $currentVariant->quantity - $pendingQty);
+
+                if ($effectiveStock < $item->quantity) {
+                    $stockErrors[] = $effectiveStock === 0
                         ? "Sản phẩm \"{$item->product->name}\" đã hết hàng."
-                        : "Sản phẩm \"{$item->product->name}\" chỉ còn {$available} trong kho (bạn đang mua {$item->quantity}).";
+                        : "Sản phẩm \"{$item->product->name}\" chỉ còn {$effectiveStock} trong kho (bạn đang mua {$item->quantity}).";
                 }
             }
         }
@@ -191,6 +202,11 @@ class CheckoutController extends Controller
                     [$voucher, $discountValue] = $this->applyVoucher($request->voucher_code, $subtotal, $user?->id, $cartItems);
                 }
                 $totalAmount = max(0, $subtotal + $shippingFee - $discountValue);
+
+                // Bắt buộc thanh toán VNPAY nếu tổng tiền > 100 triệu
+                if ($totalAmount > self::VNPAY_REQUIRED_THRESHOLD && $request->payment_method !== 'vnpay') {
+                    throw new \Exception('Đơn hàng trên 100 triệu đồng bắt buộc thanh toán qua VNPAY.');
+                }
 
                 // 6. Create Order
                 $order = Order::create([
