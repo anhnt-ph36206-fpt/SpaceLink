@@ -136,7 +136,7 @@ const ProductDetailPage: React.FC = () => {
                 axiosInstance.get(`/products/${id}/reviews`, { params: { per_page: 1 } })
                     .then(r => {
                         if (r.data?.stats) setReviewStats(r.data.stats);
-                    }).catch(() => {});
+                    }).catch(() => { });
 
                 // Set default image
                 const primary = p.images?.find(i => i.is_primary) || p.images?.[0];
@@ -695,7 +695,7 @@ const ProductDetailPage: React.FC = () => {
 
                 {/* ── Content Sections (Vertical Layout) ─────────────── */}
                 <div className="card border-0 shadow-sm p-4 p-md-5" style={{ borderRadius: 16 }}>
-                    
+
                     {/* 1. Mô tả */}
                     <div className="mb-5 pb-4 border-bottom">
                         <div className="d-flex align-items-center gap-2 mb-4">

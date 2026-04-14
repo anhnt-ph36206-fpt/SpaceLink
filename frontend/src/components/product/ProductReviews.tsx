@@ -14,7 +14,7 @@ export interface ReviewItem {
     admin_reply?: string;
     replied_at?: string;
     created_at: string;
-    variant_info?: { attrs?: { name: string; value: string }[]; [k: string]: unknown } | null;
+    variant_info?: { attrs?: { name: string; value: string }[];[k: string]: unknown } | null;
     user?: { id: number; fullname: string; avatar?: string | null };
 }
 
@@ -26,6 +26,7 @@ export interface ReviewStats {
 
 interface ProductReviewsProps {
     productId: string;
+    variants?: any[];
     onStatsChange?: (stats: ReviewStats) => void;
 }
 
@@ -36,16 +37,16 @@ const STAR_LABELS = ["", "Rất tệ", "Tệ", "Bình thường", "Tốt", "Xu�
 const formatVariant = (variantInfo: ReviewItem["variant_info"]): string => {
     if (!variantInfo) return "";
     if (Array.isArray(variantInfo.attrs) && variantInfo.attrs.length > 0) {
-        const parts = (variantInfo.attrs as { name?: string | null; value?: string | null }[])
+        const parts = (variantInfo.attrs as { value?: string | null }[])
             .filter((a) => a.value)
-            .map((a) => (a.name ? `${a.name}: ${a.value}` : String(a.value)));
+            .map((a) => String(a.value));
         if (parts.length > 0) return parts.join(" · ");
     }
     // flat format e.g. { "Màu sắc": "Đen" }
     const skip = ["sku", "image", "attrs"];
     const entries = Object.entries(variantInfo)
         .filter(([k, v]) => !skip.includes(k) && typeof v === "string" && v !== "")
-        .map(([k, v]) => `${k}: ${v}`);
+        .map(([_, v]) => String(v));
     return entries.join(" · ");
 };
 
@@ -74,7 +75,7 @@ const Stars: React.FC<{ value: number; size?: number }> = ({ value, size = 14 })
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const ProductReviews: React.FC<ProductReviewsProps> = ({ productId, onStatsChange }) => {
+const ProductReviews: React.FC<ProductReviewsProps> = ({ productId, variants, onStatsChange }) => {
     const { isAuthenticated } = useAuth();
 
     // Reviews data
@@ -84,6 +85,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId, onStatsChang
     const [reviewLastPage, setReviewLastPage] = useState(1);
     const [reviewsLoading, setReviewsLoading] = useState(false);
     const [filterRating, setFilterRating] = useState<number | null>(null);
+    const [filterVariant, setFilterVariant] = useState<number | null>(null);
 
     // Write form
     const [eligibleOrderItemId, setEligibleOrderItemId] = useState<number | null | "loading">("loading");
@@ -95,11 +97,12 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId, onStatsChang
     const [showWriteForm, setShowWriteForm] = useState(false);
 
     // ── Fetch reviews ─────────────────────────────────────────────────────────
-    const fetchReviews = useCallback((page = 1, rating?: number | null) => {
+    const fetchReviews = useCallback((page = 1, rating?: number | null, variantId?: number | null) => {
         if (!productId) return;
         setReviewsLoading(true);
         const params: Record<string, unknown> = { page, per_page: 8 };
         if (rating) params.rating = rating;
+        if (variantId) params.variant_id = variantId;
         axiosInstance
             .get(`/products/${productId}/reviews`, { params })
             .then((res) => {
@@ -110,14 +113,21 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId, onStatsChang
                 setReviewStats(stats);
                 onStatsChange?.(stats);
             })
-            .catch(() => {})
+            .catch(() => { })
             .finally(() => setReviewsLoading(false));
     }, [productId, onStatsChange]);
 
-    useEffect(() => { fetchReviews(reviewPage, filterRating); }, [productId, reviewPage, filterRating]);
+    useEffect(() => { fetchReviews(reviewPage, filterRating, filterVariant); }, [productId, reviewPage, filterRating, filterVariant]);
 
     const handleFilterRating = (star: number | null) => {
+        if (filterRating === star) star = null;
         setFilterRating(star);
+        setReviewPage(1);
+    };
+
+    const handleFilterVariant = (vId: number | null) => {
+        if (filterVariant === vId) vId = null;
+        setFilterVariant(vId);
         setReviewPage(1);
     };
 
@@ -236,17 +246,59 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId, onStatsChang
             </div>
 
             {/* ── Filter pills ── */}
-            {filterRating && (
-                <div style={{ marginBottom: 16 }}>
-                    <span
-                        style={{ fontSize: 12.5, color: "#6b7280", cursor: "pointer" }}
-                        onClick={() => handleFilterRating(null)}
-                    >
-                        <i className="fas fa-times-circle me-1" style={{ color: "#f59e0b" }} />
-                        Đang lọc: {filterRating} sao — Bỏ lọc
-                    </span>
-                </div>
-            )}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+                <button
+                    onClick={() => { setFilterRating(null); setFilterVariant(null); setReviewPage(1); }}
+                    style={{
+                        padding: "6px 16px", borderRadius: 99, fontSize: 13, fontWeight: 600, border: "1px solid", cursor: "pointer", transition: "all .2s",
+                        background: (!filterRating && !filterVariant) ? "#fffbeb" : "#f8fafc",
+                        borderColor: (!filterRating && !filterVariant) ? "#f59e0b" : "#e5e7eb",
+                        color: (!filterRating && !filterVariant) ? "#d97706" : "#4b5563"
+                    }}
+                >
+                    Tất cả ({total_reviews})
+                </button>
+
+                {[5, 4, 3, 2, 1].map(star => {
+                    const isActive = filterRating === star;
+                    const count = star_distribution?.[star] ?? 0;
+                    return (
+                        <button
+                            key={star}
+                            onClick={() => handleFilterRating(star)}
+                            style={{
+                                padding: "6px 16px", borderRadius: 99, fontSize: 13, fontWeight: 600, border: "1px solid", cursor: "pointer", transition: "all .2s",
+                                display: "flex", alignItems: "center", gap: 4,
+                                background: isActive ? "#fffbeb" : "#f8fafc",
+                                borderColor: isActive ? "#f59e0b" : "#e5e7eb",
+                                color: isActive ? "#d97706" : "#4b5563"
+                            }}
+                        >
+                            {star} <i className="fas fa-star" style={{ color: "#f59e0b", fontSize: 11 }} /> ({count})
+                        </button>
+                    );
+                })}
+
+                {variants?.map(v => {
+                    const label = v.attributes?.map((a: any) => a.value).join(" · ");
+                    if (!label) return null;
+                    const isActive = filterVariant === v.id;
+                    return (
+                        <button
+                            key={v.id}
+                            onClick={() => handleFilterVariant(v.id)}
+                            style={{
+                                padding: "6px 16px", borderRadius: 99, fontSize: 13, fontWeight: 600, border: "1px solid", cursor: "pointer", transition: "all .2s",
+                                background: isActive ? "#fffbeb" : "#f8fafc",
+                                borderColor: isActive ? "#f59e0b" : "#e5e7eb",
+                                color: isActive ? "#d97706" : "#4b5563"
+                            }}
+                        >
+                            {label}
+                        </button>
+                    );
+                })}
+            </div>
 
             {/* ── Write review CTA ── */}
             {isAuthenticated && eligibleOrderItemId !== "loading" && eligibleOrderItemId !== null && !showWriteForm && (
@@ -405,7 +457,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId, onStatsChang
                                 }}
                             >
                                 <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                    {/* Avatar */}
+                                    {/* Avatar */}
                                     <div style={{
                                         width: 42, height: 42, borderRadius: "50%", flexShrink: 0,
                                         overflow: "hidden",

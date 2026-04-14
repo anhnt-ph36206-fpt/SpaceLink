@@ -16,6 +16,7 @@ interface VariantInfo {
 interface OrderItem {
   id: number;
   product_id?: number;
+  variant_id?: number | null;
   product_name: string;
   product_image?: string;
   product_sku?: string;
@@ -2077,7 +2078,7 @@ const OrderDetailPage: React.FC = () => {
                       borderRadius: 99, padding: '2px 10px', display: 'inline-flex', alignItems: 'center', gap: 4,
                     }}>
                       <i className="fas fa-tag" style={{ fontSize: 9 }} />
-                      {parseVariantAttrs(reviewItem.variant_info).map(a => `${a.name}: ${a.value}`).join(' · ')}
+                      {parseVariantAttrs(reviewItem.variant_info).map(a => a.value).join(' · ')}
                     </span>
                   )}
                 </div>

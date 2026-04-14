@@ -61,14 +61,15 @@ class ReviewController extends Controller
                 ], 400);
             }
 
-            // 4. Tạo review
+            // 4. Tạo review (lưu cả variant_id từ order item)
             $review = Review::create([
-                'user_id'       => $user->id,
-                'product_id'    => $orderItem->product_id,
-                'order_item_id' => $orderItem->id,
-                'rating'        => $request->rating,
-                'content'       => $request->content,
-                'images'        => $request->images,
+                'user_id'            => $user->id,
+                'product_id'         => $orderItem->product_id,
+                'product_variant_id' => $orderItem->variant_id,
+                'order_item_id'      => $orderItem->id,
+                'rating'             => $request->rating,
+                'content'            => $request->content,
+                'images'             => $request->images,
             ]);
 
             // 5. Cập nhật is_reviewed của OrderItem
@@ -97,22 +98,70 @@ class ReviewController extends Controller
     {
         $product = Product::findOrFail($productId);
 
-        $reviews = Review::with('user:id,fullname')
-            ->where('product_id', $productId)
-            ->where('is_hidden', false)
-            ->latest()
-            ->paginate(10);
+        $variantId = $request->query('variant_id');
+        $rating = $request->query('rating');
 
-        // Calculate average rating count
+        $query = Review::with(['user:id,fullname', 'variant.attributes.attributeGroup', 'orderItem:id,variant_info'])
+            ->where('product_id', $productId)
+            ->where('is_hidden', false);
+
+        if ($variantId) {
+            $query->where('product_variant_id', $variantId);
+        }
+        
+        if ($rating) {
+            $query->where('rating', $rating);
+        }
+
+        $reviews = $query->latest()->paginate(10);
+
+        $reviews->getCollection()->transform(function ($review) {
+            $variantInfo = [];
+            if ($review->variant && $review->variant->attributes) {
+                foreach ($review->variant->attributes as $attr) {
+                    $groupName = $attr->attributeGroup->name ?? '';
+                    if ($groupName && $attr->value) {
+                         $variantInfo[] = ['name' => $groupName, 'value' => $attr->value];
+                    }
+                }
+            }
+            
+            if (!empty($variantInfo)) {
+                $review->setAttribute('variant_info', ['attrs' => $variantInfo]);
+            } else if ($review->orderItem && isset($review->orderItem->variant_info)) {
+                 $review->setAttribute('variant_info', $review->orderItem->variant_info);
+            }
+            
+            // Xóa relationships đã load để gọn Response nếu không cần
+            unset($review->variant);
+            unset($review->orderItem);
+            
+            return $review;
+        });
+
+        $baseQuery = Review::where('product_id', $productId)->where('is_hidden', false);
+
+        $distribution = (clone $baseQuery)
+            ->selectRaw('rating, count(*) as count')
+            ->groupBy('rating')
+            ->pluck('count', 'rating')
+            ->toArray();
+
+        $starDistribution = [];
+        for ($i = 5; $i >= 1; $i--) {
+            $starDistribution[$i] = $distribution[$i] ?? 0;
+        }
+
         $stats = [
-            'average_rating' => (float) Review::where('product_id', $productId)->where('is_hidden', false)->avg('rating'),
-            'total_reviews'  => Review::where('product_id', $productId)->where('is_hidden', false)->count(),
+            'average_rating'    => (float) (clone $baseQuery)->avg('rating'),
+            'total_reviews'     => (clone $baseQuery)->count(),
+            'star_distribution' => $starDistribution,
         ];
 
         return response()->json([
             'status' => 'success',
             'data'   => $reviews,
-            'stats'  => $stats
+            'stats'  => $stats,
         ]);
     }
 }
