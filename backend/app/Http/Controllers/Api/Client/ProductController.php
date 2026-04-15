@@ -84,7 +84,8 @@ class ProductController extends Controller
             $query->latest();
         }
 
-        $products = $query->paginate(12);
+        $perPage  = min((int) $request->get('per_page', 12), 100);
+        $products = $query->paginate($perPage);
 
         return new ProductCollection($products);
     }
