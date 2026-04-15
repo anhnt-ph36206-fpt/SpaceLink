@@ -277,4 +277,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     Route::get('dashboard/revenue', [DashboardController::class, 'revenue']);
     Route::get('dashboard/sales-by-category', [DashboardController::class, 'salesByCategory']);
     Route::get('dashboard/top-products', [DashboardController::class, 'topProducts']);
+    Route::get('dashboard/orders-stats', [DashboardController::class, 'ordersStats']);
+    Route::get('dashboard/customers-stats', [DashboardController::class, 'customersStats']);
 });
