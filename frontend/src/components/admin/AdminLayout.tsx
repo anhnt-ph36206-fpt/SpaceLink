@@ -81,6 +81,7 @@ const menuItems = [
         key: '/admin/users',
         icon: <TeamOutlined />,
         label: 'Người dùng',
+        adminOnly: true,
     },
     {
         key: '/admin/reviews',
@@ -126,7 +127,7 @@ const AdminLayout: React.FC = () => {
     const [notifOpen, setNotifOpen] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
-    const { user, logout, isLoading } = useAuth();
+    const { user, logout, isLoading, isAdmin } = useAuth();
     const { token } = theme.useToken();
     const { notifications, unreadCount, markAllRead, markRead } = useAdminNotifications();
 
@@ -162,7 +163,12 @@ const AdminLayout: React.FC = () => {
 
     // Protect admin route
     if (!user) return <Navigate to="/login" replace />;
-    if (user.role !== 'admin') return <Navigate to="/" replace />;
+    if (user.role !== 'admin' && user.role !== 'staff') return <Navigate to="/" replace />;
+
+    // Filter menu items: hide adminOnly items from staff
+    const filteredMenuItems = isAdmin
+        ? menuItems
+        : menuItems.filter(item => !(item as any).adminOnly);
 
     const currentLabel = breadcrumbMap[location.pathname] || 'Admin';
 
@@ -256,7 +262,7 @@ const AdminLayout: React.FC = () => {
                     mode="inline"
                     selectedKeys={[location.pathname]}
                     onClick={({ key }) => navigate(key)}
-                    items={menuItems}
+                    items={filteredMenuItems}
                     style={{
                         background: 'transparent',
                         border: 'none',
@@ -298,7 +304,7 @@ const AdminLayout: React.FC = () => {
                             }}>
                                 {user.fullname || user.email}
                             </div>
-                            <div style={{ color: '#ffc107', fontSize: 11 }}>Administrator</div>
+                            <div style={{ color: isAdmin ? '#ffc107' : '#17a2b8', fontSize: 11 }}>{isAdmin ? 'Administrator' : 'Nhân viên'}</div>
                         </div>
                     </div>
                 )}

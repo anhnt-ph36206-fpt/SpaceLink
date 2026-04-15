@@ -10,6 +10,8 @@ interface AuthContextType {
   updateUser: (updatedUser: User) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isAdmin: boolean;
+  isStaff: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,12 +80,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       .finally(() => setIsLoading(false));
   }, []);
 
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const isStaff = user?.role?.toLowerCase() === 'staff';
+
   const login = (token: string, userData: User) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     // Backend role name có thể là 'Admin' hoặc 'admin'
-    if (userData.role?.toLowerCase() === 'admin') {
+    const role = userData.role?.toLowerCase();
+    if (role === 'admin' || role === 'staff') {
       navigate('/admin');
     } else {
       navigate('/');
@@ -105,7 +111,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthenticated: !!user, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthenticated: !!user, isLoading, isAdmin, isStaff }}>
       {children}
     </AuthContext.Provider>
   );

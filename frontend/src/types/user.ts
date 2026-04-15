@@ -6,7 +6,7 @@ export interface User {
   gender?: string;
   avatar?: string;
   status: string;      // 'active' | 'banned' | 'inactive'
-  role?: string;       // tên role: 'admin' | 'customer' v.v.
+  role?: string;       // tên role: 'admin' | 'staff' | 'customer'
   addresses?: unknown[];
   joined_at?: string;
 }

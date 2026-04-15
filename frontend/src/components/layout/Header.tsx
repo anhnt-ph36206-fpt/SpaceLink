@@ -198,7 +198,7 @@ const Header: React.FC = () => {
                                             <div className="dropdown-divider"></div>
                                             <Link to="/profile" className="dropdown-item"><i className="fas fa-user-circle me-2 text-primary"></i>Tài khoản của tôi</Link>
                                             {
-                                                user.role == 'admin' && (
+                                                (user.role === 'admin' || user.role === 'staff') && (
                                                     <Link to="/admin" className="dropdown-item"><i className="fas fa-user-shield me-2 text-primary"></i>Trang quản trị</Link>
                                                 )
                                             }

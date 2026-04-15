@@ -17,6 +17,7 @@ import {
   BarChart,
 } from 'recharts';
 import { axiosInstance } from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -186,6 +187,7 @@ const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }:
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 const AdminDashboardPage: React.FC = () => {
+  const { isAdmin } = useAuth();
   const [period, setPeriod] = useState<Period>('month');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [revenueData, setRevenueData] = useState<RevenueDataPoint[]>([]);
@@ -202,40 +204,47 @@ const AdminDashboardPage: React.FC = () => {
   const fetchAll = useCallback(async (p: Period) => {
     setLoading(true);
     try {
-      const [statsRes, categoryRes, ordersRes, customersRes] = await Promise.all([
-        axiosInstance.get('/admin/dashboard/stats', { params: { period: p } }),
-        axiosInstance.get('/admin/dashboard/sales-by-category', { params: { period: p } }),
-        axiosInstance.get('/admin/dashboard/orders-stats', { params: { period: p } }),
-        axiosInstance.get('/admin/dashboard/customers-stats', { params: { period: p } }),
-      ]);
+      // Stats cơ bản — cả Admin + Staff đều được gọi
+      const statsRes = await axiosInstance.get('/admin/dashboard/stats', { params: { period: p } });
       setStats(statsRes.data.data);
-      setCategorySales(categoryRes.data.data ?? []);
-      setOrdersStats(ordersRes.data.data);
-      setCustomersStats(customersRes.data.data);
+
+      // Các API nâng cao — chỉ Admin mới có quyền
+      if (isAdmin) {
+        const [categoryRes, ordersRes, customersRes] = await Promise.all([
+          axiosInstance.get('/admin/dashboard/sales-by-category', { params: { period: p } }),
+          axiosInstance.get('/admin/dashboard/orders-stats', { params: { period: p } }),
+          axiosInstance.get('/admin/dashboard/customers-stats', { params: { period: p } }),
+        ]);
+        setCategorySales(categoryRes.data.data ?? []);
+        setOrdersStats(ordersRes.data.data);
+        setCustomersStats(customersRes.data.data);
+      }
     } catch (e) {
       console.error('Dashboard fetch error:', e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => { fetchAll(period); }, [period, fetchAll]);
 
   // ── Fetch revenue ──────────────────────────────────────────────────────────
   useEffect(() => {
+    if (!isAdmin) return;
     axiosInstance.get('/admin/dashboard/revenue', { params: { mode: revenueMode } })
       .then(r => setRevenueData(r.data.data ?? []))
       .catch(console.error);
-  }, [revenueMode]);
+  }, [revenueMode, isAdmin]);
 
   // ── Fetch top products ─────────────────────────────────────────────────────
   useEffect(() => {
+    if (!isAdmin) return;
     axiosInstance.get('/admin/dashboard/top-products', {
       params: { period: topProductsPeriod, sort: topProductsSort, limit: 10 }
     })
       .then(r => setTopProducts(r.data.data ?? []))
       .catch(console.error);
-  }, [topProductsPeriod, topProductsSort]);
+  }, [topProductsPeriod, topProductsSort, isAdmin]);
 
   // ── Order columns ──────────────────────────────────────────────────────────
   const orderColumns = [
@@ -327,7 +336,7 @@ const AdminDashboardPage: React.FC = () => {
 
       {/* ── Section 1: KPI Cards ──────────────────────────────────────────── */}
       <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={isAdmin ? 6 : 8}>
           <KpiCard
             title={`Doanh thu ${PERIOD_LABELS[period]}`}
             value={formatVNDShort(stats.period_revenue)}
@@ -337,7 +346,7 @@ const AdminDashboardPage: React.FC = () => {
             subtitle={formatVND(stats.period_revenue)}
           />
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={isAdmin ? 6 : 8}>
           <KpiCard
             title={`Đơn hàng ${PERIOD_LABELS[period]}`}
             value={stats.period_orders}
@@ -347,25 +356,39 @@ const AdminDashboardPage: React.FC = () => {
             subtitle={`${stats.pending_orders} đơn đang chờ`}
           />
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <KpiCard
-            title={`Khách mới ${PERIOD_LABELS[period]}`}
-            value={stats.period_new_customers}
-            icon={<TeamOutlined />}
-            color="#198754"
-            change={stats.customers_change}
-            subtitle={`Tổng: ${stats.total_customers} khách hàng`}
-          />
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <KpiCard
-            title="Tỉ lệ hoàn thành"
-            value={`${ordersStats?.completion_rate ?? 0}%`}
-            icon={<CheckCircleOutlined />}
-            color="#6f42c1"
-            subtitle={`Hủy: ${ordersStats?.cancellation_rate ?? 0}%`}
-          />
-        </Col>
+        {isAdmin && (
+          <Col xs={24} sm={12} lg={6}>
+            <KpiCard
+              title={`Khách mới ${PERIOD_LABELS[period]}`}
+              value={stats.period_new_customers}
+              icon={<TeamOutlined />}
+              color="#198754"
+              change={stats.customers_change}
+              subtitle={`Tổng: ${stats.total_customers} khách hàng`}
+            />
+          </Col>
+        )}
+        {isAdmin && (
+          <Col xs={24} sm={12} lg={6}>
+            <KpiCard
+              title="Tỉ lệ hoàn thành"
+              value={`${ordersStats?.completion_rate ?? 0}%`}
+              icon={<CheckCircleOutlined />}
+              color="#6f42c1"
+              subtitle={`Hủy: ${ordersStats?.cancellation_rate ?? 0}%`}
+            />
+          </Col>
+        )}
+        {!isAdmin && (
+          <Col xs={24} sm={12} lg={8}>
+            <KpiCard
+              title="Tổng sản phẩm"
+              value={stats.total_products}
+              icon={<ShoppingOutlined />}
+              color="#6f42c1"
+            />
+          </Col>
+        )}
       </Row>
 
       {/* ── Row: All-time stat mini-cards ────────────────────────────────── */}
@@ -391,7 +414,8 @@ const AdminDashboardPage: React.FC = () => {
         ))}
       </Row>
 
-      {/* ── Section 2: Revenue Chart ───────────────────────────────────────── */}
+      {/* ── Section 2: Revenue Chart (Admin only) ──────────────────────────── */}
+      {isAdmin && (
       <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
         <Col xs={24}>
           <Card
@@ -440,8 +464,10 @@ const AdminDashboardPage: React.FC = () => {
           </Card>
         </Col>
       </Row>
+      )}
 
-      {/* ── Section 3: Order Stats ─────────────────────────────────────────── */}
+      {/* ── Section 3: Order Stats (Admin only) ────────────────────────────── */}
+      {isAdmin && (
       <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
         {/* Donut Chart - Status Breakdown */}
         <Col xs={24} lg={9}>
@@ -533,8 +559,10 @@ const AdminDashboardPage: React.FC = () => {
           </Card>
         </Col>
       </Row>
+      )}
 
-      {/* ── Section 4: Category Sales + Top Products ──────────────────────── */}
+      {/* ── Section 4: Category Sales + Top Products (Admin only) ─────────── */}
+      {isAdmin && (
       <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
         {/* Pie - Category Revenue */}
         <Col xs={24} lg={9}>
@@ -662,8 +690,10 @@ const AdminDashboardPage: React.FC = () => {
           </Card>
         </Col>
       </Row>
+      )}
 
-      {/* ── Section 5: Customer Analytics ─────────────────────────────────── */}
+      {/* ── Section 5: Customer Analytics (Admin only) ────────────────────── */}
+      {isAdmin && (
       <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
         {/* New Customer Trend */}
         <Col xs={24} lg={14}>
@@ -760,6 +790,7 @@ const AdminDashboardPage: React.FC = () => {
           </Card>
         </Col>
       </Row>
+      )}
 
       {/* ── Section 6: Payment Sync Status ────────────────────────────────── */}
       <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
