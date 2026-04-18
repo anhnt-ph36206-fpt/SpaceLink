@@ -7,10 +7,18 @@ const { confirm } = Modal;
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 
+// Helper: build compact variant label from attributes array
+const formatVariant = (variant: any): string | null => {
+    if (!variant) return null;
+    const attrs: any[] = variant.attributes || [];
+    if (!attrs.length) return null;
+    return attrs.map((a: any) => a.value || a.name || '').filter(Boolean).join(' / ');
+};
+
 export default function AdminReviewPage() {
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(false);
-    
+
     // Filters
     const [search, setSearch] = useState('');
     const [rating, setRating] = useState<number | undefined>();
@@ -124,7 +132,7 @@ export default function AdminReviewPage() {
                     message.success('Đã gửi phản hồi thành công');
                     setIsReplyModalOpen(false);
                     setReviews((prev: any) => prev.map((r: any) => r.id === currentReview.id ? { ...r, admin_reply: replyContent } : r));
-                } catch(e: any) {
+                } catch (e: any) {
                     message.error(e.response?.data?.message || 'Có lỗi xảy ra khi gửi phản hồi');
                 }
             } else {
@@ -154,7 +162,19 @@ export default function AdminReviewPage() {
             key: 'product',
             render: (_: any, record: any) => {
                 const name = record.product?.name || record.orderItem?.product_name || 'Sản phẩm';
-                return <Tooltip title={name}><div style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500, color: '#1677ff' }}>{name}</div></Tooltip>;
+                const variantLabel = formatVariant(record.variant);
+                return (
+                    <div>
+                        <Tooltip title={name}>
+                            <div style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500, color: '#1677ff' }}>{name}</div>
+                        </Tooltip>
+                        {variantLabel && (
+                            <div style={{ marginTop: 4 }}>
+                                <Tag color="blue" style={{ fontSize: 11 }}>{variantLabel}</Tag>
+                            </div>
+                        )}
+                    </div>
+                );
             }
         },
         {
@@ -163,14 +183,14 @@ export default function AdminReviewPage() {
             width: 300,
             render: (_: any, record: any) => (
                 <div>
-                   <Rate disabled value={record.rating} style={{ fontSize: 13, color: '#faad14' }} />
-                   <div style={{ marginTop: 6, fontStyle: 'italic', color: '#5a6275', fontSize: 13 }}>{record.content || <Text type="secondary">Chỉ chấm điểm, không để lại nhận xét.</Text>}</div>
-                   {record.admin_reply && (
-                       <div style={{ marginTop: 8, padding: '6px 10px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4, fontSize: 12 }}>
-                           <span style={{ fontWeight: 600, color: '#389e0d' }}>Shop phản hồi: </span>
-                           {record.admin_reply}
-                       </div>
-                   )}
+                    <Rate disabled value={record.rating} style={{ fontSize: 13, color: '#faad14' }} />
+                    <div style={{ marginTop: 6, fontStyle: 'italic', color: '#5a6275', fontSize: 13 }}>{record.content || <Text type="secondary">Chỉ chấm điểm, không để lại nhận xét.</Text>}</div>
+                    {record.admin_reply && (
+                        <div style={{ marginTop: 8, padding: '6px 10px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4, fontSize: 12 }}>
+                            <span style={{ fontWeight: 600, color: '#389e0d' }}>Shop phản hồi: </span>
+                            {record.admin_reply}
+                        </div>
+                    )}
                 </div>
             )
         },
@@ -211,7 +231,7 @@ export default function AdminReviewPage() {
             render: (_: any, record: any) => (
                 <Space>
                     <Tooltip title={record.is_hidden ? "Hiện đánh giá" : "Ẩn đánh giá"}>
-                        <Button 
+                        <Button
                             size="small"
                             type="dashed"
                             danger={!record.is_hidden}
@@ -220,10 +240,10 @@ export default function AdminReviewPage() {
                         />
                     </Tooltip>
                     <Tooltip title={record.admin_reply ? 'Sửa câu trả lời' : 'Trả lời khách'}>
-                        <Button 
-                            type="primary" 
-                            size="small" 
-                            icon={<CommentOutlined />} 
+                        <Button
+                            type="primary"
+                            size="small"
+                            icon={<CommentOutlined />}
                             onClick={() => openReplyModal(record)}
                             ghost={!!record.admin_reply}
                         />
@@ -300,11 +320,11 @@ export default function AdminReviewPage() {
                     </Col>
                 </Row>
             </Card>
-            
-            <Table 
-                columns={columns} 
-                dataSource={reviews} 
-                rowKey="id" 
+
+            <Table
+                columns={columns}
+                dataSource={reviews}
+                rowKey="id"
                 loading={loading}
                 style={{ background: '#fff', borderRadius: 10, boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}
                 pagination={{
@@ -329,7 +349,15 @@ export default function AdminReviewPage() {
             >
                 {currentReview && (
                     <div style={{ marginBottom: 16, padding: 14, background: '#f8f9fa', borderRadius: 8, border: '1px solid #e9ecef' }}>
-                        <div style={{ fontWeight: 700, marginBottom: 4 }}>Khách hàng: {currentReview.user?.fullname || currentReview.user?.name || 'Khách'}</div>
+                        <div style={{ fontWeight: 700, marginBottom: 2 }}>Khách hàng: {currentReview.user?.fullname || currentReview.user?.name || 'Khách'}</div>
+                        {currentReview.product?.name && (
+                            <div style={{ fontSize: 13, color: '#1677ff', marginBottom: 4 }}>
+                                {currentReview.product.name}
+                                {formatVariant(currentReview.variant) && (
+                                    <Tag color="blue" style={{ marginLeft: 8, fontSize: 11 }}>{formatVariant(currentReview.variant)}</Tag>
+                                )}
+                            </div>
+                        )}
                         <Rate disabled value={currentReview.rating} style={{ fontSize: 13, marginBottom: 8, color: '#faad14' }} />
                         <div style={{ fontStyle: 'italic', color: '#5a6275', fontSize: 13, background: '#fff', padding: '8px 12px', borderRadius: 6, border: '1px solid #dee2e6' }}>
                             "{currentReview.content || 'Không có nhận xét'}"
@@ -337,9 +365,9 @@ export default function AdminReviewPage() {
                     </div>
                 )}
                 <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>Nội dung phản hồi của Shop:</div>
-                <TextArea 
-                    rows={4} 
-                    placeholder="VD: Cảm ơn bạn đã tin tưởng ủng hộ Shop..." 
+                <TextArea
+                    rows={4}
+                    placeholder="VD: Cảm ơn bạn đã tin tưởng ủng hộ Shop..."
                     value={replyContent}
                     onChange={e => setReplyContent(e.target.value)}
                     style={{ borderRadius: 6 }}
