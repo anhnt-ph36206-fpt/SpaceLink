@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React, { useEffect, type ReactNode } from 'react';
 import Header from './Header';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -11,7 +11,25 @@ interface LayoutProps {
     showSpinner?: boolean;
 }
 
+const FASTBOTS_BOT_ID = 'cmnrs81fm03lppb1oljk89f1r';
+
 const Layout: React.FC<LayoutProps> = ({ children, showSpinner = false }) => {
+
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = 'https://app.fastbots.ai/embed.js';
+        script.defer = true;
+        script.setAttribute('data-bot-id', FASTBOTS_BOT_ID);
+        script.id = 'fastbots-embed-script';
+        document.body.appendChild(script);
+
+        return () => {
+            // Remove script
+            document.getElementById('fastbots-embed-script')?.remove();
+            // Remove any widget elements injected by FastBots
+            document.querySelectorAll('[id^="fastbots"], fastbots-widget, .fastbots-widget').forEach(el => el.remove());
+        };
+    }, []);
 
     return (
         <>
