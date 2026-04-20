@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import type { User } from '../types/user';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { axiosInstance } from '../api/axios';
 import type { AxiosError } from 'axios';
 
@@ -12,7 +12,15 @@ type LoginForm = {
 };
 
 const LoginPage: React.FC = () => {
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>();
+  const location = useLocation();
+  const prefillEmail = (location.state as { prefillEmail?: string } | null)?.prefillEmail ?? '';
+  const prefillPassword = (location.state as { prefillPassword?: string } | null)?.prefillPassword ?? '';
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
+    defaultValues: {
+      email: prefillEmail,
+      password: prefillPassword,
+    },
+  });
   const { login } = useAuth();
 
   const onLogin = async (data: LoginForm) => {
@@ -186,7 +194,13 @@ const LoginPage: React.FC = () => {
                               Ghi nhớ đăng nhập
                             </label>
                           </div>
-                          <a href="#" className="auth-link" style={{fontSize:'13px'}}>Quên mật khẩu?</a>
+                          <Link
+                            to="/forgot-password"
+                            className="auth-link"
+                            style={{ fontSize: '13px' }}
+                          >
+                            Quên mật khẩu?
+                          </Link>
                         </div>
 
                         <button type="submit" className="btn btn-login btn-primary w-100 text-white mb-4" disabled={isSubmitting}>

@@ -1,8 +1,6 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import type { User } from '../types/user';
+import { Link, useNavigate } from 'react-router-dom';
 import { axiosInstance } from '../api/axios';
 import type { AxiosError } from 'axios';
 
@@ -17,7 +15,7 @@ type RegisterForm = {
 
 const RegisterPage: React.FC = () => {
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterForm>();
-  const { login } = useAuth();
+  const navigate = useNavigate();
   const passwordValue = watch('password');
 
   const onRegister = async (data: RegisterForm) => {
@@ -32,11 +30,15 @@ const RegisterPage: React.FC = () => {
         password_confirmation: data.confirmPassword, // bắt buộc theo 'confirmed' rule
       });
 
-      const user: User = res.data.data.user;
-      const token: string = res.data.data.token;
+      void res;
 
       alert('🎉 Đăng ký thành công! Chào mừng bạn đến với SpaceLink!');
-      login(token, user); // tự động đăng nhập + điều hướng
+      navigate('/login', {
+        state: {
+          prefillEmail: data.email,
+          prefillPassword: data.password,
+        },
+      });
     } catch (err) {
       const error = err as AxiosError<{ message?: string; errors?: Record<string, string[]> }>;
       const resData = error.response?.data;
