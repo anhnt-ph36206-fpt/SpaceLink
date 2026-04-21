@@ -5,6 +5,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import type { User } from '../types/user';
 import { axiosInstance } from '../api/axios';
 import type { AxiosError } from 'axios';
+import ConfirmLogoutModal from '../components/common/ConfirmLogoutModal';
 
 // ── Order types ──────────────────────────────────────────────
 interface OrderItem {
@@ -102,6 +103,7 @@ const ProfilePage: React.FC = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string>('');
   const [saveError, setSaveError] = useState<string>('');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -802,7 +804,7 @@ const ProfilePage: React.FC = () => {
                   <li>
                     <button
                       className="sidebar-nav-btn logout-btn"
-                      onClick={logout}
+                      onClick={() => setShowLogoutModal(true)}
                     >
                       <i className="fas fa-sign-out-alt" />
                       Đăng xuất
@@ -1289,6 +1291,12 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+      {showLogoutModal && (
+        <ConfirmLogoutModal
+          onConfirm={() => { setShowLogoutModal(false); logout(); }}
+          onCancel={() => setShowLogoutModal(false)}
+        />
       )}
     </>
   );

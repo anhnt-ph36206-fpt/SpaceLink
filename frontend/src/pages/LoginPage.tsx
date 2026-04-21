@@ -1,27 +1,50 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import type { User } from '../types/user';
 import { useAuth } from '../context/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
 import { axiosInstance } from '../api/axios';
 import type { AxiosError } from 'axios';
+import Toast, { type ToastType } from '../components/common/Toast';
 
 type LoginForm = {
   email: string;
   password: string;
 };
 
+interface ToastState {
+  message: string;
+  type: ToastType;
+}
+
 const LoginPage: React.FC = () => {
   const location = useLocation();
-  const prefillEmail = (location.state as { prefillEmail?: string } | null)?.prefillEmail ?? '';
-  const prefillPassword = (location.state as { prefillPassword?: string } | null)?.prefillPassword ?? '';
+  const locationState = location.state as { prefillEmail?: string; successMessage?: string } | null;
+  const prefillEmail = locationState?.prefillEmail ?? '';
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const loginTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
-    defaultValues: {
-      email: prefillEmail,
-      password: prefillPassword,
-    },
+    defaultValues: { email: prefillEmail },
   });
   const { login } = useAuth();
+
+  const showToast = useCallback((message: string, type: ToastType = 'error') => {
+    setToast({ message, type });
+  }, []);
+
+  useEffect(() => () => { if (loginTimerRef.current) clearTimeout(loginTimerRef.current); }, []);
+
+  // Show success toast when redirected from RegisterPage
+  useEffect(() => {
+    if (locationState?.successMessage) {
+      showToast(locationState.successMessage, 'success');
+      // Clear state so toast doesn't re-appear on refresh
+      window.history.replaceState({}, '');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onLogin = async (data: LoginForm) => {
     try {
@@ -34,22 +57,30 @@ const LoginPage: React.FC = () => {
       const user: User = res.data.data.user;
       const token: string = res.data.data.token;
 
-      login(token, user);
+      showToast('Đăng nhập thành công! Chào mừng trở lại 👋', 'success');
+      loginTimerRef.current = setTimeout(() => login(token, user), 900);
     } catch (err) {
       const error = err as AxiosError<{ message?: string }>;
       const msg = error.response?.data?.message;
       if (error.response?.status === 403) {
-        alert(msg ?? 'Tài khoản của bạn đã bị khóa.');
+        showToast(msg ?? 'Tài khoản của bạn đã bị khóa.', 'warning');
       } else if (error.response?.status === 401) {
-        alert(msg ?? 'Email hoặc mật khẩu không đúng!');
+        showToast(msg ?? 'Email hoặc mật khẩu không đúng!', 'error');
       } else {
-        alert(msg ?? 'Đã có lỗi xảy ra, vui lòng thử lại!');
+        showToast(msg ?? 'Đã có lỗi xảy ra, vui lòng thử lại!', 'error');
       }
     }
   };
 
   return (
     <>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       {/* Custom styles scoped via inline */}
       <style>{`
         .auth-page { min-height: 100vh; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); }
@@ -64,6 +95,8 @@ const LoginPage: React.FC = () => {
         .input-icon-wrapper { position: relative; }
         .input-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color: #adb5bd; z-index:1; font-size:14px; }
         .form-control-custom.with-icon { padding-left: 40px; }
+        .password-toggle { position:absolute; right:14px; top:50%; transform:translateY(-50%); background:none; border:none; color:#adb5bd; cursor:pointer; padding:0; z-index:2; font-size:14px; transition:color 0.2s; line-height:1; }
+        .password-toggle:hover { color:#495057; }
         .btn-login { border-radius: 10px; padding: 13px; font-weight: 600; font-size: 15px; letter-spacing: 0.5px; transition: all 0.3s ease; background: linear-gradient(135deg,#0d6efd,#0a58ca); border:none; }
         .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(13,110,253,0.4); background: linear-gradient(135deg,#0a58ca,#084298); }
         .btn-social { border-radius: 10px; padding: 11px; font-size:14px; font-weight:500; border: 2px solid #e9ecef; background:#fff; color:#495057; transition:all 0.2s; }
@@ -160,6 +193,7 @@ const LoginPage: React.FC = () => {
                             <input
                               type="email"
                               placeholder="example@email.com"
+                              autoComplete="email"
                               {...register('email', {
                                 required: 'Vui lòng nhập email',
                                 pattern: { value: /^\S+@\S+$/i, message: 'Email không hợp lệ' }
@@ -178,11 +212,22 @@ const LoginPage: React.FC = () => {
                           <div className="input-icon-wrapper">
                             <i className="fas fa-lock input-icon"></i>
                             <input
-                              type="password"
+                              type={showPassword ? 'text' : 'password'}
                               placeholder="Nhập mật khẩu"
+                              autoComplete="current-password"
                               {...register('password', { required: 'Vui lòng nhập mật khẩu' })}
                               className={`form-control form-control-custom with-icon ${errors.password ? 'is-invalid' : ''}`}
+                              style={{ paddingRight: '42px' }}
                             />
+                            <button
+                              type="button"
+                              className="password-toggle"
+                              onClick={() => setShowPassword(p => !p)}
+                              tabIndex={-1}
+                              aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                            >
+                              <i className={`fas ${showPassword ? 'fa-eye' : 'fa-eye-slash'}`} />
+                            </button>
                           </div>
                           {errors.password && <div className="invalid-feedback d-block" style={{fontSize:'13px'}}><i className="fas fa-exclamation-circle me-1"></i>{errors.password.message}</div>}
                         </div>

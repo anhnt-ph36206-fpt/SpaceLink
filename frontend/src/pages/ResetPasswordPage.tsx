@@ -24,6 +24,8 @@ const ResetPasswordPage: React.FC = () => {
   } = useForm<ResetPasswordForm>();
 
   const passwordValue = watch('password');
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
@@ -109,15 +111,28 @@ const ResetPasswordPage: React.FC = () => {
                       <label className="form-label fw-semibold" style={{ fontSize: '14px' }}>
                         Mật khẩu mới <span className="text-danger">*</span>
                       </label>
-                      <input
-                        type="password"
-                        className={`form-control ${errors.password ? 'is-invalid' : ''}`}
-                        placeholder="Tối thiểu 6 ký tự"
-                        {...register('password', {
-                          required: 'Vui lòng nhập mật khẩu mới',
-                          minLength: { value: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự' },
-                        })}
-                      />
+                      <div className="input-icon-wrapper position-relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                          placeholder="Tối thiểu 6 ký tự"
+                          style={{ paddingRight: '42px' }}
+                          {...register('password', {
+                            required: 'Vui lòng nhập mật khẩu mới',
+                            minLength: { value: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự' },
+                          })}
+                        />
+                        <button 
+                          type="button" 
+                          className="btn btn-link position-absolute top-50 end-0 translate-middle-y text-muted text-decoration-none"
+                          onClick={() => setShowPassword(p => !p)} 
+                          tabIndex={-1} 
+                          aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                          style={{ border: 'none', background: 'transparent' }}
+                        >
+                          <i className={`fas ${showPassword ? 'fa-eye' : 'fa-eye-slash'}`} />
+                        </button>
+                      </div>
                       {errors.password && (
                         <div className="invalid-feedback d-block" style={{ fontSize: '13px' }}>
                           {errors.password.message}
@@ -129,15 +144,28 @@ const ResetPasswordPage: React.FC = () => {
                       <label className="form-label fw-semibold" style={{ fontSize: '14px' }}>
                         Xác nhận mật khẩu <span className="text-danger">*</span>
                       </label>
-                      <input
-                        type="password"
-                        className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
-                        placeholder="Nhập lại mật khẩu"
-                        {...register('confirmPassword', {
-                          required: 'Vui lòng xác nhận mật khẩu',
-                          validate: (value) => value === passwordValue || 'Xác nhận mật khẩu không khớp',
-                        })}
-                      />
+                      <div className="input-icon-wrapper position-relative">
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
+                          placeholder="Nhập lại mật khẩu"
+                          style={{ paddingRight: '42px' }}
+                          {...register('confirmPassword', {
+                            required: 'Vui lòng xác nhận mật khẩu',
+                            validate: (value) => value === passwordValue || 'Xác nhận mật khẩu không khớp',
+                          })}
+                        />
+                        <button 
+                          type="button" 
+                          className="btn btn-link position-absolute top-50 end-0 translate-middle-y text-muted text-decoration-none"
+                          onClick={() => setShowConfirmPassword(p => !p)} 
+                          tabIndex={-1} 
+                          aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                          style={{ border: 'none', background: 'transparent' }}
+                        >
+                          <i className={`fas ${showConfirmPassword ? 'fa-eye' : 'fa-eye-slash'}`} />
+                        </button>
+                      </div>
                       {errors.confirmPassword && (
                         <div className="invalid-feedback d-block" style={{ fontSize: '13px' }}>
                           {errors.confirmPassword.message}
