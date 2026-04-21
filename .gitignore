@@ -5,3 +5,5 @@
 .claude
 AGENTS.md
 CLAUDE.md
+.env
+.env.docker
