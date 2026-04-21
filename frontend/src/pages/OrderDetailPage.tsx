@@ -883,6 +883,29 @@ const OrderDetailPage: React.FC = () => {
                     {order.product_return.created_at && (
                       <div className="od-cancelled-time">{order.product_return.created_at}</div>
                     )}
+                    {/* Ảnh bằng chứng chuyển khoản hoàn tiền */}
+                    {order.product_return.refund_proof_image_url && (
+                      <div style={{ marginTop: 12 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#16a34a', marginBottom: 8 }}>
+                          <i className="fas fa-receipt me-2" />Bằng chứng chuyển khoản hoàn tiền
+                        </div>
+                        <a href={order.product_return.refund_proof_image_url} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={order.product_return.refund_proof_image_url}
+                            alt="Bằng chứng chuyển khoản"
+                            style={{
+                              maxWidth: 280,
+                              maxHeight: 360,
+                              borderRadius: 12,
+                              border: '2px solid #bbf7d0',
+                              cursor: 'pointer',
+                              objectFit: 'contain',
+                              background: '#f0fdf4',
+                            }}
+                          />
+                        </a>
+                      </div>
+                    )}
                   </>
                 )}
 
@@ -1105,8 +1128,16 @@ const OrderDetailPage: React.FC = () => {
                         ? <img src={item.product_image} alt={item.product_name} className="od-item-img" />
                         : <div className="od-item-img-placeholder"><i className="fas fa-box" /></div>
                       }
-                      <div className="od-item-info">
-                        <div className="od-item-name">{item.product_name}</div>
+                        <div className="od-item-info">
+                        <Link
+                          to={`/product/${item.product_id}${item.variant_id ? `?variant=${item.variant_id}` : ''}`}
+                          className="od-item-name"
+                          style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
+                          onMouseEnter={e => (e.currentTarget.style.color = '#ea580c')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'inherit')}
+                        >
+                          {item.product_name}
+                        </Link>
                         {item.product_sku && <div className="od-item-sku">SKU: {item.product_sku}</div>}
                         {attrs.length > 0 && (
                           <div className="od-item-attrs">

@@ -41,26 +41,16 @@ class CartController extends Controller
     }
 
     /**
-     * Tính tồn kho hiệu lực: variant.quantity - tổng qty đang trong đơn pending của NGƯỜI KHÁC.
-     * Loại trừ đơn pending của chính user hiện tại (để không bị chặn bởi đơn cũ của mình).
+     * Tồn kho hiệu lực: trả về raw variant.quantity.
+     * Vì stock đã được trừ ngay khi đặt hàng (immediate deduction),
+     * không cần trừ pending orders nữa.
      */
     private function getEffectiveStock(int $variantId, ?int $excludeUserId = null): int
     {
         $variant = ProductVariant::find($variantId);
         if (!$variant) return 0;
 
-        // Tổng qty đang bị "soft reserve" bởi các đơn pending của NGƯỜI KHÁC
-        $query = OrderItem::where('variant_id', $variantId)
-            ->whereHas('order', function ($q) use ($excludeUserId) {
-                $q->where('status', 'pending');
-                if ($excludeUserId) {
-                    $q->where('user_id', '!=', $excludeUserId);
-                }
-            });
-
-        $pendingQty = $query->sum('quantity');
-
-        return max(0, $variant->quantity - $pendingQty);
+        return max(0, $variant->quantity);
     }
 
     // =========================================================================

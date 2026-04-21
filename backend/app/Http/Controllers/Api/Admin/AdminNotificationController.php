@@ -127,10 +127,9 @@ class AdminNotificationController extends Controller
                 'cancelled_at'     => $freshOrder->cancelled_at ?? now(),
             ]);
 
-            // Hoàn kho nếu đơn đã confirmed+ (stock đã bị trừ)
-            // HOẶC đơn VNPAY ĐÃ THANH TOÁN (vì IPN của VNPAY đã tự động trừ kho)
-            // Đơn cancelled vì out_of_stock_after_payment → chưa trừ kho → KHÔNG hoàn
-            if (($wasConfirmed || $isVnpayPaid) && !$isStockCancelled) {
+            // Immediate deduction: LUÔN hoàn kho khi hủy đơn (stock đã trừ ngay khi checkout)
+            // Ngoại trừ đơn cancelled vì out_of_stock_after_payment (stock chưa thực sự bị trừ lần 2)
+            if (!$isStockCancelled) {
                 foreach ($freshOrder->items()->with('variant')->get() as $item) {
                     if ($item->variant_id) {
                         $variant = \App\Models\ProductVariant::where('id', $item->variant_id)

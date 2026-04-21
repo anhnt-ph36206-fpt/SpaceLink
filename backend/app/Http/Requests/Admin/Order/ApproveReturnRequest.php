@@ -15,6 +15,7 @@ class ApproveReturnRequest extends FormRequest
     {
         return [
             'admin_note' => 'nullable|string|max:500',
+            'refund_proof_image' => 'nullable|image|max:5120',
         ];
     }
 

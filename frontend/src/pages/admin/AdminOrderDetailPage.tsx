@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Button, Tag, Space, Typography, message, Card, Row, Col,
   Select, Descriptions, Tooltip, Form, Divider, Timeline,
-  Spin, Image, Modal, Input, Badge, Steps,
+  Spin, Image, Modal, Input, Badge, Steps, Upload,
 } from 'antd';
 import {
   ArrowLeftOutlined, ShoppingCartOutlined, CheckCircleOutlined,
@@ -12,7 +12,7 @@ import {
   GiftOutlined, RollbackOutlined, UserOutlined, PhoneOutlined,
   EnvironmentOutlined, CalendarOutlined, CopyOutlined,
   PrinterOutlined, EditOutlined, ReloadOutlined, InboxOutlined,
-  WarningOutlined,
+  WarningOutlined, UploadOutlined, PictureOutlined,
 } from '@ant-design/icons';
 import { axiosInstance } from '../../api/axios';
 
@@ -102,6 +102,7 @@ interface Order {
       file_type?: string | null;
       created_at?: string;
     }> | null;
+    refund_proof_image_url?: string | null;
     created_at?: string;
   };
 }
@@ -308,6 +309,8 @@ const AdminOrderDetailPage: React.FC = () => {
   const [savingPayment, setSavingPayment] = useState(false);
 
   const [returnApproveLoading, setReturnApproveLoading] = useState(false);
+  const [returnApproveOpen, setReturnApproveOpen] = useState(false);
+  const [refundProofFile, setRefundProofFile] = useState<any>(null);
   const [returnRejectOpen, setReturnRejectOpen] = useState(false);
   const [returnRejectReason, setReturnRejectReason] = useState('');
   const [returnRejectLoading, setReturnRejectLoading] = useState(false);
@@ -418,10 +421,17 @@ const AdminOrderDetailPage: React.FC = () => {
     if (!order) return;
     setReturnApproveLoading(true);
     try {
-      await axiosInstance.post(`${API_BASE}/${order.id}/return/approve`, {
-        admin_note: 'Chấp nhận yêu cầu hoàn trả.',
+      const fd = new FormData();
+      fd.append('admin_note', 'Chấp nhận yêu cầu hoàn trả.');
+      if (refundProofFile) {
+        fd.append('refund_proof_image', refundProofFile);
+      }
+      await axiosInstance.post(`${API_BASE}/${order.id}/return/approve`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       message.success('Đã duyệt hoàn trả!');
+      setReturnApproveOpen(false);
+      setRefundProofFile(null);
       fetchOrder();
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
@@ -681,8 +691,7 @@ const AdminOrderDetailPage: React.FC = () => {
                     <Button
                       type="primary"
                       icon={<CheckCircleOutlined />}
-                      loading={returnApproveLoading}
-                      onClick={handleApproveReturn}
+                      onClick={() => { setRefundProofFile(null); setReturnApproveOpen(true); }}
                       style={{ borderRadius: 10, background: 'linear-gradient(135deg,#198754,#0f5132)', border: 'none' }}
                     >
                       Chấp nhận hoàn trả
@@ -702,8 +711,23 @@ const AdminOrderDetailPage: React.FC = () => {
                 )}
 
                 {order.product_return.status === 'approved' && (
-                  <div style={{ marginTop: 10, color: '#0369a1', fontSize: 13 }}>
-                    Đã duyệt hoàn trả. Tiếp theo cập nhật hoàn tiền ở mục “Cập nhật thanh toán”.
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ color: '#0369a1', fontSize: 13, marginBottom: 8 }}>
+                      Đã duyệt hoàn trả. Tiếp theo cập nhật hoàn tiền ở mục "Cập nhật thanh toán".
+                    </div>
+                    {order.product_return.refund_proof_image_url && (
+                      <div style={{ marginTop: 8 }}>
+                        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
+                          <PictureOutlined style={{ marginRight: 4 }} />Ảnh bằng chứng chuyển khoản đã gửi:
+                        </Text>
+                        <Image
+                          src={order.product_return.refund_proof_image_url}
+                          width={160}
+                          height={160}
+                          style={{ objectFit: 'contain', borderRadius: 10, border: '1.5px solid #bbf7d0', background: '#f0fdf4' }}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1182,6 +1206,46 @@ const AdminOrderDetailPage: React.FC = () => {
           </Form.Item>
           <Form.Item name="note" label="Ghi chú (tuỳ chọn)">
             <Input.TextArea rows={2} placeholder="Ghi chú..." style={{ borderRadius: 8 }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* ── Return Approve Modal (with refund proof upload) ── */}
+      <Modal
+        title={<Space><CheckCircleOutlined style={{ color: '#16a34a' }} /><span>Duyệt hoàn trả — <Text code>{order.order_code}</Text></span></Space>}
+        open={returnApproveOpen}
+        onOk={handleApproveReturn}
+        onCancel={() => setReturnApproveOpen(false)}
+        okText="Xác nhận duyệt"
+        cancelText="Hủy"
+        confirmLoading={returnApproveLoading}
+        width={520}
+        style={{ top: 120 }}
+        okButtonProps={{ style: { borderRadius: 10, background: '#16a34a', borderColor: '#16a34a' } }}
+      >
+        <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#14532d', border: '1px solid #bbf7d0' }}>
+          Sau khi duyệt, trạng thái hoàn trả sẽ chuyển sang <strong>Đã duyệt</strong>. Upload ảnh bằng chứng chuyển khoản hoàn tiền cho khách hàng.
+        </div>
+        <Form layout="vertical">
+          <Form.Item label="Ảnh bằng chứng chuyển khoản" extra="Tải lên ảnh chụp màn hình chuyển khoản hoàn tiền (tối đa 5MB)">
+            <Upload
+              maxCount={1}
+              accept="image/*"
+              beforeUpload={(file) => {
+                setRefundProofFile(file);
+                return false;
+              }}
+              onRemove={() => setRefundProofFile(null)}
+              fileList={refundProofFile ? [{ uid: '-1', name: refundProofFile.name, status: 'done' as const }] : []}
+              listType="picture-card"
+            >
+              {!refundProofFile && (
+                <div>
+                  <UploadOutlined style={{ fontSize: 20, color: '#16a34a' }} />
+                  <div style={{ marginTop: 8, fontSize: 12 }}>Tải ảnh lên</div>
+                </div>
+              )}
+            </Upload>
           </Form.Item>
         </Form>
       </Modal>

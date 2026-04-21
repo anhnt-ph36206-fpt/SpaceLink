@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { axiosInstance } from "../api/axios";
 import { useCart } from "../context/CartContext";
 import { useCompare } from "../context/CompareContext";
@@ -80,6 +80,8 @@ const formatVND = (v: number) =>
 const ProductDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const variantIdFromUrl = searchParams.get('variant');
     const { addToCart } = useCart();
     const { addToCompare, removeFromCompare, isInCompare, compareList } = useCompare();
     const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
@@ -144,17 +146,22 @@ const ProductDetailPage: React.FC = () => {
                 setDefaultMainImg(defaultUrl);
                 setMainImg(defaultUrl);
 
-                // If variants exist, select the first one
+                // If variants exist, select the one from URL or the first one
                 if (p.variants && p.variants.length > 0) {
-                    const firstVariant = p.variants[0];
-                    setSelectedVariant(firstVariant);
+                    // Ưu tiên biến thể từ URL query param ?variant=ID
+                    let targetVariant = p.variants[0];
+                    if (variantIdFromUrl) {
+                        const fromUrl = p.variants.find(v => String(v.id) === variantIdFromUrl);
+                        if (fromUrl) targetVariant = fromUrl;
+                    }
+                    setSelectedVariant(targetVariant);
                     // Build selected attrs map
                     const attrsMap: Record<string, number> = {};
-                    firstVariant.attributes.forEach(a => {
+                    targetVariant.attributes.forEach(a => {
                         if (a.group) attrsMap[a.group] = a.id;
                     });
                     setSelectedAttrs(attrsMap);
-                    const vi = varImgUrl(firstVariant);
+                    const vi = varImgUrl(targetVariant);
                     if (vi) setMainImg(vi);
                 }
             } catch {

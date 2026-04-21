@@ -17,6 +17,7 @@ class ProductReturn extends Model
         'refund_account_number',
         'refund_amount',
         'transaction_code',
+        'refund_proof_image',
         'items',
     ];
 

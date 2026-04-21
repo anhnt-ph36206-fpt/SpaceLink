@@ -111,7 +111,7 @@ class CheckoutController extends Controller
         }
 
         // 2. Pre-flight stock check: validate nhanh toàn bộ items TRƯỚC khi vào transaction
-        // Tính tồn kho hiệu lực: variant.quantity - tổng qty trong đơn pending
+        // Immediate deduction: check raw stock (đã phản ánh đúng vì trừ kho ngay khi đặt hàng)
         $stockErrors = [];
         foreach ($cartItems as $item) {
             if (!$item->variant_id)
@@ -122,23 +122,10 @@ class CheckoutController extends Controller
 
             if (!$currentVariant || !$currentVariant->is_active) {
                 $stockErrors[] = "Sản phẩm \"{$item->product->name}\" đã ngừng bán.";
-            } else {
-                // Tồn kho hiệu lực: trừ qty đang trong đơn pending của NGƯỜI KHÁC
-                $pendingQty = \App\Models\OrderItem::where('variant_id', $item->variant_id)
-                    ->whereHas('order', function ($q) use ($user) {
-                        $q->where('status', 'pending');
-                        if ($user) {
-                            $q->where('user_id', '!=', $user->id);
-                        }
-                    })
-                    ->sum('quantity');
-                $effectiveStock = max(0, $currentVariant->quantity - $pendingQty);
-
-                if ($effectiveStock < $item->quantity) {
-                    $stockErrors[] = $effectiveStock === 0
-                        ? "Sản phẩm \"{$item->product->name}\" đã hết hàng."
-                        : "Sản phẩm \"{$item->product->name}\" chỉ còn {$effectiveStock} trong kho (bạn đang mua {$item->quantity}).";
-                }
+            } else if ($currentVariant->quantity < $item->quantity) {
+                $stockErrors[] = $currentVariant->quantity === 0
+                    ? "Sản phẩm \"{$item->product->name}\" đã hết hàng."
+                    : "Sản phẩm \"{$item->product->name}\" chỉ còn {$currentVariant->quantity} trong kho (bạn đang mua {$item->quantity}).";
             }
         }
 
@@ -187,9 +174,13 @@ class CheckoutController extends Controller
                     if (!$variant || !$variant->is_active) {
                         throw new \App\Exceptions\StockException("Sản phẩm \"{$item->product->name}\" hiện không còn bán.");
                     }
-                    // Lazy deduction: validate trực tiếp — stock chưa bị trừ bởi bất kỳ reservation nào
+                    // Immediate deduction: check raw stock (đã phản ánh đúng vì trừ kho ngay khi đặt hàng)
                     if ($variant->quantity < $item->quantity) {
-                        throw new \App\Exceptions\StockException("Sản phẩm \"{$item->product->name}\" không đủ tồn kho.");
+                        throw new \App\Exceptions\StockException(
+                            $variant->quantity === 0
+                                ? "Sản phẩm \"{$item->product->name}\" đã hết hàng."
+                                : "Sản phẩm \"{$item->product->name}\" chỉ còn {$variant->quantity} trong kho (bạn đang mua {$item->quantity})."
+                        );
                     }
                 }
 
@@ -232,7 +223,7 @@ class CheckoutController extends Controller
                     'note' => $request->note,
                 ]);
 
-                // 7. OrderItems — Lazy deduction: KHÔNG trừ kho tại đây
+                // 7. OrderItems + Immediate Deduction: TRỪ KHO NGAY khi đặt hàng
                 foreach ($cartItems as $item) {
                     $price = $this->resolvePrice($item, $lockedVariants);
                     $variant = $item->variant_id ? $lockedVariants->get($item->variant_id) : null;
@@ -255,10 +246,15 @@ class CheckoutController extends Controller
                         'total' => $price * $item->quantity,
                     ]);
 
-                    // Lazy deduction: KHÔNG trừ kho ở đây
-                    // Stock sẽ được trừ khi:
-                    // - COD: Admin xác nhận đơn (pending → confirmed)
-                    // - VNPAY: IPN callback thành công (payment_status → paid)
+                    // Immediate deduction: TRỪ KHO NGAY khi đặt hàng
+                    // Để sản phẩm hiển thị hết hàng cho user khác ngay lập tức
+                    if ($item->variant_id && $variant) {
+                        $variant->decrement('quantity', $item->quantity);
+                        $product = Product::find($item->product_id);
+                        if ($product) {
+                            $product->update(['quantity' => ProductVariant::where('product_id', $product->id)->sum('quantity')]);
+                        }
+                    }
                 }
 
                 if ($voucher) {
@@ -358,7 +354,7 @@ class CheckoutController extends Controller
                     $subtotal += $effectivePrice * $item->quantity;
                 }
 
-                // Lazy deduction: validate stock nhưng KHÔNG trừ kho
+                // Immediate deduction: check raw stock (đã phản ánh đúng vì trừ kho ngay)
                 foreach ($cartItems as $item) {
                     if (!$item->variant_id)
                         continue;
@@ -367,7 +363,11 @@ class CheckoutController extends Controller
                         throw new \Exception("Sản phẩm \"{$item->product->name}\" hiện không còn bán.");
                     }
                     if ($variant->quantity < $item->quantity) {
-                        throw new \Exception("Sản phẩm \"{$item->product->name}\" chỉ còn {$variant->quantity} trong kho.");
+                        throw new \Exception(
+                            $variant->quantity === 0
+                                ? "Sản phẩm \"{$item->product->name}\" đã hết hàng."
+                                : "Sản phẩm \"{$item->product->name}\" chỉ còn {$variant->quantity} trong kho (bạn đang mua {$item->quantity})."
+                        );
                     }
                 }
 
@@ -411,8 +411,6 @@ class CheckoutController extends Controller
                     $effectivePrice = $this->resolvePrice($item, $lockedVariants);
                     $variant = $item->variant_id ? $lockedVariants->find($item->variant_id) : null;
 
-                    // Bug #1 Fix: dùng đúng field names theo OrderItem::$fillable
-                    // Thêm product_image, product_sku (thay 'sku'), total
                     $variantInfo = $variant ? [
                         'sku'   => $variant->sku,
                         'image' => $variant->image,
@@ -431,6 +429,15 @@ class CheckoutController extends Controller
                         'quantity'      => $item->quantity,
                         'total'         => $effectivePrice * $item->quantity,
                     ]);
+
+                    // Immediate deduction: TRỪ KHO NGAY khi đặt hàng
+                    if ($item->variant_id && $variant) {
+                        $variant->decrement('quantity', $item->quantity);
+                        $product = Product::find($item->product_id);
+                        if ($product) {
+                            $product->update(['quantity' => ProductVariant::where('product_id', $product->id)->sum('quantity')]);
+                        }
+                    }
                 }
 
 
@@ -693,7 +700,7 @@ class CheckoutController extends Controller
                 return;
             }
 
-            // 1. Đánh dấu đã thanh toán
+            // Đánh dấu đã thanh toán
             $freshOrder->update(['payment_status' => 'paid']);
             OrderStatusHistory::create([
                 'order_id' => $freshOrder->id,
@@ -701,92 +708,8 @@ class CheckoutController extends Controller
                 'note' => 'Thanh toán VNPAY thành công. Mã GD: ' . $transactionNo,
             ]);
 
-            // 1.5. Kiểm tra nếu kho đã bị trừ (do admin xác nhận đơn trước khi IPN tới)
-            $isStockAlreadyDeducted = in_array($freshOrder->status, ['confirmed', 'processing', 'shipping', 'delivered', 'completed'], true);
-
-            if (!$isStockAlreadyDeducted) {
-                // 2. Kiểm tra stock
-                $orderItems = $freshOrder->items()->with('variant')->get();
-                $stockIssues = [];
-
-                foreach ($orderItems as $item) {
-                    if (!$item->variant_id) continue;
-
-                    $variant = ProductVariant::where('id', $item->variant_id)
-                        ->lockForUpdate()
-                        ->first();
-
-                    if (!$variant || $variant->quantity < $item->quantity) {
-                        $stockIssues[] = [
-                            'product_name' => $item->product_name,
-                            'variant_id' => $item->variant_id,
-                            'needed' => $item->quantity,
-                            'available' => $variant ? $variant->quantity : 0,
-                        ];
-                    }
-                }
-
-                if (!empty($stockIssues)) {
-                    // =====================================================
-                    // HẾT HÀNG → Cancel đơn + đánh dấu cần hoàn tiền
-                    // =====================================================
-                    $stockDepleted = true;
-                    $issueDetails = collect($stockIssues)->map(function ($issue) {
-                        return "{$issue['product_name']} (cần {$issue['needed']}, còn {$issue['available']})";
-                    })->implode(', ');
-
-                    $freshOrder->update([
-                        'status' => 'cancelled',
-                        'cancelled_at' => now(),
-                        'cancelled_reason' => 'out_of_stock_after_payment',
-                        'admin_note' => 'HẾT HÀNG SAU THANH TOÁN VNPAY: ' . $issueDetails . '. Cần hoàn tiền cho khách.',
-                    ]);
-
-                    OrderStatusHistory::create([
-                        'order_id' => $freshOrder->id,
-                        'from_status' => 'pending',
-                        'to_status' => 'cancelled',
-                        'note' => 'Hệ thống tự động hủy: sản phẩm đã hết hàng trong lúc khách thanh toán VNPAY. ' . $issueDetails,
-                    ]);
-
-                    // Hoàn trả voucher nếu có
-                    if ($freshOrder->voucher_id) {
-                        Voucher::where('id', $freshOrder->voucher_id)
-                            ->where('used_count', '>', 0)
-                            ->decrement('used_count');
-                        VoucherUsage::where('voucher_id', $freshOrder->voucher_id)
-                            ->where('order_id', $freshOrder->id)
-                            ->delete();
-                    }
-
-                    AdminNotification::notify(
-                        'stock_issue_vnpay',
-                        '⚠️ VNPAY đã thanh toán nhưng hết hàng — cần hoàn tiền',
-                        "Đơn #{$freshOrder->order_code}: {$issueDetails}. Đơn đã tự động hủy, cần xử lý hoàn tiền cho khách.",
-                        $freshOrder->id
-                    );
-                } else {
-                    // =====================================================
-                    // ĐỦ STOCK → Trừ kho bình thường
-                    // =====================================================
-                    foreach ($orderItems as $item) {
-                        if (!$item->variant_id) continue;
-
-                        $variant = ProductVariant::where('id', $item->variant_id)
-                            ->lockForUpdate()
-                            ->first();
-
-                        if ($variant) {
-                            $variant->decrement('quantity', $item->quantity);
-                            // Sync product.quantity = tổng variant (nhất quán với hoàn kho)
-                            $product = Product::find($item->product_id);
-                            if ($product) {
-                                $product->update(['quantity' => ProductVariant::where('product_id', $product->id)->sum('quantity')]);
-                            }
-                        }
-                    }
-                }
-            }
+            // Immediate deduction: KHÔNG cần trừ kho ở đây nữa
+            // Stock đã được trừ ngay khi tạo đơn hàng (checkout/createVnpayPayment)
         });
 
         $order->refresh();

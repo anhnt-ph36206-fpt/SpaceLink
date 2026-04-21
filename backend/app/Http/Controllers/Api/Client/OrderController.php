@@ -102,7 +102,16 @@ class OrderController extends Controller
         $reason = $request->input('reason', 'Khách hàng tự hủy.');
 
         DB::transaction(function () use ($order, $user, $reason) {
-            // Lazy deduction: Đơn pending → stock CHƯA bị trừ → KHÔNG cần hoàn kho
+            // Immediate deduction: HOÀN KHO khi hủy đơn (vì stock đã bị trừ ngay khi đặt hàng)
+            foreach ($order->items()->with('variant')->get() as $item) {
+                if ($item->variant_id && $item->variant) {
+                    $item->variant->increment('quantity', $item->quantity);
+                }
+                $p = \App\Models\Product::find($item->product_id);
+                if ($p) {
+                    $p->update(['quantity' => \App\Models\ProductVariant::where('product_id', $p->id)->sum('quantity')]);
+                }
+            }
 
             $order->update([
                 'status'           => 'cancelled',
@@ -329,7 +338,16 @@ class OrderController extends Controller
                 'changed_by'  => $user->id,
             ]);
 
-            // Lazy deduction: KHÔNG hoàn kho — stock chưa bị trừ (VNPAY chưa thanh toán)
+            // Immediate deduction: HOÀN KHO khi hủy đơn VNPAY (vì stock đã trừ ngay khi checkout)
+            foreach ($order->items()->with('variant')->get() as $item) {
+                if ($item->variant_id && $item->variant) {
+                    $item->variant->increment('quantity', $item->quantity);
+                }
+                $p = \App\Models\Product::find($item->product_id);
+                if ($p) {
+                    $p->update(['quantity' => \App\Models\ProductVariant::where('product_id', $p->id)->sum('quantity')]);
+                }
+            }
 
             // Hoàn trả voucher khi hủy đơn VNPAY
             if ($order->voucher_id) {

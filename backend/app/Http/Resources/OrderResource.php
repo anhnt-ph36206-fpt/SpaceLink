@@ -101,6 +101,10 @@ class OrderResource extends JsonResource
                     'refund_bank' => $pr->refund_bank,
                     'refund_account_name' => $pr->refund_account_name,
                     'refund_account_number' => $pr->refund_account_number,
+                    'refund_proof_image' => $pr->refund_proof_image,
+                    'refund_proof_image_url' => $pr->refund_proof_image
+                        ? asset('storage/' . $pr->refund_proof_image)
+                        : null,
                     'items' => $pr->items,
                     'evidences' => $pr->relationLoaded('evidences')
                         ? $pr->evidences->map(fn ($e) => [

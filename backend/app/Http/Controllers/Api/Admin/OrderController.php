@@ -153,76 +153,28 @@ class OrderController extends Controller
                 }
 
                 // ===================================================================
-                // Lazy deduction: TRỪ KHO khi xác nhận đơn (pending → confirmed)
-                // NGOẠI TRỪ: Đơn VNPAY đã thanh toán (vì đã trừ kho trong IPN)
+                // Immediate deduction: KHÔNG cần trừ kho khi confirm nữa
+                // Stock đã được trừ ngay khi user đặt hàng (checkout)
                 // ===================================================================
-                $isVnpayPaid = $order->payment_method === 'vnpay' && $order->payment_status === 'paid';
-
-                if ($newStatus === 'confirmed' && !$isVnpayPaid) {
-                    $stockErrors = [];
-                    foreach ($order->items()->with('variant')->get() as $item) {
-                        if (! $item->variant_id) {
-                            \Log::info("[STOCK] Item #{$item->id} ({$item->product_name}) has NO variant_id — SKIPPED");
-                            continue;
-                        }
-
-                        $variant = ProductVariant::where('id', $item->variant_id)
-                            ->lockForUpdate()
-                            ->first();
-
-                        \Log::info("[STOCK] Item #{$item->id}: variant_id={$item->variant_id}, need={$item->quantity}, available=" . ($variant ? $variant->quantity : 'NULL'));
-
-                        if (! $variant || $variant->quantity < $item->quantity) {
-                            $available = $variant ? $variant->quantity : 0;
-                            $stockErrors[] = "{$item->product_name} (cần {$item->quantity}, còn {$available})";
-                            continue;
-                        }
-
-                        // Trừ kho variant
-                        $variant->decrement('quantity', $item->quantity);
-                        \Log::info("[STOCK] DECREMENTED variant #{$variant->id}: {$variant->quantity} (after decrement)");
-
-                        // Sync kho product = tổng kho các variant
-                        $product = Product::find($item->product_id);
-                        if ($product) {
-                            $newQty = ProductVariant::where('product_id', $product->id)->sum('quantity');
-                            $product->update(['quantity' => $newQty]);
-                            \Log::info("[STOCK] SYNCED product #{$product->id}: qty={$newQty}");
-                        }
-                    }
-
-                    // Nếu có sản phẩm hết hàng → không cho confirm
-                    if (! empty($stockErrors)) {
-                        throw new \Exception(
-                            'Không thể xác nhận đơn vì tồn kho không đủ: ' . implode(', ', $stockErrors)
-                        );
-                    }
-                }
 
                 // ===================================================================
-                // Xử lý khi hủy đơn
+                // Xử lý khi hủy đơn — LUÔN hoàn kho (vì stock đã trừ ngay khi đặt hàng)
                 // ===================================================================
                 if ($newStatus === 'cancelled') {
                     $updateData['cancelled_reason'] = $request->cancelled_reason;
                     $updateData['cancelled_by'] = $admin->id;
 
-                    $isVnpayPaid = $order->payment_method === 'vnpay' && $order->payment_status === 'paid';
-
-                    // Lazy deduction: CHỈ hoàn kho nếu đơn đã confirmed+ (stock đã bị trừ)
-                    // HOẶC đơn VNPAY đã thanh toán (vì IPN của VNPAY đã tự động trừ kho)
-                    if (in_array($oldStatus, self::STOCK_DEDUCTED_STATUSES, true) || $isVnpayPaid) {
-                        foreach ($order->items()->with('variant')->get() as $item) {
-                            if ($item->variant_id && $item->variant) {
-                                $item->variant->increment('quantity', $item->quantity);
-                            }
-                            // Sync product.quantity = tổng variant
-                            $p = Product::find($item->product_id);
-                            if ($p) {
-                                $p->update(['quantity' => ProductVariant::where('product_id', $p->id)->sum('quantity')]);
-                            }
+                    // Immediate deduction: LUÔN hoàn kho khi cancel (vì stock đã bị trừ ngay khi checkout)
+                    foreach ($order->items()->with('variant')->get() as $item) {
+                        if ($item->variant_id && $item->variant) {
+                            $item->variant->increment('quantity', $item->quantity);
+                        }
+                        // Sync product.quantity = tổng variant
+                        $p = Product::find($item->product_id);
+                        if ($p) {
+                            $p->update(['quantity' => ProductVariant::where('product_id', $p->id)->sum('quantity')]);
                         }
                     }
-                    // Đơn pending bị cancel → KHÔNG hoàn kho (vì chưa trừ)
 
                     // Hoàn trả voucher khi admin hủy đơn
                     if ($order->voucher_id) {
@@ -439,6 +391,13 @@ class OrderController extends Controller
         DB::transaction(function () use ($order, $productReturn, $admin, $request): void {
             $productReturn->status = 'approved';
             $productReturn->reason_for_refusal = null;
+
+            // Upload ảnh bằng chứng chuyển khoản hoàn tiền
+            if ($request->hasFile('refund_proof_image')) {
+                $path = $request->file('refund_proof_image')->store('refunds', 'public');
+                $productReturn->refund_proof_image = $path;
+            }
+
             $productReturn->save();
 
             if ($request->filled('admin_note')) {

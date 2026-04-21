@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCart, type CartItem } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -19,7 +19,7 @@ const imgUrl = (path?: string) => {
 };
 
 const CartPage: React.FC = () => {
-    const { items, removeFromCart, updateQty, loading, updatingItems } = useCart();
+    const { items, removeFromCart, updateQty, loading, updatingItems, refreshCart } = useCart();
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -94,6 +94,29 @@ const CartPage: React.FC = () => {
     const selectedItems = useMemo(() => items.filter(i => selectedIds.has(i.id)), [items, selectedIds]);
     const selectedTotalPrice = useMemo(() => selectedItems.reduce((s, i) => s + i.lineTotal, 0), [selectedItems]);
     const selectedTotalQty = useMemo(() => selectedItems.reduce((s, i) => s + i.quantity, 0), [selectedItems]);
+
+    // Check xem có sản phẩm đã chọn nào hết hàng không
+    const hasOutOfStockSelected = useMemo(
+        () => selectedItems.some(i => i.stock <= 0 || i.quantity > i.stock),
+        [selectedItems]
+    );
+
+    // Auto-refresh cart khi vào trang + khi quay lại tab
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const doRefresh = useCallback(async () => {
+        setIsRefreshing(true);
+        await refreshCart();
+        setIsRefreshing(false);
+    }, [refreshCart]);
+
+    useEffect(() => {
+        doRefresh();
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') doRefresh();
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+    }, [doRefresh]);
 
     // -- State for Variant Switching --
     const [editingItem, setEditingItem] = useState<CartItem | null>(null);
@@ -265,6 +288,7 @@ const CartPage: React.FC = () => {
             <h1 className="h4 mb-4 fw-bold d-flex align-items-center gap-2">
                 <ShoppingOutlined className="text-primary" />
                 Giỏ hàng của tôi ({items.length})
+                {isRefreshing && <Spin size="small" style={{ marginLeft: 8 }} />}
             </h1>
 
             {/* Banner thông báo đơn VNPAY đang chờ (chỉ informational, không block) */}
@@ -392,10 +416,24 @@ const CartPage: React.FC = () => {
 
                                             <div className="mt-2 text-danger fw-bold">{formatVND(item.price)}</div>
 
-                                            {stockWarningIds.has(item.id) && item.quantity >= item.stock && !stockIssues.has(item.variantId!) && (
-                                                <div className="mt-1 text-danger small" style={{ animation: 'fadeIn 0.3s ease' }}>
+                                            {stockWarningIds.has(item.id) && item.quantity >= item.stock && item.stock > 0 && !stockIssues.has(item.variantId!) && (
+                                                <div className="mt-1 text-danger small">
                                                     <InfoCircleOutlined className="me-1" />
                                                     Sản phẩm chỉ còn {item.stock} trong kho
+                                                </div>
+                                            )}
+                                            {/* Hiển thị HẾT HÀNG nếu stock = 0 (real-time từ API) */}
+                                            {item.stock <= 0 && !stockIssues.has(item.variantId!) && (
+                                                <div className="stock-issue-badge mt-2">
+                                                    <ExclamationCircleOutlined className="me-1" />
+                                                    HẾT HÀNG
+                                                </div>
+                                            )}
+                                            {/* Hiển thị nếu số lượng trong giỏ > stock (vẫn còn hàng nhưng không đủ) */}
+                                            {item.stock > 0 && item.quantity > item.stock && !stockIssues.has(item.variantId!) && (
+                                                <div className="stock-issue-badge mt-2" style={{ background: '#ff8800' }}>
+                                                    <ExclamationCircleOutlined className="me-1" />
+                                                    Chỉ còn {item.stock} sản phẩm
                                                 </div>
                                             )}
                                             {stockIssues.has(item.variantId!) && (
@@ -500,15 +538,21 @@ const CartPage: React.FC = () => {
                                 <span className="text-danger fw-bold h4 mb-0">{formatVND(selectedTotalPrice)}</span>
                             </div>
 
-                            <Tooltip title={selectedIds.size === 0 ? 'Vui lòng chọn ít nhất 1 sản phẩm' : ''}>
+                            <Tooltip title={
+                                selectedIds.size === 0 
+                                    ? 'Vui lòng chọn ít nhất 1 sản phẩm' 
+                                    : hasOutOfStockSelected 
+                                        ? 'Có sản phẩm đã hết hàng trong giỏ. Vui lòng bỏ chọn hoặc xóa sản phẩm hết hàng.' 
+                                        : ''
+                            }>
                                 <button
-                                    className="btn w-100 py-3 rounded-pill fw-bold btn-primary"
+                                    className={`btn w-100 py-3 rounded-pill fw-bold ${hasOutOfStockSelected ? 'btn-secondary' : 'btn-primary'}`}
                                     onClick={handleCheckout}
-                                    disabled={selectedIds.size === 0 || checkingStock}
+                                    disabled={selectedIds.size === 0 || checkingStock || hasOutOfStockSelected}
                                     style={{ fontSize: 16 }}
                                 >
                                     {checkingStock ? <Spin size="small" className="me-2" /> : <ShoppingCartOutlined className="me-2" />}
-                                    {checkingStock ? 'ĐANG KIỂM TRA...' : `THANH TOÁN (${selectedIds.size})`}
+                                    {checkingStock ? 'ĐANG KIỂM TRA...' : hasOutOfStockSelected ? 'CÓ SẢN PHẨM HẾT HÀNG' : `THANH TOÁN (${selectedIds.size})`}
                                 </button>
                             </Tooltip>
 
