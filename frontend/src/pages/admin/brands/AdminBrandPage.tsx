@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import {
     Table, Button, Modal, Form, Input, Switch, Space, Tag,
-    Typography, Popconfirm, Card, Row, Col, Avatar, Upload, type UploadFile, Select
+    Typography, Popconfirm, Card, Row, Col, Avatar, Upload, type UploadFile, Select, Tooltip
 } from 'antd';
 import {
     PlusOutlined, EditOutlined, DeleteOutlined,
-    SearchOutlined, ShopOutlined
+    SearchOutlined, ShopOutlined, PoweroffOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { axiosInstance } from "../../../api/axios.ts";
 import { toast } from "react-toastify";
 import type { UploadProps } from 'antd';
 import { brandPrefix } from "../../../api/apiAdminPrefix.ts";
+import { usePermission } from "../../../hooks/usePermission";
 
 const { Title, Text } = Typography;
 
@@ -44,6 +45,7 @@ const AdminBrandPage: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [editingItem, setEditingItem] = useState<Brand | null>(null);
     const [form] = Form.useForm();
+    const { canDelete } = usePermission();
 
     const [search, setSearch] = useState('');
     const [isActive, setIsActive] = useState<number | undefined>(undefined);
@@ -162,6 +164,16 @@ const AdminBrandPage: React.FC = () => {
         }
     };
 
+    const handleToggle = async (brand: Brand) => {
+        try {
+            await axiosInstance.patch(`${brandPrefix}/${brand.id}/toggle`);
+            toast.success(brand.is_active ? 'Đã tắt thương hiệu' : 'Đã bật thương hiệu');
+            fetchBrands(pagination.current);
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Thao tác thất bại');
+        }
+    };
+
     const uploadProps: UploadProps = {
         listType: 'picture-card',
         maxCount: 1,
@@ -223,14 +235,26 @@ const AdminBrandPage: React.FC = () => {
                         icon={<EditOutlined />}
                         onClick={() => openEdit(r)}
                     />
-                    <Popconfirm
-                        title="Xóa thương hiệu?"
-                        onConfirm={() => handleDelete(r.id)}
-                        okText="Xóa"
-                        cancelText="Hủy"
-                    >
-                        <Button danger size="small" icon={<DeleteOutlined />} />
-                    </Popconfirm>
+                    {canDelete ? (
+                        <Popconfirm
+                            title="Xóa thương hiệu?"
+                            onConfirm={() => handleDelete(r.id)}
+                            okText="Xóa"
+                            cancelText="Hủy"
+                        >
+                            <Button danger size="small" icon={<DeleteOutlined />} />
+                        </Popconfirm>
+                    ) : (
+                        <Tooltip title={r.is_active ? 'Tắt thương hiệu' : 'Bật thương hiệu'}>
+                            <Button
+                                size="small"
+                                type="dashed"
+                                danger={r.is_active}
+                                icon={<PoweroffOutlined />}
+                                onClick={() => handleToggle(r)}
+                            />
+                        </Tooltip>
+                    )}
                 </Space>
             ),
         },

@@ -110,4 +110,19 @@ class BrandController extends Controller
             'message' => 'Xóa thương hiệu thành công.'
         ]);
     }
+
+    /**
+     * PATCH /api/admin/brands/{brand}/toggle
+     * Bật / tắt trạng thái thương hiệu — Staff được phép (thay vì xóa)
+     */
+    public function toggle(Brand $brand): JsonResponse
+    {
+        $brand->update(['is_active' => !$brand->is_active]);
+
+        return response()->json([
+            'status'    => true,
+            'message'   => $brand->is_active ? 'Đã bật thương hiệu.' : 'Đã tắt thương hiệu.',
+            'is_active' => $brand->is_active,
+        ]);
+    }
 }

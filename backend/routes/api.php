@@ -188,10 +188,14 @@ Route::get('payment/vnpay-ipn', [\App\Http\Controllers\Api\Client\CheckoutContro
 // ── 4a. Staff + Admin: quản lý sản phẩm, đơn hàng, nội dung ─────────────
 Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'staff'])->group(function () {
 
-    Route::delete('categories/{category}/force', [AdminCategoryController::class, 'forceDelete']);
+    // Category — Staff được SoftDelete (destroy), KHÔNG được forceDelete
     Route::post('categories/{category}/reassign-products', [AdminCategoryController::class, 'reassignProducts']);
     Route::apiResource('categories', AdminCategoryController::class);
-    Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class);
+
+    // Brands — Staff được thêm/sửa/toggle, KHÔNG được xóa
+    Route::patch('brands/{brand}/toggle', [\App\Http\Controllers\Api\Admin\BrandController::class, 'toggle']);
+    Route::apiResource('brands', \App\Http\Controllers\Api\Admin\BrandController::class)->except(['destroy']);
+
     Route::apiResource('attribute-groups', AdminAttributeGroupController::class);
     Route::apiResource('specification-groups', \App\Http\Controllers\Api\Admin\SpecificationGroupController::class);
 
@@ -237,25 +241,27 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'staff'])->g
     // Complaints
     Route::apiResource('complaints', \App\Http\Controllers\Api\Admin\ComplaintController::class)->only(['index', 'show', 'update']);
 
-    Route::apiResource('vouchers', \App\Http\Controllers\Api\Admin\VoucherController::class);
+    // Vouchers — Staff được thêm/sửa, KHÔNG được xóa (destroy ở group admin)
+    Route::apiResource('vouchers', \App\Http\Controllers\Api\Admin\VoucherController::class)->except(['destroy']);
 
+    // Reviews — Staff được xem/trả lời/ẩn, KHÔNG được xóa (destroy ở group admin)
     Route::get('reviews', [AdminReviewController::class, 'index']);
     Route::patch('reviews/{id}/reply', [AdminReviewController::class, 'reply']);
     Route::patch('reviews/{id}/toggle-visibility', [AdminReviewController::class, 'toggleVisibility']);
-    Route::delete('reviews/{id}', [AdminReviewController::class, 'destroy']);
 
+    // Comments — Staff được xem/duyệt/từ chối/ẩn, KHÔNG được xóa
     Route::get('comments', [AdminCommentController::class, 'index']);
     Route::get('comments/{comment}', [AdminCommentController::class, 'show']);
     Route::patch('comments/{comment}/approve', [AdminCommentController::class, 'approve']);
     Route::patch('comments/{comment}/reject', [AdminCommentController::class, 'reject']);
     Route::patch('comments/{comment}/toggle-hide', [AdminCommentController::class, 'toggleHide']);
-    Route::delete('comments/{comment}', [AdminCommentController::class, 'destroy']);
 
-    Route::apiResource('news', AdminNewsController::class);
+    // News — Staff được thêm/sửa, KHÔNG được xóa (destroy ở group admin)
+    Route::apiResource('news', AdminNewsController::class)->except(['destroy']);
 
+    // Contacts — Staff được xem/trả lời, KHÔNG được xóa
     Route::get('contacts', [AdminContactController::class, 'index']);
     Route::patch('contacts/{id}/reply', [AdminContactController::class, 'reply']);
-    Route::delete('contacts/{id}', [AdminContactController::class, 'destroy']);
 
     Route::apiResource('attributes', AttributeController::class);
 
@@ -266,7 +272,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'staff'])->g
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
 });
 
-// ── 4b. Admin-only: Quản lý người dùng & báo cáo doanh thu ───────────────
+// ── 4b. Admin-only: Quản lý người dùng, báo cáo doanh thu & xóa dữ liệu ──
 Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->group(function () {
 
     // Quản lý User/Staff/Admin — CHỈ Admin
@@ -279,4 +285,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     Route::get('dashboard/top-products', [DashboardController::class, 'topProducts']);
     Route::get('dashboard/orders-stats', [DashboardController::class, 'ordersStats']);
     Route::get('dashboard/customers-stats', [DashboardController::class, 'customersStats']);
+
+    // ── Xóa dữ liệu — CHỈ Admin ──────────────────────────────────────────
+    // Category: forceDelete vĩnh viễn
+    Route::delete('categories/{category}/force', [AdminCategoryController::class, 'forceDelete']);
+    // Brand: xóa thương hiệu
+    Route::delete('brands/{brand}', [\App\Http\Controllers\Api\Admin\BrandController::class, 'destroy']);
+    // Reviews: xóa vĩnh viễn đánh giá
+    Route::delete('reviews/{id}', [AdminReviewController::class, 'destroy']);
+    // Comments: xóa vĩnh viễn bình luận
+    Route::delete('comments/{comment}', [AdminCommentController::class, 'destroy']);
+    // News: xóa bài viết
+    Route::delete('news/{news}', [AdminNewsController::class, 'destroy']);
+    // Contacts: xóa liên hệ
+    Route::delete('contacts/{id}', [AdminContactController::class, 'destroy']);
+    // Vouchers: xóa mã giảm giá
+    Route::delete('vouchers/{voucher}', [\App\Http\Controllers\Api\Admin\VoucherController::class, 'destroy']);
 });

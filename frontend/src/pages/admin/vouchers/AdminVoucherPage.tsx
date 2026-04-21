@@ -9,6 +9,7 @@ import { axiosInstance } from "../../../api/axios";
 import { toast } from "react-toastify";
 import { voucherPrefix } from "../../../api/apiAdminPrefix";
 import dayjs from 'dayjs';
+import { usePermission } from "../../../hooks/usePermission";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -40,6 +41,7 @@ const AdminVoucherPage: React.FC = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Voucher | null>(null);
     const [form] = Form.useForm();
+    const { canDelete } = usePermission();
 
     const [search, setSearch] = useState('');
     const [isActive, setIsActive] = useState<boolean | undefined>(undefined);
@@ -194,16 +196,18 @@ const AdminVoucherPage: React.FC = () => {
                         type="primary" ghost size="small" icon={<EditOutlined />}
                         onClick={() => openEdit(r)}
                     />
-                    <Popconfirm
-                        title="Xóa mã giảm giá?"
-                        description={r.usages_count && r.usages_count > 0 ? "Voucher này đã có người dùng, hãy tắt trạng thái Hoạt động thay vì xóa. Bạn vẫn muốn xóa?" : "Chắc chắn xóa voucher này?"}
-                        onConfirm={() => handleDelete(r)}
-                        okText="Xóa"
-                        cancelText="Hủy"
-                        okButtonProps={{ danger: true }}
-                    >
-                        <Button danger size="small" icon={<DeleteOutlined />} />
-                    </Popconfirm>
+                    {canDelete && (
+                        <Popconfirm
+                            title="Xóa mã giảm giá?"
+                            description={r.usages_count && r.usages_count > 0 ? "Voucher này đã có người dùng, hãy tắt trạng thái Hoạt động thay vì xóa. Bạn vẫn muốn xóa?" : "Chắc chắn xóa voucher này?"}
+                            onConfirm={() => handleDelete(r)}
+                            okText="Xóa"
+                            cancelText="Hủy"
+                            okButtonProps={{ danger: true }}
+                        >
+                            <Button danger size="small" icon={<DeleteOutlined />} />
+                        </Popconfirm>
+                    )}
                 </Space>
             ),
         },
