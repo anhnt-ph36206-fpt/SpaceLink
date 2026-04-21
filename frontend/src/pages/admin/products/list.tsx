@@ -166,18 +166,22 @@ const ProductList: React.FC = () => {
 
     const handleDelete = async (id: number) => {
         try {
-            await axiosInstance.delete(`${productPrefix}/${id}`);
-            toast.success('Đã xóa sản phẩm');
+            const res = await axiosInstance.delete(`${productPrefix}/${id}`);
+            toast.success(res.data?.message || 'Đã xóa sản phẩm');
             fetchProducts(pagination.current);
-        } catch { toast.error('Xóa thất bại'); }
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Xóa thất bại');
+        }
     };
 
     const handleRestore = async (id: number) => {
         try {
-            await axiosInstance.post(`${productPrefix}/${id}/restore`);
-            toast.success('Đã khôi phục sản phẩm');
+            const res = await axiosInstance.post(`${productPrefix}/${id}/restore`);
+            toast.success(res.data?.message || 'Đã khôi phục sản phẩm');
             fetchProducts(pagination.current);
-        } catch { toast.error('Khôi phục thất bại'); }
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Khôi phục thất bại');
+        }
     };
 
     const handleReset = () => {

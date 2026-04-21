@@ -199,8 +199,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'staff'])->g
     Route::post('products/bulk-action', [\App\Http\Controllers\Api\Admin\ProductController::class, 'bulkAction']);
     Route::patch('products/{product}/toggle-active', [\App\Http\Controllers\Api\Admin\ProductController::class, 'toggleActive']);
     // forceDelete & restore — Policy sẽ chặn Staff trong Controller
-    Route::delete('products/{product}/force', [\App\Http\Controllers\Api\Admin\ProductController::class, 'forceDelete']);
-    Route::post('products/{product}/restore', [\App\Http\Controllers\Api\Admin\ProductController::class, 'restore']);
+    Route::delete('products/{product}/force', [\App\Http\Controllers\Api\Admin\ProductController::class, 'forceDelete'])->withTrashed();
+    Route::post('products/{product}/restore', [\App\Http\Controllers\Api\Admin\ProductController::class, 'restore'])->withTrashed();
     Route::get('products/{product}/specifications', [\App\Http\Controllers\Api\Admin\ProductController::class, 'getSpecifications']);
     Route::put('products/{product}/specifications', [\App\Http\Controllers\Api\Admin\ProductController::class, 'syncSpecifications']);
     Route::apiResource('products', \App\Http\Controllers\Api\Admin\ProductController::class);

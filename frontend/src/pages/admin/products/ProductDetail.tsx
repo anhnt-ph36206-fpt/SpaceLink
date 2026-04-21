@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     Card, Row, Col, Typography, Space, Tag, Button,
     Table, Image, Descriptions, Divider,
-    InputNumber, Switch, Breadcrumb, Tabs, Skeleton
+    InputNumber, Switch, Breadcrumb, Tabs, Skeleton, Popconfirm,
 } from 'antd';
 import {
     ArrowLeftOutlined, EditOutlined, ShoppingOutlined,
     ThunderboltOutlined, SaveOutlined, TagsOutlined,
-    BarChartOutlined, InfoCircleOutlined, ToolOutlined
+    BarChartOutlined, InfoCircleOutlined, ToolOutlined,
+    UndoOutlined, DeleteOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import ProductSpecifications from './ProductSpecifications';
 import MDEditor from '@uiw/react-md-editor';
@@ -44,6 +45,7 @@ interface Product {
     is_featured: boolean;
     is_active: boolean;
     sold_count: number;
+    deleted_at?: string | null;
     images?: { id: number; image_path: string; image_url?: string; is_primary: boolean }[];
     variants?: Variant[];
 }
@@ -58,6 +60,32 @@ const ProductDetail: React.FC = () => {
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
     const [updatingVariantId, setUpdatingVariantId] = useState<number | null>(null);
+    const [restoring, setRestoring] = useState(false);
+
+    const handleRestore = async () => {
+        if (!product) return;
+        setRestoring(true);
+        try {
+            const res = await axiosInstance.post(`${productPrefix}/${product.id}/restore`);
+            toast.success(res.data?.message || 'Đã khôi phục sản phẩm');
+            fetchDetail();
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Khôi phục thất bại');
+        } finally {
+            setRestoring(false);
+        }
+    };
+
+    const handleDeleteFromDetail = async () => {
+        if (!product) return;
+        try {
+            const res = await axiosInstance.delete(`${productPrefix}/${product.id}`);
+            toast.success(res.data?.message || 'Đã xóa sản phẩm');
+            navigate('/admin/products');
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Xóa thất bại');
+        }
+    };
 
     const fetchDetail = async () => {
         try {
@@ -129,16 +157,59 @@ const ProductDetail: React.FC = () => {
                         <Text type="secondary">Product ID: #{product.id} • SKU: {product.sku || 'N/A'}</Text>
                     </div>
                 </Space>
-                <Button
-                    type="primary"
-                    icon={<EditOutlined />}
-                    size="large"
-                    onClick={() => navigate(`/admin/products/edit/${product.id}`)}
-                    style={{ borderRadius: 8, height: 45, padding: '0 25px' }}
-                >
-                    Chỉnh sửa sản phẩm
-                </Button>
+                <Space>
+                    {product.deleted_at ? (
+                        <>
+                            <Button
+                                type="primary"
+                                icon={<UndoOutlined />}
+                                size="large"
+                                loading={restoring}
+                                onClick={handleRestore}
+                                style={{ borderRadius: 8, height: 45, padding: '0 25px', background: 'linear-gradient(135deg,#16a34a,#14532d)', border: 'none' }}
+                            >
+                                Khôi phục sản phẩm
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <Popconfirm
+                                title="Xóa sản phẩm này?"
+                                description="Sản phẩm sẽ bị xóa mềm, có thể khôi phục sau."
+                                onConfirm={handleDeleteFromDetail}
+                                okText="Xóa" cancelText="Hủy" okType="danger"
+                            >
+                                <Button danger size="large" icon={<DeleteOutlined />} style={{ borderRadius: 8, height: 45 }}>
+                                    Xóa
+                                </Button>
+                            </Popconfirm>
+                            <Button
+                                type="primary"
+                                icon={<EditOutlined />}
+                                size="large"
+                                onClick={() => navigate(`/admin/products/edit/${product.id}`)}
+                                style={{ borderRadius: 8, height: 45, padding: '0 25px' }}
+                            >
+                                Chỉnh sửa sản phẩm
+                            </Button>
+                        </>
+                    )}
+                </Space>
             </div>
+
+            {/* Banner cảnh báo sản phẩm đã xóa */}
+            {product.deleted_at && (
+                <div style={{
+                    background: '#fef2f2', border: '2px solid #fca5a5', borderRadius: 12,
+                    padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12
+                }}>
+                    <ExclamationCircleOutlined style={{ color: '#dc2626', fontSize: 22 }} />
+                    <div>
+                        <div style={{ fontWeight: 700, color: '#dc2626', fontSize: 15 }}>Sản phẩm đã bị xóa</div>
+                        <div style={{ color: '#991b1b', fontSize: 13 }}>Sản phẩm này đang ẩn khỏi cửa hàng. Bấm "Khôi phục sản phẩm" để đưa lại.</div>
+                    </div>
+                </div>
+            )}
 
             <Row gutter={[24, 24]}>
                 {/* Left side: Basic Info & Stats */}

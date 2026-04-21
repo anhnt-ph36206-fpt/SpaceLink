@@ -77,7 +77,7 @@ class ProductController extends Controller
     // =========================================================================
     public function show(string $id): ProductResource
     {
-        $product = Product::with([
+        $product = Product::withTrashed()->with([
             'category:id,name,slug',
             'brand:id,name,slug',
             'images',
@@ -322,11 +322,34 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
         $this->authorize('delete', $product);
 
+        // Chặn xóa nếu sản phẩm đang có đơn hàng active (pending → delivered)
+        $activeStatuses = ['pending', 'confirmed', 'processing', 'shipping', 'delivered'];
+        $activeOrderCount = \App\Models\OrderItem::where('product_id', $product->id)
+            ->whereHas('order', function ($q) use ($activeStatuses) {
+                $q->whereIn('status', $activeStatuses);
+            })
+            ->count();
+
+        if ($activeOrderCount > 0) {
+            return response()->json([
+                'status'  => false,
+                'message' => "Không thể xóa sản phẩm \"{$product->name}\" vì đang có {$activeOrderCount} đơn hàng chưa hoàn thành liên quan.",
+            ], 422);
+        }
+
+        // Dọn sạch giỏ hàng tham chiếu đến sản phẩm này
+        $cartCleared = \App\Models\Cart::where('product_id', $product->id)->delete();
+
         $product->delete();
+
+        $msg = "Đã xóa sản phẩm \"{$product->name}\". Có thể khôi phục qua POST /admin/products/{id}/restore.";
+        if ($cartCleared > 0) {
+            $msg .= " ({$cartCleared} mục giỏ hàng đã được tự động xóa.)";
+        }
 
         return response()->json([
             'status'  => true,
-            'message' => "Đã xóa sản phẩm \"{$product->name}\". Có thể khôi phục qua POST /admin/products/{id}/restore.",
+            'message' => $msg,
         ]);
     }
 
@@ -337,6 +360,18 @@ class ProductController extends Controller
     {
         $product = Product::withTrashed()->findOrFail($id);
         $this->authorize('forceDelete', $product);
+
+        // Chặn xóa vĩnh viễn nếu sản phẩm đã từng được đặt hàng (bảo toàn lịch sử đơn hàng)
+        $orderItemCount = \App\Models\OrderItem::where('product_id', $product->id)->count();
+        if ($orderItemCount > 0) {
+            return response()->json([
+                'status'  => false,
+                'message' => "Không thể xóa vĩnh viễn sản phẩm \"{$product->name}\" vì có {$orderItemCount} đơn hàng liên quan trong lịch sử. Hãy sử dụng xóa mềm (ẩn) thay thế.",
+            ], 422);
+        }
+
+        // Dọn sạch giỏ hàng trước khi xóa vĩnh viễn
+        \App\Models\Cart::where('product_id', $product->id)->delete();
 
         $product->forceDelete();
 
@@ -404,6 +439,27 @@ class ProductController extends Controller
             case 'delete':
                 // Staff + Admin đều được phép soft delete (policy 'delete')
                 $this->authorize('delete', new Product());
+
+                // Chặn nếu có SP đang trong đơn hàng active
+                $activeStatuses = ['pending', 'confirmed', 'processing', 'shipping', 'delivered'];
+                $blockedProducts = Product::whereIn('id', $ids)
+                    ->whereHas('orderItems.order', function ($q) use ($activeStatuses) {
+                        $q->whereIn('status', $activeStatuses);
+                    })
+                    ->pluck('name')
+                    ->toArray();
+
+                if (!empty($blockedProducts)) {
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'Không thể xóa vì các sản phẩm sau đang có đơn hàng chưa hoàn thành: '
+                            . implode(', ', $blockedProducts),
+                    ], 422);
+                }
+
+                // Dọn giỏ hàng
+                \App\Models\Cart::whereIn('product_id', $ids)->delete();
+
                 Product::whereIn('id', $ids)->delete();
                 return response()->json([
                     'status'  => true,

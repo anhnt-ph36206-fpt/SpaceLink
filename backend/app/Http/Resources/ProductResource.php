@@ -67,6 +67,7 @@ class ProductResource extends JsonResource
                 });
             }),
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
+            'deleted_at' => $this->deleted_at?->format('d-m-Y H:i:s'),
         ];
     }
 }
