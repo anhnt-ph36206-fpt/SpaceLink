@@ -5,6 +5,7 @@ import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useUserNotifications } from '../../hooks/useUserNotifications';
 import { axiosInstance } from '../../api/axios';
+import ConfirmLogoutModal from '../common/ConfirmLogoutModal';
 
 const formatVND = (v: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
@@ -24,6 +25,7 @@ const Header: React.FC = () => {
     const { totalItems: totalWishlistItems } = useWishlist();
     const { notifications, unreadCount, markAllRead, markRead } = useUserNotifications(!!user);
     const [notifOpen, setNotifOpen] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const notifRef = useRef<HTMLDivElement>(null);
 
 
@@ -202,7 +204,7 @@ const Header: React.FC = () => {
                                                     <Link to="/admin" className="dropdown-item"><i className="fas fa-user-shield me-2 text-primary"></i>Trang quản trị</Link>
                                                 )
                                             }
-                                            <button onClick={logout} className="dropdown-item w-100 text-start bg-transparent border-0"><i className="fas fa-sign-out-alt me-2 text-danger"></i>Đăng xuất</button>
+                                            <button onClick={() => setShowLogoutModal(true)} className="dropdown-item w-100 text-start bg-transparent border-0"><i className="fas fa-sign-out-alt me-2 text-danger"></i>Đăng xuất</button>
                                         </>
                                     )}
                                     <div className="dropdown-divider"></div>
@@ -491,6 +493,12 @@ const Header: React.FC = () => {
 
                 </div>
             </div>
+      {showLogoutModal && (
+        <ConfirmLogoutModal
+          onConfirm={() => { setShowLogoutModal(false); logout(); }}
+          onCancel={() => setShowLogoutModal(false)}
+        />
+      )}
         </>
     );
 };

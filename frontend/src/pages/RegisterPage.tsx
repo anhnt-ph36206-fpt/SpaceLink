@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import type { User } from '../types/user';
+import { Link, useNavigate } from 'react-router-dom';
 import { axiosInstance } from '../api/axios';
 import type { AxiosError } from 'axios';
+import Toast, { type ToastType } from '../components/common/Toast';
 
 type RegisterForm = {
   name: string;
@@ -15,36 +14,51 @@ type RegisterForm = {
   address: string;
 };
 
+interface ToastState {
+  message: string;
+  type: ToastType;
+}
+
 const RegisterPage: React.FC = () => {
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterForm>();
-  const { login } = useAuth();
+  const navigate = useNavigate();
   const passwordValue = watch('password');
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const showToast = useCallback((message: string, type: ToastType = 'error') => {
+    setToast({ message, type });
+  }, []);
 
   const onRegister = async (data: RegisterForm) => {
     try {
       // POST /api/auth/register → { status: true, data: { user, token, token_type } }
       const res = await axiosInstance.post('/auth/register', {
-        fullname: data.name,                   // backend field: 'FULLNAME'
+        fullname: data.name,
         email: data.email,
         password: data.password,
         phone: data.phone,
         address: data.address,
-        password_confirmation: data.confirmPassword, // bắt buộc theo 'confirmed' rule
+        password_confirmation: data.confirmPassword,
       });
+      void res;
 
-      const user: User = res.data.data.user;
-      const token: string = res.data.data.token;
-
-      alert('🎉 Đăng ký thành công! Chào mừng bạn đến với SpaceLink!');
-      login(token, user); // tự động đăng nhập + điều hướng
+      // Redirect to login and show success notification there
+      navigate('/login', {
+        state: {
+          prefillEmail: data.email,
+          successMessage: 'Đăng ký thành công! Chào mừng bạn đến với SpaceLink 🎉',
+        },
+      });
     } catch (err) {
       const error = err as AxiosError<{ message?: string; errors?: Record<string, string[]> }>;
       const resData = error.response?.data;
       if (resData?.errors) {
         const firstError = Object.values(resData.errors)[0];
-        alert(firstError?.[0] ?? 'Đăng ký thất bại!');
+        showToast(firstError?.[0] ?? 'Đăng ký thất bại!', 'error');
       } else {
-        alert(resData?.message ?? 'Đã có lỗi xảy ra, vui lòng thử lại!');
+        showToast(resData?.message ?? 'Đã có lỗi xảy ra, vui lòng thử lại!', 'error');
       }
     }
   };
@@ -52,6 +66,13 @@ const RegisterPage: React.FC = () => {
   
   return (
     <>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <style>{`
         .auth-page { min-height: 100vh; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); }
         .auth-card { border: none; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); overflow: hidden; }
@@ -66,6 +87,8 @@ const RegisterPage: React.FC = () => {
         .input-icon-wrapper { position: relative; }
         .input-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color: #adb5bd; z-index:1; font-size:14px; }
         .form-control-custom.with-icon { padding-left: 40px; }
+        .password-toggle { position:absolute; right:14px; top:50%; transform:translateY(-50%); background:none; border:none; color:#adb5bd; cursor:pointer; padding:0; z-index:2; font-size:14px; transition:color 0.2s; line-height:1; }
+        .password-toggle:hover { color:#495057; }
         .btn-register { border-radius: 10px; padding: 13px; font-weight: 600; font-size: 15px; letter-spacing: 0.5px; transition: all 0.3s ease; background: linear-gradient(135deg,#0d6efd,#0a58ca); border:none; }
         .btn-register:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(13,110,253,0.4); background: linear-gradient(135deg,#0a58ca,#084298); }
         .auth-link { color:linear-gradient(160deg, #ffb347 0%, #f28b00 50%, #c96f00 100%); text-decoration:none; font-weight:600; }
@@ -177,12 +200,16 @@ const RegisterPage: React.FC = () => {
                               <input
                                 type="password"
                                 placeholder="Tối thiểu 6 ký tự"
+                                autoComplete="new-password"
                                 {...register('password', {
                                   required: 'Vui lòng nhập mật khẩu',
                                   minLength: { value: 6, message: 'Mật khẩu ít nhất 6 ký tự' }
                                 })}
                                 className={`form-control form-control-custom with-icon ${errors.password ? 'is-invalid' : ''}`}
-                              />
+                               style={{ paddingRight: '42px' }} />
+                               <button type="button" className="password-toggle" onClick={() => setShowPassword(p => !p)} tabIndex={-1} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>
+                                 <i className={`fas ${showPassword ? 'fa-eye' : 'fa-eye-slash'}`} />
+                               </button>
                             </div>
                             {errors.password && <div className="invalid-feedback d-block" style={{fontSize:'13px'}}><i className="fas fa-exclamation-circle me-1"></i>{errors.password.message}</div>}
                           </div>
@@ -195,12 +222,16 @@ const RegisterPage: React.FC = () => {
                               <input
                                 type="password"
                                 placeholder="Nhập lại mật khẩu"
+                                autoComplete="new-password"
                                 {...register('confirmPassword', {
                                   required: 'Vui lòng xác nhận mật khẩu',
                                   validate: val => val === passwordValue || 'Mật khẩu không khớp'
                                 })}
                                 className={`form-control form-control-custom with-icon ${errors.confirmPassword ? 'is-invalid' : ''}`}
-                              />
+                               style={{ paddingRight: '42px' }} />
+                               <button type="button" className="password-toggle" onClick={() => setShowConfirmPassword(p => !p)} tabIndex={-1} aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>
+                                 <i className={`fas ${showConfirmPassword ? 'fa-eye' : 'fa-eye-slash'}`} />
+                               </button>
                             </div>
                             {errors.confirmPassword && <div className="invalid-feedback d-block" style={{fontSize:'13px'}}><i className="fas fa-exclamation-circle me-1"></i>{errors.confirmPassword.message}</div>}
                           </div>

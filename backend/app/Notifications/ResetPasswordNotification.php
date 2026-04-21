@@ -36,8 +36,12 @@ class ResetPasswordNotification extends Notification implements ShouldQueue
      */
     public function toMail($notifiable): MailMessage
     {
-        // Giả sử frontend reset URL là: http://localhost:5173/reset-password?token=xxx&email=yyy
-        $url = url(config('app.frontend_url', 'http://localhost:5173') . '/reset-password?token=' . $this->token . '&email=' . $notifiable->getEmailForPasswordReset());
+        $frontendUrl = rtrim((string) config('app.frontend_url', 'http://localhost:5173'), '/');
+        $query = http_build_query([
+            'token' => $this->token,
+            'email' => $notifiable->getEmailForPasswordReset(),
+        ]);
+        $url = $frontendUrl . '/reset-password?' . $query;
 
         return (new MailMessage)
             ->subject('[SpaceLink] Yêu cầu đặt lại mật khẩu')
