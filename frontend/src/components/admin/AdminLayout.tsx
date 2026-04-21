@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ConfirmLogoutModal from '../common/ConfirmLogoutModal';
 import { Layout, Menu, Button, Avatar, Dropdown, Breadcrumb, theme, Badge } from 'antd';
 import {
     DashboardOutlined,
@@ -125,6 +126,7 @@ const breadcrumbMap: Record<string, string> = {
 const AdminLayout: React.FC = () => {
     const [collapsed, setCollapsed] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout, isLoading, isAdmin } = useAuth();
@@ -194,12 +196,13 @@ const AdminLayout: React.FC = () => {
     ];
 
     const handleUserMenu = ({ key }: { key: string }) => {
-        if (key === 'logout') logout();
+        if (key === 'logout') setShowLogoutModal(true);
         if (key === 'profile') navigate('/');
     };
 
     return (
-        <Layout style={{ minHeight: '100vh' }}>
+        <>
+            <Layout style={{ minHeight: '100vh' }}>
             {/* ===== SIDEBAR ===== */}
             <Sider
                 trigger={null}
@@ -518,6 +521,13 @@ const AdminLayout: React.FC = () => {
                 </Content>
             </Layout>
         </Layout>
+      {showLogoutModal && (
+        <ConfirmLogoutModal
+          onConfirm={() => { setShowLogoutModal(false); logout(); }}
+          onCancel={() => setShowLogoutModal(false)}
+        />
+      )}
+        </>
     );
 };
 
