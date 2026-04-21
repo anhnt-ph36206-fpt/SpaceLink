@@ -15,6 +15,7 @@ import OrderSuccessPage from './pages/OrderSuccessPage';
 import PaymentReturnPage from './pages/PaymentReturnPage';
 import BestsellerPage from './pages/BestsellerPage';
 import ContactPage from './pages/ContactPage';
+import AboutPage from './pages/AboutPage';
 import NotFoundPage from './pages/NotFoundPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -114,6 +115,7 @@ function App() {
                                 </Route>
                                 <Route path="/bestseller" element={<BestsellerPage />} />
                                 <Route path="/contact" element={<ContactPage />} />
+                                <Route path="/about" element={<AboutPage />} />
                                 <Route path="/search" element={<SearchPage />} />
                                 <Route path="/compare" element={<ComparePage />} />
                                 <Route path="/wishlist" element={<WishlistPage />} />
