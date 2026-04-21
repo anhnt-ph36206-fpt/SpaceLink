@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Table, Button, Space, Modal, Input, message, Tag, Rate, Tooltip, Typography, Card, Row, Col, Select, Popconfirm, Avatar } from 'antd';
 import { CommentOutlined, DeleteOutlined, ExclamationCircleOutlined, SearchOutlined, ReloadOutlined, EyeInvisibleOutlined, EyeOutlined, UserOutlined } from '@ant-design/icons';
 import { axiosInstance } from '../../../api/axios';
+import { usePermission } from '../../../hooks/usePermission';
 
 const { confirm } = Modal;
 const { TextArea } = Input;
@@ -18,6 +19,7 @@ const formatVariant = (variant: any): string | null => {
 export default function AdminReviewPage() {
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(false);
+    const { canDelete } = usePermission();
 
     // Filters
     const [search, setSearch] = useState('');
@@ -248,15 +250,17 @@ export default function AdminReviewPage() {
                             ghost={!!record.admin_reply}
                         />
                     </Tooltip>
-                    <Popconfirm
-                        title="Bạn có chắc chắn muốn xóa vĩnh viễn?"
-                        onConfirm={() => handleDelete(record.id)}
-                        okText="Xóa"
-                        okType="danger"
-                        cancelText="Hủy"
-                    >
-                        <Button danger size="small" icon={<DeleteOutlined />} />
-                    </Popconfirm>
+                    {canDelete && (
+                        <Popconfirm
+                            title="Bạn có chắc chắn muốn xóa vĩnh viễn?"
+                            onConfirm={() => handleDelete(record.id)}
+                            okText="Xóa"
+                            okType="danger"
+                            cancelText="Hủy"
+                        >
+                            <Button danger size="small" icon={<DeleteOutlined />} />
+                        </Popconfirm>
+                    )}
                 </Space>
             )
         }

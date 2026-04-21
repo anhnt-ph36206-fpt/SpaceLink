@@ -37,6 +37,7 @@ const menuItems = [
         key: '/admin',
         icon: <DashboardOutlined />,
         label: 'Dashboard',
+        adminOnly: true,
     },
     {
         key: '/admin/categories',

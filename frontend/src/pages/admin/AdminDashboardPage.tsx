@@ -336,17 +336,19 @@ const AdminDashboardPage: React.FC = () => {
 
       {/* ── Section 1: KPI Cards ──────────────────────────────────────────── */}
       <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        <Col xs={24} sm={12} lg={isAdmin ? 6 : 8}>
-          <KpiCard
-            title={`Doanh thu ${PERIOD_LABELS[period]}`}
-            value={formatVNDShort(stats.period_revenue)}
-            icon={<DollarOutlined />}
-            color="#F28B00"
-            change={stats.revenue_change}
-            subtitle={formatVND(stats.period_revenue)}
-          />
-        </Col>
-        <Col xs={24} sm={12} lg={isAdmin ? 6 : 8}>
+        {isAdmin && (
+          <Col xs={24} sm={12} lg={6}>
+            <KpiCard
+              title={`Doanh thu ${PERIOD_LABELS[period]}`}
+              value={formatVNDShort(stats.period_revenue)}
+              icon={<DollarOutlined />}
+              color="#F28B00"
+              change={stats.revenue_change}
+              subtitle={formatVND(stats.period_revenue)}
+            />
+          </Col>
+        )}
+        <Col xs={24} sm={12} lg={isAdmin ? 6 : 12}>
           <KpiCard
             title={`Đơn hàng ${PERIOD_LABELS[period]}`}
             value={stats.period_orders}
@@ -380,7 +382,7 @@ const AdminDashboardPage: React.FC = () => {
           </Col>
         )}
         {!isAdmin && (
-          <Col xs={24} sm={12} lg={8}>
+          <Col xs={24} sm={12} lg={12}>
             <KpiCard
               title="Tổng sản phẩm"
               value={stats.total_products}

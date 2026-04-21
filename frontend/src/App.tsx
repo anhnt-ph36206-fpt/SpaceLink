@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { CompareProvider } from './context/CompareContext';
 import PrivateRoute from './components/layout/PrivateRoute';
@@ -56,6 +57,12 @@ const PublicRoot = () => (
     </Layout>
 );
 
+// Staff-aware index: redirect Staff away from Dashboard → Orders
+const AdminIndexRoute: React.FC = () => {
+    const { isAdmin } = useAuth();
+    return isAdmin ? <AdminDashboardPage /> : <Navigate to="/admin/orders" replace />;
+};
+
 function App() {
     return (
         <BrowserRouter>
@@ -68,7 +75,7 @@ function App() {
 
                             {/* ADMIN */}
                             <Route path="/admin" element={<AdminLayout />}>
-                                <Route index element={<AdminDashboardPage />} />
+                                <Route index element={<AdminIndexRoute />} />
                                 <Route path="categories" element={<AdminCategoryPage />} />
                                 <Route path="brands" element={<AdminBrandPage />} />
                                 <Route path="banners" element={<AdminBannerPage />} />

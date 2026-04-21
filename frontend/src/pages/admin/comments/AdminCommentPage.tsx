@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
     Table, Button, Space, Input, Tag, Tooltip, Typography,
-    Card, Row, Col, Select, Popconfirm, Avatar, Modal, message, Badge,
+    Card, Row, Col, Select, Popconfirm, Avatar, Modal, message,
 } from 'antd';
 import {
     QuestionCircleOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined,
@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons';
 import { axiosInstance } from '../../../api/axios';
 import { Link, useNavigate } from 'react-router-dom';
+import { usePermission } from '../../../hooks/usePermission';
 
 const { Title } = Typography;
 
@@ -62,6 +63,7 @@ export default function AdminCommentPage() {
     const [questions, setQuestions] = useState<QuestionItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [actionLoading, setActionLoading] = useState<number | null>(null);
+    const { canDelete } = usePermission();
 
     // Filters
     const [keyword, setKeyword] = useState('');
@@ -243,14 +245,16 @@ export default function AdminCommentPage() {
                             style={{ background: '#52c41a', borderColor: '#52c41a' }} />
                     </Tooltip>
                 )}
-                <Popconfirm
-                    title="Xoá vĩnh viễn?" icon={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
-                    onConfirm={() => handleDelete(record.id, parentId)} okText="Xoá" okType="danger" cancelText="Huỷ"
-                >
-                    <Tooltip title="Xoá">
-                        <Button size="small" danger icon={<DeleteOutlined />} loading={busy} />
-                    </Tooltip>
-                </Popconfirm>
+                {canDelete && (
+                    <Popconfirm
+                        title="Xoá vĩnh viễn?" icon={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
+                        onConfirm={() => handleDelete(record.id, parentId)} okText="Xoá" okType="danger" cancelText="Huỷ"
+                    >
+                        <Tooltip title="Xoá">
+                            <Button size="small" danger icon={<DeleteOutlined />} loading={busy} />
+                        </Tooltip>
+                    </Popconfirm>
+                )}
             </Space>
         );
     };

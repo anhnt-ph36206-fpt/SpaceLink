@@ -14,6 +14,7 @@ import { axiosInstance } from '../../../api/axios';
 import { toast } from 'react-toastify';
 import { newsPrefix } from '../../../api/apiAdminPrefix';
 import dayjs from 'dayjs';
+import { usePermission } from '../../../hooks/usePermission';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -57,6 +58,7 @@ const AdminNewsPage: React.FC = () => {
     const [filterFeatured, setFilterFeatured] = useState<number | undefined>(undefined);
     const [pagination, setPagination] = useState<Pagination>({ current_page: 1, last_page: 1, per_page: 15, total: 0 });
     const [form] = Form.useForm();
+    const { canDelete } = usePermission();
 
     // ── Thumbnail upload state ────────────────────────────────────────────────
     const [thumbFile, setThumbFile] = useState<File | null>(null);
@@ -310,14 +312,16 @@ const AdminNewsPage: React.FC = () => {
                         onClick={() => openEdit(r)}
                         title="Sửa"
                     />
-                    <Popconfirm
-                        title="Xóa bài viết này?"
-                        description="Hành động này không thể hoàn tác."
-                        onConfirm={() => handleDelete(r.id)}
-                        okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }}
-                    >
-                        <Button danger size="small" icon={<DeleteOutlined />} title="Xóa" />
-                    </Popconfirm>
+                    {canDelete && (
+                        <Popconfirm
+                            title="Xóa bài viết này?"
+                            description="Hành động này không thể hoàn tác."
+                            onConfirm={() => handleDelete(r.id)}
+                            okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }}
+                        >
+                            <Button danger size="small" icon={<DeleteOutlined />} title="Xóa" />
+                        </Popconfirm>
+                    )}
                 </Space>
             ),
         },
