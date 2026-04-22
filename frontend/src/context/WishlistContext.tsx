@@ -31,7 +31,12 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
         try {
             const res = await wishlistApi.getWishlist();
             if (res.status === 'success') {
-                setItems(res.data.data);
+                // Laravel paginate() wraps items inside .data
+                const data = res.data.data;
+                const itemsArray = Array.isArray(data) ? data : (data?.data || []);
+                // Filter out any orphaned wishlist items where the product has been deleted
+                const validItems = itemsArray.filter((item: any) => item.product != null);
+                setItems(validItems);
             }
         } catch (error) {
             console.error('Failed to fetch wishlist:', error);

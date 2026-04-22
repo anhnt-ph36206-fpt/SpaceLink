@@ -61,6 +61,7 @@ const WishlistPage: React.FC = () => {
                         <div className="row g-4">
                             {items.map((item, index) => {
                                 const p = item.product;
+                                if (!p) return null; // Add guard for missing product
                                 // find primary image
                                 const primaryImg = p.images?.find((i: any) => i.is_primary) || p.images?.[0];
 
