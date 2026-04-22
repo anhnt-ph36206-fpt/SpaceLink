@@ -1125,8 +1125,16 @@ const OrderDetailPage: React.FC = () => {
                       style={{ borderBottom: i < (order.items?.length ?? 0) - 1 ? '1px solid #f3f4f6' : 'none' }}
                     >
                       {item.product_image
-                        ? <img src={item.product_image} alt={item.product_name} className="od-item-img" />
-                        : <div className="od-item-img-placeholder"><i className="fas fa-box" /></div>
+                        ? (
+                            <Link to={`/product/${item.product_id}${item.variant_id ? `?variant=${item.variant_id}` : ''}`}>
+                              <img src={item.product_image} alt={item.product_name} className="od-item-img" />
+                            </Link>
+                          )
+                        : (
+                            <Link to={`/product/${item.product_id}${item.variant_id ? `?variant=${item.variant_id}` : ''}`} style={{ textDecoration: 'none' }}>
+                              <div className="od-item-img-placeholder"><i className="fas fa-box" /></div>
+                            </Link>
+                          )
                       }
                         <div className="od-item-info">
                         <Link

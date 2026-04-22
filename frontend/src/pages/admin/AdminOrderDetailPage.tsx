@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Button, Tag, Space, Typography, message, Card, Row, Col,
@@ -843,15 +843,25 @@ const AdminOrderDetailPage: React.FC = () => {
               return (
                 <div key={item.id ?? i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 0', borderBottom: i < (order.items?.length ?? 0) - 1 ? '1px solid #f0f0f0' : 'none' }}>
                   {item.product_image ? (
-                    <Image src={item.product_image} width={64} height={64} style={{ objectFit: 'cover', borderRadius: 10, border: '1px solid #f0f0f0' }}
-                      fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" />
+                    <Image src={item.product_image} width={64} height={64} style={{ objectFit: 'cover', borderRadius: 10, border: '1px solid #f0f0f0', cursor: 'pointer' }}
+                      fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                      preview={false}
+                      onClick={() => navigate(`/admin/products/detail/${item.product_id}`)}
+                    />
                   ) : (
-                    <div style={{ width: 64, height: 64, borderRadius: 10, background: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #f0f0f0', flexShrink: 0 }}>
+                    <div style={{ width: 64, height: 64, borderRadius: 10, background: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #f0f0f0', flexShrink: 0, cursor: 'pointer' }} onClick={() => navigate(`/admin/products/detail/${item.product_id}`)}>
                       <ShoppingCartOutlined style={{ color: '#adb5bd', fontSize: 22 }} />
                     </div>
                   )}
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e', marginBottom: 4 }}>{item.product_name}</div>
+                    <div 
+                      style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e', marginBottom: 4, cursor: 'pointer', display: 'inline-block' }} 
+                      onClick={() => navigate(`/admin/products/detail/${item.product_id}`)}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#ea580c'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#1a1a2e'}
+                    >
+                      {item.product_name}
+                    </div>
                     {item.product_sku && <Text type="secondary" style={{ fontSize: 12 }}>SKU: {item.product_sku}</Text>}
                     {/* Variant attributes (properly parsed, no raw JSON) */}
                     {attrs.length > 0 && (
