@@ -449,7 +449,7 @@ const ProductDetailPage: React.FC = () => {
 
                             {/* Price */}
                             <div className="bg-light rounded-3 p-3 mb-4 d-flex align-items-center flex-wrap gap-2 gap-md-3">
-                                <span className="fw-bold" style={{ fontSize: 'clamp(24px, 5vw, 30px)', color: '#ff7a00' }}>
+                                <span className="fw-bold" style={{ fontSize: 'clamp(24px, 5vw, 30px)', color: '#e00429' }}>
                                     {formatVND(displayPrice)}
                                 </span>
                                 {discountPct > 0 && (
@@ -457,7 +457,7 @@ const ProductDetailPage: React.FC = () => {
                                         <del className="text-muted" style={{ fontSize: 'clamp(14px, 3vw, 16px)' }}>
                                             {formatVND(originalPrice)}
                                         </del>
-                                        <span className="badge rounded-pill" style={{ backgroundColor: '#ff7a00', fontSize: '13px', padding: '6px 10px' }}>
+                                        <span className="badge rounded-pill" style={{ backgroundColor: '#e00429', fontSize: '13px', padding: '6px 10px' }}>
                                             Tiết kiệm {discountPct}%
                                         </span>
                                     </>
@@ -494,12 +494,12 @@ const ProductDetailPage: React.FC = () => {
                                                     style={{
                                                         width: 32, height: 32, borderRadius: '50%',
                                                         background: attr.color_code,
-                                                        border: isSelected ? '3px solid #ff7a00' : '2px solid #dee2e6',
+                                                        border: isSelected ? '3px solid #e00429' : '2px solid #dee2e6',
                                                         cursor: isAvailable ? 'pointer' : 'not-allowed',
                                                         opacity: isAvailable ? 1 : 0.35,
                                                         transition: 'all .2s',
                                                         transform: isSelected ? 'scale(1.15)' : 'scale(1)',
-                                                        boxShadow: isSelected ? '0 0 10px rgba(255,122,0,0.3)' : 'none'
+                                                        boxShadow: isSelected ? '0 0 10px rgba(224,4,41,0.3)' : 'none'
                                                     }}
                                                 />
                                             ) : (
@@ -511,9 +511,9 @@ const ProductDetailPage: React.FC = () => {
                                                         fontWeight: isSelected ? 700 : 400,
                                                         opacity: isAvailable ? 1 : 0.4,
                                                         cursor: isAvailable ? 'pointer' : 'not-allowed',
-                                                        borderColor: isSelected ? '#ff7a00' : '#dee2e6',
+                                                        borderColor: isSelected ? '#e00429' : '#dee2e6',
                                                         backgroundColor: isSelected ? '#fffcf8' : 'transparent',
-                                                        color: isSelected ? '#ff7a00' : '#6c757d',
+                                                        color: isSelected ? '#e00429' : '#6c757d',
                                                         borderWidth: 2,
                                                         transition: 'all .2s'
                                                     }}
@@ -583,13 +583,13 @@ const ProductDetailPage: React.FC = () => {
                                     </div>
 
                                     <button
-                                        className="btn btn-lg flex-grow-1 shop-btn-outline-orange bg-white"
+                                        className="btn btn-lg flex-grow-1 shop-btn-outline-red bg-white"
                                         style={{
                                             borderRadius: 12,
                                             fontWeight: 600,
                                             height: 48,
-                                            border: '2px solid #ff7a00',
-                                            color: '#ff7a00',
+                                            border: '2px solid #e00429',
+                                            color: '#e00429',
                                             transition: 'all .3s ease'
                                         }}
                                         disabled={stock === 0}
@@ -600,16 +600,16 @@ const ProductDetailPage: React.FC = () => {
                                 </div>
 
                                 <button
-                                    className="btn btn-lg shop-btn-orange w-100"
+                                    className="btn btn-lg shop-btn-red w-100"
                                     style={{
                                         borderRadius: 12,
                                         fontWeight: 700,
                                         height: 48,
-                                        background: '#ff7a00',
-                                        borderColor: '#ff7a00',
+                                        background: '#e00429',
+                                        borderColor: '#e00429',
                                         color: '#fff',
                                         transition: 'all .3s ease',
-                                        boxShadow: '0 4px 15px rgba(255,122,0,0.2)'
+                                        boxShadow: '0 4px 15px rgba(224,4,41,0.2)'
                                     }}
                                     disabled={stock === 0 || isChecking}
                                     onClick={handleBuyNow}
@@ -706,7 +706,7 @@ const ProductDetailPage: React.FC = () => {
                     {/* 1. Mô tả */}
                     <div className="mb-5 pb-4 border-bottom">
                         <div className="d-flex align-items-center gap-2 mb-4">
-                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <div style={{ width: 4, height: 24, background: '#e00429', borderRadius: 4 }} />
                             <h3 className="fw-bold mb-0 h4">Mô tả sản phẩm</h3>
                         </div>
                         <ProductDescription description={product.description} />
@@ -715,7 +715,7 @@ const ProductDetailPage: React.FC = () => {
                     {/* 2. Nội dung chi tiết */}
                     <div className="mb-5 pb-4 border-bottom">
                         <div className="d-flex align-items-center gap-2 mb-4">
-                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <div style={{ width: 4, height: 24, background: '#e00429', borderRadius: 4 }} />
                             <h3 className="fw-bold mb-0 h4">Nội dung chi tiết</h3>
                         </div>
                         <ProductContent content={product.content} />
@@ -724,7 +724,7 @@ const ProductDetailPage: React.FC = () => {
                     {/* 3. Thông số kỹ thuật */}
                     <div className="mb-5 pb-4 border-bottom">
                         <div className="d-flex align-items-center gap-2 mb-4">
-                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <div style={{ width: 4, height: 24, background: '#e00429', borderRadius: 4 }} />
                             <h3 className="fw-bold mb-0 h4">Thông số kỹ thuật</h3>
                         </div>
                         <ProductTechSpecs specifications={product.specifications} />
@@ -733,7 +733,7 @@ const ProductDetailPage: React.FC = () => {
                     {/* 4. Đánh giá */}
                     <div className="mb-5 pb-4 border-bottom">
                         <div className="d-flex align-items-center gap-2 mb-4">
-                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <div style={{ width: 4, height: 24, background: '#e00429', borderRadius: 4 }} />
                             <h3 className="fw-bold mb-0 h4">Đánh giá sản phẩm ({reviewStats.total_reviews})</h3>
                         </div>
                         <ProductReviews
@@ -745,7 +745,7 @@ const ProductDetailPage: React.FC = () => {
                     {/* 5. Hỏi đáp */}
                     <div>
                         <div className="d-flex align-items-center gap-2 mb-4">
-                            <div style={{ width: 4, height: 24, background: '#ff7a00', borderRadius: 4 }} />
+                            <div style={{ width: 4, height: 24, background: '#e00429', borderRadius: 4 }} />
                             <h3 className="fw-bold mb-0 h4">Hỏi & Đáp</h3>
                         </div>
                         <ProductComments productId={id!} />
@@ -757,7 +757,7 @@ const ProductDetailPage: React.FC = () => {
                 {relatedProducts.length > 0 && (
                     <div className="mt-5">
                         <div className="d-flex align-items-center gap-3 mb-4">
-                            <div style={{ width: 4, height: 28, background: '#ff7a00', borderRadius: 4 }} />
+                            <div style={{ width: 4, height: 28, background: '#e00429', borderRadius: 4 }} />
                             <h4 className="fw-bold mb-0">Sản phẩm liên quan</h4>
                             <Link to="/shop" className="ms-auto text-decoration-none small text-muted">
                                 Xem tất cả <i className="fas fa-arrow-right ms-1" />

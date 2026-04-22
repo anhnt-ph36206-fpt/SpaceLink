@@ -194,7 +194,7 @@ const PaymentReturnPage: React.FC = () => {
                 {/* ── PROCESSING — Đang xác minh thanh toán ── */}
                 {processing && isSuccess ? (
                     <Card className="shadow-lg border-0 rounded-4 overflow-hidden">
-                        <div className="p-4 text-center" style={{ background: 'linear-gradient(135deg, #F28B00 0%, #f7a533 100%)' }}>
+                        <div className="p-4 text-center" style={{ background: 'linear-gradient(135deg, #e00429 0%, #b8001f 100%)' }}>
                             <CreditCardOutlined style={{ fontSize: 60, color: '#fff' }} className="mb-3" />
                             <Title level={2} className="text-white m-0 fw-bold">Đang xử lý thanh toán</Title>
                         </div>
@@ -208,7 +208,7 @@ const PaymentReturnPage: React.FC = () => {
                     </Card>
                 ) : stockDepleted ? (
                     <Card className="shadow-lg border-0 rounded-4 overflow-hidden">
-                        <div className="p-4 text-center" style={{ background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)' }}>
+                        <div className="p-4 text-center" style={{ background: 'linear-gradient(135deg, #ff4d6d 0%, #f7931e 100%)' }}>
                             <WarningOutlined style={{ fontSize: 64, color: '#fff' }} className="mb-3" />
                             <Title level={2} className="text-white m-0 fw-bold">Sản phẩm đã hết hàng!</Title>
                         </div>
@@ -220,7 +220,7 @@ const PaymentReturnPage: React.FC = () => {
                                 subTitle={
                                     <span style={{ color: '#6b7280', fontSize: '0.95rem' }}>
                                         Trong quá trình bạn thực hiện thanh toán qua VNPAY, sản phẩm đã được người khác mua hết.
-                                        Đơn hàng của bạn đã được tự động hủy. <strong style={{ color: '#F28B00' }}>Chúng tôi sẽ hoàn tiền lại cho bạn trong thời gian sớm nhất.</strong>
+                                        Đơn hàng của bạn đã được tự động hủy. <strong style={{ color: '#e00429' }}>Chúng tôi sẽ hoàn tiền lại cho bạn trong thời gian sớm nhất.</strong>
                                     </span>
                                 }
                             />
@@ -243,7 +243,7 @@ const PaymentReturnPage: React.FC = () => {
                                         </Descriptions.Item>
                                     )}
                                     <Descriptions.Item label={<Text type="secondary">Trạng thái:</Text>}>
-                                        <Tag color="orange" bordered={false} style={{ fontWeight: 600, fontSize: '0.85rem' }}>Chờ hoàn tiền</Tag>
+                                        <Tag color="red" bordered={false} style={{ fontWeight: 600, fontSize: '0.85rem' }}>Chờ hoàn tiền</Tag>
                                     </Descriptions.Item>
                                 </Descriptions>
                             </div>
@@ -386,7 +386,7 @@ const PaymentReturnPage: React.FC = () => {
                                     )}
                                     {bankCode && (
                                         <Descriptions.Item label={<Text type="secondary">Ngân hàng:</Text>}>
-                                            <Tag bordered={false} className="bg-white fw-bold" style={{ border: '1px solid #e8e8e8', color: '#F28B00' }}>{bankCode}</Tag>
+                                            <Tag bordered={false} className="bg-white fw-bold" style={{ border: '1px solid #e8e8e8', color: '#e00429' }}>{bankCode}</Tag>
                                         </Descriptions.Item>
                                     )}
                                     {payDate && (
@@ -408,7 +408,7 @@ const PaymentReturnPage: React.FC = () => {
                             {isSuccess && (
                                 <div className="text-center mb-4">
                                     <Text type="secondary">Tự động chuyển về trang chủ sau </Text>
-                                    <Text strong style={{ color: '#F28B00' }}>{countdown}s</Text>
+                                    <Text strong style={{ color: '#e00429' }}>{countdown}s</Text>
                                 </div>
                             )}
 
@@ -445,7 +445,7 @@ const PaymentReturnPage: React.FC = () => {
                                                     size="large"
                                                     icon={<ShoppingOutlined />}
                                                     className="rounded-pill px-4"
-                                                    style={{ background: '#F28B00', borderColor: '#F28B00' }}
+                                                    style={{ background: '#e00429', borderColor: '#e00429' }}
                                                     onClick={() => navigate(`/orders/${pendingOrderId}`)}
                                                 >
                                                     Xem đơn hàng &amp; Thanh toán lại
@@ -511,7 +511,7 @@ const PaymentReturnPage: React.FC = () => {
                         <div
                             onClick={() => setSelectedMethod('cod')}
                             style={{
-                                border: `2px solid ${selectedMethod === 'cod' ? '#F28B00' : '#e5e7eb'}`,
+                                border: `2px solid ${selectedMethod === 'cod' ? '#e00429' : '#e5e7eb'}`,
                                 borderRadius: 10,
                                 padding: '14px 16px',
                                 cursor: 'pointer',
@@ -522,7 +522,7 @@ const PaymentReturnPage: React.FC = () => {
                             <Radio value="cod">
                                 <div style={{ marginLeft: 6 }}>
                                     <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <CarOutlined style={{ color: '#F28B00' }} />
+                                        <CarOutlined style={{ color: '#e00429' }} />
                                         Thanh toán khi nhận hàng (COD)
                                     </span>
                                     <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
@@ -567,9 +567,9 @@ const PaymentReturnPage: React.FC = () => {
                 .bg-success { background-color: #52c41a !important; }
                 .bg-danger { background-color: #ff4d4f !important; }
                 .bg-warning { background-color: #faad14 !important; }
-                .btn-brand { background: #F28B00 !important; border-color: #F28B00 !important; color: #fff !important; }
+                .btn-brand { background: #e00429 !important; border-color: #e00429 !important; color: #fff !important; }
                 .btn-brand:hover { background: #e07a00 !important; border-color: #e07a00 !important; }
-                .btn-brand-outline { border-color: #F28B00 !important; color: #F28B00 !important; }
+                .btn-brand-outline { border-color: #e00429 !important; color: #e00429 !important; }
                 .btn-brand-outline:hover { background: #fffbf0 !important; }
                 .custom-breadcrumb .ant-breadcrumb-link { font-size: 13px; color: #8c8c8c; }
                 .text-success { color: #52c41a !important; }

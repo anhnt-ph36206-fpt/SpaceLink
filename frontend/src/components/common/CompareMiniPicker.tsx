@@ -50,7 +50,7 @@ const CSS = `
     width: 100%; border: 1px solid #cbd5e1; border-radius: 20px;
     padding: 10px 16px 10px 42px; outline: none; font-size: 14px; transition: border-color 0.2s;
 }
-.cb-popup-search-wrap input:focus { border-color: #ff7a00; }
+.cb-popup-search-wrap input:focus { border-color: #e00429; }
 
 .cb-popup-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
@@ -76,10 +76,10 @@ const CSS = `
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 36px;
 }
 .cb-card-oldprice { font-size: 12px; color: #94a3b8; margin-bottom: 2px; }
-.cb-card-price { font-size: 13px; font-weight: 700; color: #ff7a00; margin-bottom: 12px; }
+.cb-card-price { font-size: 13px; font-weight: 700; color: #e00429; margin-bottom: 12px; }
 
 .cb-card-btn {
-    background: #ff7a00; color: #fff; padding: 8px; border-radius: 6px; font-size: 12.5px;
+    background: #e00429; color: #fff; padding: 8px; border-radius: 6px; font-size: 12.5px;
     font-weight: 600; text-align: center; border: none; cursor: pointer; margin-top: auto;
     transition: background 0.2s; display: flex; justify-content: center; align-items: center; gap: 4px;
 }
@@ -88,9 +88,9 @@ const CSS = `
 
 .cb-empty { grid-column: 1 / -1; text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
 .cb-loading { grid-column: 1 / -1; text-align: center; padding: 40px; }
-.cb-spinner { width: 28px; height: 28px; border: 3px solid #f1f5f9; border-top-color: #ff7a00; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
+.cb-spinner { width: 28px; height: 28px; border: 3px solid #f1f5f9; border-top-color: #e00429; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
 .cb-loadmore-wrap { grid-column: 1 / -1; text-align: center; padding-top: 10px; }
-.cb-loadmore-btn { background: none; border: none; color: #ff7a00; font-size: 14px; font-weight: 600; cursor: pointer; }
+.cb-loadmore-btn { background: none; border: none; color: #e00429; font-size: 14px; font-weight: 600; cursor: pointer; }
 `;
 
 interface CompareMiniPickerProps {

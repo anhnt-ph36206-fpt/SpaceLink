@@ -162,7 +162,7 @@ const ORDER_STATUS_CFG: Record<string, {
     desc: 'Shop đang đóng gói hàng để giao cho đơn vị vận chuyển',
   },
   shipping: {
-    color: '#ea580c', bg: '#fff7ed', border: '#fed7aa',
+    color: '#e00429', bg: '#fff0f3', border: '#fba8b8',
     label: 'Đang vận chuyển', icon: 'fa-truck', step: 3,
     desc: 'Hàng đã được giao cho đơn vị vận chuyển',
   },
@@ -812,7 +812,7 @@ const OrderDetailPage: React.FC = () => {
             <div className="od-modal-backdrop" onClick={() => setSwitchCodOpen(false)}>
               <div className="od-modal" onClick={e => e.stopPropagation()}>
                 <div className="od-modal-title">
-                  <i className="fas fa-truck me-2" style={{ color: '#ea580c' }} />
+                  <i className="fas fa-truck me-2" style={{ color: '#e00429' }} />
                   Xác nhận chuyển sang COD
                 </div>
                 <div className="od-modal-body">
@@ -920,8 +920,8 @@ const OrderDetailPage: React.FC = () => {
                 {order.status === 'cancelled' && order.cancelled_reason === 'out_of_stock_after_payment'
                   && order.payment_status === 'paid' && (
                   <div style={{
-                    marginTop: 12, padding: '16px 18px', background: '#fff7ed',
-                    border: '1.5px solid #fed7aa', borderRadius: 12, fontSize: 13
+                    marginTop: 12, padding: '16px 18px', background: '#fff0f3',
+                    border: '1.5px solid #fba8b8', borderRadius: 12, fontSize: 13
                   }}>
                     <div style={{ fontWeight: 700, color: '#92400e', marginBottom: 8 }}>
                       <i className="fas fa-exclamation-triangle me-2" />
@@ -1011,8 +1011,8 @@ const OrderDetailPage: React.FC = () => {
                   && (order.cancelled_reason.toLowerCase().includes('tồn kho') || order.cancelled_reason.toLowerCase().includes('hết hàng'))
                   && (
                   <div style={{
-                    marginTop: 10, padding: '10px 14px', background: '#fff7ed',
-                    border: '1px solid #fed7aa', borderRadius: 8, fontSize: 13, color: '#92400e'
+                    marginTop: 10, padding: '10px 14px', background: '#fff0f3',
+                    border: '1px solid #fba8b8', borderRadius: 8, fontSize: 13, color: '#92400e'
                   }}>
                     <i className="fas fa-info-circle" style={{ marginRight: 6 }} />
                     Rất tiếc, sản phẩm trong đơn hàng của bạn đã hết hàng do có người đặt mua trước.
@@ -1112,7 +1112,7 @@ const OrderDetailPage: React.FC = () => {
               {/* Items */}
               <div className="od-card">
                 <div className="od-card-title">
-                  <i className="fas fa-box me-2" style={{ color: '#ea580c' }} />
+                  <i className="fas fa-box me-2" style={{ color: '#e00429' }} />
                   Sản phẩm ({order.items?.length ?? 0})
                 </div>
 
@@ -1141,7 +1141,7 @@ const OrderDetailPage: React.FC = () => {
                           to={`/product/${item.product_id}${item.variant_id ? `?variant=${item.variant_id}` : ''}`}
                           className="od-item-name"
                           style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
-                          onMouseEnter={e => (e.currentTarget.style.color = '#ea580c')}
+                          onMouseEnter={e => (e.currentTarget.style.color = '#e00429')}
                           onMouseLeave={e => (e.currentTarget.style.color = 'inherit')}
                         >
                           {item.product_name}
@@ -1215,7 +1215,7 @@ const OrderDetailPage: React.FC = () => {
               {order.status_history && order.status_history.length > 0 && (
                 <div className="od-card">
                   <div className="od-card-title">
-                    <i className="fas fa-history me-2" style={{ color: '#ea580c' }} />
+                    <i className="fas fa-history me-2" style={{ color: '#e00429' }} />
                     Lịch sử đơn hàng
                   </div>
                   <ul className="od-timeline">
@@ -1224,7 +1224,7 @@ const OrderDetailPage: React.FC = () => {
                       const toCfg = ORDER_STATUS_CFG[h.to];
                       return (
                         <li key={i} className="od-tl-item">
-                          <div className="od-tl-dot" style={{ background: toCfg?.color ?? '#ea580c' }} />
+                          <div className="od-tl-dot" style={{ background: toCfg?.color ?? '#e00429' }} />
                           <div className="od-tl-body">
                             <div className="od-tl-row">
                               <span className="od-tl-chip" style={{ color: fromCfg?.color ?? '#64748b', background: fromCfg?.bg ?? '#f8fafc' }}>
@@ -1232,7 +1232,7 @@ const OrderDetailPage: React.FC = () => {
                                 {fromCfg?.label ?? h.from}
                               </span>
                               <i className="fas fa-long-arrow-alt-right od-tl-arrow" />
-                              <span className="od-tl-chip" style={{ color: toCfg?.color ?? '#ea580c', background: toCfg?.bg ?? '#fff7ed' }}>
+                              <span className="od-tl-chip" style={{ color: toCfg?.color ?? '#e00429', background: toCfg?.bg ?? '#fff0f3' }}>
                                 <i className={`fas ${toCfg?.icon ?? 'fa-circle'} me-1`} style={{ fontSize: 9 }} />
                                 {toCfg?.label ?? h.to}
                               </span>
@@ -1254,18 +1254,18 @@ const OrderDetailPage: React.FC = () => {
               {/* Shipping address */}
               <div className="od-card">
                 <div className="od-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span><i className="fas fa-map-marker-alt me-2" style={{ color: '#ea580c' }} />Địa chỉ giao hàng</span>
+                  <span><i className="fas fa-map-marker-alt me-2" style={{ color: '#e00429' }} />Địa chỉ giao hàng</span>
                   {canEditShipping && (
                     <button
                       onClick={openShippingEdit}
                       style={{
-                        background: 'none', border: '1.5px solid #ea580c', color: '#ea580c',
+                        background: 'none', border: '1.5px solid #e00429', color: '#e00429',
                         borderRadius: 8, padding: '4px 12px', fontSize: 12, fontWeight: 600,
                         cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
                         transition: 'all 0.2s',
                       }}
-                      onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = '#ea580c'; (e.target as HTMLButtonElement).style.color = '#fff'; }}
-                      onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = 'none'; (e.target as HTMLButtonElement).style.color = '#ea580c'; }}
+                      onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = '#e00429'; (e.target as HTMLButtonElement).style.color = '#fff'; }}
+                      onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = 'none'; (e.target as HTMLButtonElement).style.color = '#e00429'; }}
                     >
                       <i className="fas fa-pen" style={{ fontSize: 10 }} /> Thay đổi
                     </button>
@@ -1286,7 +1286,7 @@ const OrderDetailPage: React.FC = () => {
                     <div className="od-modal-hd">
                       <div>
                         <div className="od-modal-title">
-                          <i className="fas fa-map-marker-alt me-2" style={{ color: '#ea580c' }} />Thay đổi địa chỉ giao hàng
+                          <i className="fas fa-map-marker-alt me-2" style={{ color: '#e00429' }} />Thay đổi địa chỉ giao hàng
                         </div>
                         <div className="od-modal-sub">Cập nhật thông tin nhận hàng cho đơn này</div>
                       </div>
@@ -1335,7 +1335,7 @@ const OrderDetailPage: React.FC = () => {
                       <button className="od-modal-btn-no" onClick={() => setShippingEditOpen(false)} disabled={shippingEditLoading}>Hủy bỏ</button>
                       <button className="od-modal-btn-yes" disabled={shippingEditLoading} onClick={handleUpdateShipping}
                         style={{
-                          background: shippingEditLoading ? '#d1d5db' : 'linear-gradient(135deg,#ea580c,#c2410c)',
+                          background: shippingEditLoading ? '#d1d5db' : 'linear-gradient(135deg,#e00429,#b8001f)',
                           boxShadow: shippingEditLoading ? 'none' : '0 4px 14px rgba(234,88,12,0.3)',
                         }}
                       >
@@ -1349,7 +1349,7 @@ const OrderDetailPage: React.FC = () => {
               {/* Payment */}
               <div className="od-card">
                 <div className="od-card-title">
-                  <i className="fas fa-credit-card me-2" style={{ color: '#ea580c' }} />Thanh toán
+                  <i className="fas fa-credit-card me-2" style={{ color: '#e00429' }} />Thanh toán
                 </div>
                 {payMethodCfg && (
                   <div className="od-info-row">
@@ -1367,7 +1367,7 @@ const OrderDetailPage: React.FC = () => {
               {(order.tracking_code || order.shipping_partner || order.estimated_delivery) && (
                 <div className="od-card">
                   <div className="od-card-title">
-                    <i className="fas fa-truck me-2" style={{ color: '#ea580c' }} />Vận chuyển
+                    <i className="fas fa-truck me-2" style={{ color: '#e00429' }} />Vận chuyển
                   </div>
                   {order.shipping_partner && (
                     <div className="od-info-row"><i className="fas fa-building" /><span>Đơn vị: <strong>{order.shipping_partner}</strong></span></div>
@@ -1393,7 +1393,7 @@ const OrderDetailPage: React.FC = () => {
               {order.note && (
                 <div className="od-card">
                   <div className="od-card-title">
-                    <i className="fas fa-sticky-note me-2" style={{ color: '#ea580c' }} />Ghi chú của bạn
+                    <i className="fas fa-sticky-note me-2" style={{ color: '#e00429' }} />Ghi chú của bạn
                   </div>
                   <div className="od-note-box">"{order.note}"</div>
                 </div>
@@ -1402,7 +1402,7 @@ const OrderDetailPage: React.FC = () => {
               {/* Timestamps */}
               <div className="od-card">
                 <div className="od-card-title">
-                  <i className="fas fa-clock me-2" style={{ color: '#ea580c' }} />Thời gian
+                  <i className="fas fa-clock me-2" style={{ color: '#e00429' }} />Thời gian
                 </div>
                 {[
                   { label: 'Đặt hàng', value: order.created_at },
@@ -1482,7 +1482,7 @@ const OrderDetailPage: React.FC = () => {
                 {/* Pending cancel request notice */}
                 {hasPendingCancelReq && (
                   <div style={{
-                    background: '#fff7ed', border: '1.5px solid #fed7aa',
+                    background: '#fff0f3', border: '1.5px solid #fba8b8',
                     borderRadius: 10, padding: '10px 14px', fontSize: 13,
                     color: '#b45309', display: 'flex', alignItems: 'center', gap: 8,
                   }}>
@@ -1534,7 +1534,7 @@ const OrderDetailPage: React.FC = () => {
                 {canRequestCancel && (
                   <button
                     className="od-btn-full"
-                    style={{ background: '#fff7ed', border: '1.5px solid #fd7e14', color: '#b45309' }}
+                    style={{ background: '#fff0f3', border: '1.5px solid #fd7e14', color: '#b45309' }}
                     onClick={() => setCancelReqOpen(true)}
                   >
                     <i className="fas fa-rotate-left me-2" />
@@ -1547,8 +1547,8 @@ const OrderDetailPage: React.FC = () => {
                     {/* Countdown cửa sổ hoàn trả */}
                     {showReturnCountdown && (
                       <div style={{
-                        background: daysLeft <= 2 ? '#fef2f2' : '#fff7ed',
-                        border: `1.5px solid ${daysLeft <= 2 ? '#fecaca' : '#fed7aa'}`,
+                        background: daysLeft <= 2 ? '#fef2f2' : '#fff0f3',
+                        border: `1.5px solid ${daysLeft <= 2 ? '#fecaca' : '#fba8b8'}`,
                         borderRadius: 10, padding: '8px 12px',
                         fontSize: 12, color: daysLeft <= 2 ? '#b91c1c' : '#b45309',
                         marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
@@ -1561,7 +1561,7 @@ const OrderDetailPage: React.FC = () => {
                     )}
                     <button
                       className="od-btn-full"
-                      style={{ background: '#fff7ed', border: '1.5px solid #b45309', color: '#b45309' }}
+                      style={{ background: '#fff0f3', border: '1.5px solid #b45309', color: '#b45309' }}
                       onClick={() => { setReturnOpen(true); setReturnReason(''); }}
                     >
                       <i className="fas fa-undo me-2" />
@@ -1808,7 +1808,7 @@ const OrderDetailPage: React.FC = () => {
               <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>{cancelReqReason.length}/1000</div>
 
               {order.payment_status === 'paid' && (
-                <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff7ed', borderRadius: 10, border: '1px solid #fed7aa' }}>
+                <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff0f3', borderRadius: 10, border: '1px solid #fba8b8' }}>
                   <div style={{ fontWeight: 700, fontSize: 13, color: '#b45309', marginBottom: 10 }}>
                     <i className="fas fa-university me-2" />Thông tin tài khoản nhận hoàn tiền
                   </div>
@@ -1866,7 +1866,7 @@ const OrderDetailPage: React.FC = () => {
               />
 
               {order.payment_status === 'paid' && ['vnpay', 'banking'].includes(order.payment_method ?? '') && (
-                <div style={{ marginTop: 16, padding: 14, background: '#fff7ed', borderRadius: 10, border: '1px solid #fed7aa' }}>
+                <div style={{ marginTop: 16, padding: 14, background: '#fff0f3', borderRadius: 10, border: '1px solid #fba8b8' }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#9a3412', marginBottom: 10 }}>
                     <i className="fas fa-university me-2" />Thông tin hoàn tiền
                   </div>
@@ -2045,7 +2045,7 @@ const OrderDetailPage: React.FC = () => {
               )}
 
               {order.payment_status === 'paid' && (
-                <div style={{ marginTop: 16, padding: 14, background: '#fff7ed', borderRadius: 10, border: '1px solid #fed7aa' }}>
+                <div style={{ marginTop: 16, padding: 14, background: '#fff0f3', borderRadius: 10, border: '1px solid #fba8b8' }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#9a3412', marginBottom: 10 }}>
                     <i className="fas fa-university me-2" />Thông tin hoàn tiền
                   </div>
@@ -2188,10 +2188,10 @@ const OrderDetailPage: React.FC = () => {
 const CSS = `
   /* ── Variables ── */
   :root {
-    --od-primary: #ea580c;
-    --od-primary-light: #fff7ed;
-    --od-primary-border: #fed7aa;
-    --od-primary-dark: #c2410c;
+    --od-primary: #e00429;
+    --od-primary-light: #fff0f3;
+    --od-primary-border: #fba8b8;
+    --od-primary-dark: #b8001f;
     --od-radius: 14px;
     --od-card-shadow: 0 2px 10px rgba(0,0,0,0.05);
   }

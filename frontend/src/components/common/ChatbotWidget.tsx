@@ -35,7 +35,7 @@ const ORDER_STATUS_LABEL: Record<string, { label: string; icon: string; color: s
     pending:    { label: 'Chờ xác nhận',    icon: '⏳', color: '#b45309' },
     confirmed:  { label: 'Đã xác nhận',     icon: '✅', color: '#0369a1' },
     processing: { label: 'Đang đóng gói',   icon: '📦', color: '#7c3aed' },
-    shipping:   { label: 'Đang vận chuyển', icon: '🚚', color: '#ea580c' },
+    shipping:   { label: 'Đang vận chuyển', icon: '🚚', color: '#e00429' },
     delivered:  { label: 'Đã giao hàng',    icon: '🎁', color: '#0f766e' },
     completed:  { label: 'Hoàn thành',      icon: '🎉', color: '#15803d' },
     cancelled:  { label: 'Đã hủy',          icon: '❌', color: '#b91c1c' },

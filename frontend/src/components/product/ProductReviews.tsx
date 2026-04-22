@@ -199,7 +199,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId, variants, on
                 .rv-star-btn:hover { transform: scale(1.25); }
                 .rv-filter-pill { display:inline-flex; align-items:center; gap:4px; padding:4px 14px; border-radius:999px; font-size:12.5px; font-weight:600; cursor:pointer; border:1.5px solid; transition:all .15s; }
                 .rv-review-card { animation: rvFadeIn .3s ease both; }
-                .rv-write-cta { background: linear-gradient(135deg,#fff7ed 0%,#fef3c7 100%); border:2px solid #fcd34d; border-radius:14px; padding:18px 22px; margin-bottom:20px; }
+                .rv-write-cta { background: linear-gradient(135deg,#fff0f3 0%,#fef3c7 100%); border:2px solid #fcd34d; border-radius:14px; padding:18px 22px; margin-bottom:20px; }
                 .rv-write-form { background:#fff; border:1.5px solid #e5e7eb; border-radius:14px; padding:20px 24px; }
             `}</style>
 
@@ -527,11 +527,11 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId, variants, on
                                         {/* Admin reply */}
                                         {review.admin_reply && (
                                             <div style={{
-                                                background: "linear-gradient(135deg,#fff7ed,#fffbeb)",
-                                                borderLeft: "3px solid #f97316", borderRadius: "0 10px 10px 0",
+                                                background: "linear-gradient(135deg,#fff0f3,#fffbeb)",
+                                                borderLeft: "3px solid #e00429", borderRadius: "0 10px 10px 0",
                                                 padding: "10px 14px", marginTop: 10,
                                             }}>
-                                                <div style={{ fontSize: 11.5, fontWeight: 700, color: "#ea580c", marginBottom: 4 }}>
+                                                <div style={{ fontSize: 11.5, fontWeight: 700, color: "#e00429", marginBottom: 4 }}>
                                                     <i className="fas fa-store me-1" />Phản hồi từ Shop
                                                 </div>
                                                 <p style={{ fontSize: 13, color: "#292524", margin: 0, lineHeight: 1.65 }}>

@@ -263,10 +263,10 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({
                                         cursor: isAvailable ? 'pointer' : 'not-allowed',
                                         borderWidth: 2,
                                         borderStyle: 'solid',
-                                        borderColor: isSelected ? '#ff7a00' : '#dee2e6',
+                                        borderColor: isSelected ? '#e00429' : '#dee2e6',
                                         backgroundColor: isSelected ? '#fffcf8' : 'transparent',
-                                        color: isSelected ? '#ff7a00' : '#6c757d',
-                                        boxShadow: isSelected ? '0 0 0 2px rgba(255,122,0,0.15)' : 'none',
+                                        color: isSelected ? '#e00429' : '#6c757d',
+                                        boxShadow: isSelected ? '0 0 0 2px rgba(224,4,41,0.15)' : 'none',
                                         transition: 'all 0.2s'
                                     }}
                                     onClick={() => {

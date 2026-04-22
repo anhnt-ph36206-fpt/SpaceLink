@@ -24,15 +24,15 @@ const CSS = `
 .cp-empty-state img { width: 140px; opacity: 0.5; margin-bottom: 24px; }
 .cp-empty-state h4 { color: #334155; font-weight: 700; margin-bottom: 8px; font-size: 20px; }
 .cp-empty-state p { color: #64748b; margin-bottom: 24px; font-size: 14px; }
-.cp-empty-btn { background: #ff7a00; color: #fff; padding: 10px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.cp-empty-btn { background: #e00429; color: #fff; padding: 10px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
 .cp-empty-btn:hover { background: #e85d00; color: #fff; }
 
 .cp-container { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); padding: 24px; }
 .cp-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 .cp-title { font-size: 20px; font-weight: 700; color: #1e293b; margin: 0; }
 .cp-actions { display: flex; gap: 12px; }
-.cp-btn-add { background: #fff; border: 1.5px solid #ff7a00; color: #ff7a00; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
-.cp-btn-add:hover { background: #fff8f0; }
+.cp-btn-add { background: #fff; border: 1.5px solid #e00429; color: #e00429; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+.cp-btn-add:hover { background: #fff0f3; }
 .cp-btn-clear { background: #fee2e2; border: none; color: #dc2626; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
 .cp-btn-clear:hover { background: #fca5a5; }
 
@@ -42,7 +42,7 @@ const CSS = `
 
 /* Sticky Header */
 .cp-th-head { position: sticky; top: 0; background: #fff; z-index: 10; vertical-align: top; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04); }
-.cp-th-label { width: 15%; min-width: 150px; background: #f8f9fa; color: #ff7a00; font-weight: 700; text-align: center; font-size: 14px; vertical-align: middle; }
+.cp-th-label { width: 15%; min-width: 150px; background: #f8f9fa; color: #e00429; font-weight: 700; text-align: center; font-size: 14px; vertical-align: middle; }
 .cp-th-product { width: 28.33%; min-width: 250px; text-align: center; position: relative; }
 
 /* Product Card in Header */
@@ -51,14 +51,14 @@ const CSS = `
 .cp-head-img { height: 160px; display: flex; justify-content: center; align-items: center; margin-bottom: 16px; padding: 10px; background: #fff; border-radius: 8px; }
 .cp-head-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .cp-head-name { font-size: 14.5px; font-weight: 700; color: #1e293b; text-decoration: none; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 42px; line-height: 1.4; margin-bottom: 16px; transition: color 0.2s; }
-.cp-head-name:hover { color: #ff7a00; }
+.cp-head-name:hover { color: #e00429; }
 .cp-head-btn { width: 100%; background: #d70018; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: background 0.2s; }
 .cp-head-btn:hover { background: #b90014; }
 .cp-head-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
 
 /* Empty Slot in Header */
 .cp-head-empty { height: 100%; min-height: 260px; border: 2px dashed #cbd5e1; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; color: #94a3b8; background: transparent; }
-.cp-head-empty:hover { border-color: #ff7a00; color: #ff7a00; background: #fff8f0; }
+.cp-head-empty:hover { border-color: #e00429; color: #e00429; background: #fff0f3; }
 .cp-head-empty i.icon-big { font-size: 40px; margin-bottom: 12px; }
 .cp-head-empty span { font-weight: 600; font-size: 14px; }
 
@@ -72,7 +72,7 @@ const CSS = `
 .cp-oldprice { color: #94a3b8; font-size: 12px; text-decoration: line-through; }
 
 /* Spec Group */
-.cp-group-row td { background: #f1f5f9 !important; color: #ff7a00; font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px; padding: 12px 16px; border-top: 2px solid #e2e8f0; }
+.cp-group-row td { background: #f1f5f9 !important; color: #e00429; font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px; padding: 12px 16px; border-top: 2px solid #e2e8f0; }
 
 .cp-empty-td { background: #f8f9fa; }
 
@@ -181,7 +181,7 @@ const ComparePage: React.FC = () => {
                     <nav style={{ fontSize: 13, color: '#64748b' }}>
                         <Link to="/" style={{ color: '#64748b', textDecoration: 'none' }}><i className="fas fa-home me-1" />Trang chủ</Link>
                         <span className="mx-2">/</span>
-                        <span style={{ color: '#ff7a00', fontWeight: 600 }}>So sánh sản phẩm</span>
+                        <span style={{ color: '#e00429', fontWeight: 600 }}>So sánh sản phẩm</span>
                     </nav>
                 </div>
             </div>
@@ -227,7 +227,7 @@ const ComparePage: React.FC = () => {
                         </div>
 
                         {loading ? (
-                            <div style={{ textAlign: 'center', padding: '60px 0', color: '#ff7a00' }}>
+                            <div style={{ textAlign: 'center', padding: '60px 0', color: '#e00429' }}>
                                 <div className="spinner-border" />
                                 <div style={{ marginTop: 12, color: '#64748b' }}>Đang tải dữ liệu...</div>
                             </div>

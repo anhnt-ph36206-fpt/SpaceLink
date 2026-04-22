@@ -129,7 +129,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
 
                     {/* Price */}
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                        <span className="fw-bold" style={{ color: '#ff7a00', fontFamily: "'Roboto', sans-serif", fontSize: '0.95rem' }}>
+                        <span className="fw-bold" style={{ color: '#e00429', fontFamily: "'Roboto', sans-serif", fontSize: '0.95rem' }}>
                             {formatPrice(product.price)}
                         </span>
                         {product.oldPrice && product.oldPrice > product.price && (

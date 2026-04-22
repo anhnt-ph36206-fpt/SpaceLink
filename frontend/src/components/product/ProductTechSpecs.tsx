@@ -36,7 +36,7 @@ const ProductTechSpecs: React.FC<ProductTechSpecsProps> = ({ specifications }) =
                     {Object.entries(groupedSpecs).map(([groupName, specs]) => (
                         <React.Fragment key={groupName}>
                             <tr className="table-light">
-                                <th colSpan={2} className="text-uppercase py-3" style={{ fontSize: 13, color: '#ff7a00', background: '#fffcf8', letterSpacing: '0.5px' }}>
+                                <th colSpan={2} className="text-uppercase py-3" style={{ fontSize: 13, color: '#e00429', background: '#fffcf8', letterSpacing: '0.5px' }}>
                                     {groupName}
                                 </th>
                             </tr>

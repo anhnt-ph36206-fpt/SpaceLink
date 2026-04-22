@@ -438,7 +438,7 @@ const CheckoutPage: React.FC = () => {
                                                                     <div className="ms-2">
                                                                         <div className="d-flex align-items-center gap-2 mb-1">
                                                                             <Text strong>{addr.fullname}</Text>
-                                                                            {addr.is_default && <Tag color="orange">Mặc định</Tag>}
+                                                                            {addr.is_default && <Tag color="red">Mặc định</Tag>}
                                                                         </div>
                                                                         <div className="text-secondary small"><PhoneOutlined /> {addr.phone}</div>
                                                                         <div className="text-muted small mt-1"><HomeOutlined /> {addr.address_detail}, {addr.ward}, {addr.province}</div>
@@ -539,7 +539,7 @@ const CheckoutPage: React.FC = () => {
                                 </Form.Item>
                                 {isVnpayRequired && (
                                     <div className="vnpay-required-notice mt-3 p-3 rounded-3">
-                                        <InfoCircleOutlined style={{ color: '#F28B00', marginRight: 8 }} />
+                                        <InfoCircleOutlined style={{ color: '#e00429', marginRight: 8 }} />
                                         <Text style={{ fontSize: 13, color: '#b45309' }}>
                                             Đơn hàng trên <Text strong style={{ color: '#b45309' }}>100 triệu đồng</Text> bắt buộc thanh toán qua VNPAY để đảm bảo an toàn giao dịch.
                                         </Text>
@@ -618,7 +618,7 @@ const CheckoutPage: React.FC = () => {
                                                     <Text strong className="text-danger">-{formatVND(discountAmount)}</Text>
                                                 </div>
                                             )}
-                                            <Divider style={{ margin: '12px 0', borderColor: 'rgba(242,139,0,0.1)' }} />
+                                            <Divider style={{ margin: '12px 0', borderColor: 'rgba(224, 4, 41,0.1)' }} />
                                             <div className="d-flex justify-content-between align-items-center">
                                                 <Text strong style={{ fontSize: 16 }}>TỔNG CỘNG</Text>
                                                 <Title level={3} className="m-0 text-brand fw-bold">{formatVND(total)}</Title>
@@ -694,7 +694,7 @@ const CheckoutPage: React.FC = () => {
             <Drawer
                 title={
                     <div className="d-flex align-items-center gap-2">
-                        <GiftOutlined style={{ color: '#F28B00', fontSize: 20 }} />
+                        <GiftOutlined style={{ color: '#e00429', fontSize: 20 }} />
                         <span className="fw-bold" style={{ fontSize: 16 }}>Chọn mã giảm giá</span>
                     </div>
                 }
@@ -746,7 +746,7 @@ const CheckoutPage: React.FC = () => {
                                                     onClick={() => selectVoucher(v)}
                                                     loading={applyingVoucher}
                                                     style={{
-                                                        background: '#F28B00', border: 'none', borderRadius: 6,
+                                                        background: '#e00429', border: 'none', borderRadius: 6,
                                                         fontWeight: 600, fontSize: 12, height: 28
                                                     }}
                                                 >
@@ -801,7 +801,7 @@ const CheckoutPage: React.FC = () => {
                             type="primary"
                             onClick={() => handleApplyVoucher()}
                             loading={applyingVoucher}
-                            style={{ background: '#F28B00', border: 'none', height: 40, borderRadius: 8, fontWeight: 600 }}
+                            style={{ background: '#e00429', border: 'none', height: 40, borderRadius: 8, fontWeight: 600 }}
                         >
                             Dùng
                         </Button>
@@ -811,15 +811,15 @@ const CheckoutPage: React.FC = () => {
 
             <style>{`
                 .bg-canvas { background: #fafafa; }
-                .text-brand { color: #F28B00 !important; }
-                .bg-brand { background: #F28B00 !important; }
+                .text-brand { color: #e00429 !important; }
+                .bg-brand { background: #e00429 !important; }
                 .bg-brand-soft { background: #fffbf0; }
-                .border-brand { border-color: #F28B00 !important; }
+                .border-brand { border-color: #e00429 !important; }
                 
                 .custom-breadcrumb .ant-breadcrumb-link { cursor: pointer; transition: color 0.2s; font-size: 13px; }
-                .custom-breadcrumb .ant-breadcrumb-link:hover { color: #F28B00 !important; }
+                .custom-breadcrumb .ant-breadcrumb-link:hover { color: #e00429 !important; }
                 
-                .icon-main { width: 50px; height: 50px; background: #F28B00; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; box-shadow: 0 4px 12px rgba(242, 139, 0, 0.2); }
+                .icon-main { width: 50px; height: 50px; background: #e00429; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; box-shadow: 0 4px 12px rgba(224, 4, 41, 0.2); }
                 .title-page { font-size: 28px; letter-spacing: -0.02em; }
                 
                 .checkout-card { border-radius: 12px; border: 1px solid #f0f0f0; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
@@ -827,24 +827,24 @@ const CheckoutPage: React.FC = () => {
                 .checkout-card .ant-card-body { padding: 24px; }
                 
                 .address-card, .payment-card { border: 2px solid #f0f0f0 !important; cursor: pointer; transition: all 0.3s; position: relative; }
-                .address-card.active, .payment-card.active { border-color: #F28B00 !important; background: #fffcf5; box-shadow: 0 4px 12px rgba(242, 139, 0, 0.05); }
-                .address-card:hover, .payment-card:hover { border-color: #F28B00; }
+                .address-card.active, .payment-card.active { border-color: #e00429 !important; background: #fff3f5; box-shadow: 0 4px 12px rgba(224, 4, 41, 0.05); }
+                .address-card:hover, .payment-card:hover { border-color: #e00429; }
                 
                 .item-thumbnail { width: 70px; height: 70px; border-radius: 8px; overflow: hidden; background: #f9f9f9; border: 1px solid #f0f0f0; flex-shrink: 0; }
                 .item-thumbnail img { width: 100%; height: 100%; object-fit: contain; }
                 
-                .checkout-item-row:hover { border-color: #F28B00; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+                .checkout-item-row:hover { border-color: #e00429; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
                 
                 .custom-input, .custom-select .ant-select-selector { border-radius: 8px !important; height: 42px !important; border: 1.5px solid #e8e8e8 !important; }
-                .custom-input:focus, .custom-input:hover, .custom-select .ant-select-selector:hover { border-color: #F28B00 !important; shadow: none !important; }
+                .custom-input:focus, .custom-input:hover, .custom-select .ant-select-selector:hover { border-color: #e00429 !important; shadow: none !important; }
                 
                 .sticky-summary { position: sticky; top: 24px; }
-                .btn-checkout { height: 54px; border-radius: 8px; font-weight: 700; font-size: 16px; background: #F28B00; border: none; }
-                .btn-checkout:hover { background: #e07a00 !important; box-shadow: 0 6px 20px rgba(242, 139, 0, 0.3); }
+                .btn-checkout { height: 54px; border-radius: 8px; font-weight: 700; font-size: 16px; background: #e00429; border: none; }
+                .btn-checkout:hover { background: #e07a00 !important; box-shadow: 0 6px 20px rgba(224, 4, 41, 0.3); }
                 
                 .payment-card-disabled { opacity: 0.55; cursor: not-allowed; pointer-events: none; background: #fafafa !important; }
                 .payment-card-disabled:hover { border-color: #f0f0f0 !important; }
-                .vnpay-required-notice { background: #fff7ed; border: 1px solid #fed7aa; }
+                .vnpay-required-notice { background: #fff0f3; border: 1px solid #fba8b8; }
                 
                 .animate-fade-in { animation: fadeIn 0.4s ease; }
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -858,12 +858,12 @@ const CheckoutPage: React.FC = () => {
                     transition: all 0.25s ease; cursor: default;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
                 }
-                .voucher-card-drawer:hover { border-color: #F28B00; box-shadow: 0 4px 16px rgba(242,139,0,0.08); }
-                .voucher-card-drawer.selected { border-color: #F28B00; background: #fffcf5; }
+                .voucher-card-drawer:hover { border-color: #e00429; box-shadow: 0 4px 16px rgba(224, 4, 41,0.08); }
+                .voucher-card-drawer.selected { border-color: #e00429; background: #fff3f5; }
                 .voucher-card-drawer.disabled { opacity: 0.55; pointer-events: none; }
 
                 .voucher-card-left {
-                    width: 80px; min-height: 100px; background: linear-gradient(135deg, #F28B00, #ff6b35);
+                    width: 80px; min-height: 100px; background: linear-gradient(135deg, #e00429, #ff4d6d);
                     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
                     position: relative;
                 }
@@ -877,9 +877,9 @@ const CheckoutPage: React.FC = () => {
 
                 .voucher-card-right { flex: 1; padding: 12px 14px; }
                 .voucher-code-tag {
-                    display: inline-block; background: #fff3e0; color: #F28B00;
+                    display: inline-block; background: #ffe6ea; color: #e00429;
                     font-weight: 700; font-size: 12px; padding: 2px 8px;
-                    border-radius: 4px; border: 1px dashed #F28B00; letter-spacing: 0.5px;
+                    border-radius: 4px; border: 1px dashed #e00429; letter-spacing: 0.5px;
                 }
                 .voucher-name { font-size: 13px; font-weight: 600; color: #1a1a2e; line-height: 1.3; }
                 .voucher-meta { font-size: 11px; color: #888; display: flex; flex-direction: column; gap: 2px; }

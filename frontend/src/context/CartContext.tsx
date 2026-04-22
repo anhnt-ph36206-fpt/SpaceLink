@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { axiosInstance } from '../api/axios';
 import { useAuth } from './AuthContext';
 import { toast } from 'react-toastify';
@@ -86,7 +86,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         getOrSetSessionId();
     }, []);
 
-    const mapApiItem = (item: any): CartItem => {
+    const mapApiItem = useCallback((item: any): CartItem => {
         // Lấy ảnh: ưu tiên variant image, sau đó đến product images
         let img = item.variant_image;
         if (!img && item.product_images && item.product_images.length > 0) {
@@ -112,9 +112,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             productSlug: item.product_slug,
             availableVariants: item.available_variants
         };
-    };
+    }, []);
 
-    const refreshCart = async () => {
+    const refreshCart = useCallback(async () => {
         setLoading(true);
         try {
             const res = await axiosInstance.get('/client/cart');
@@ -127,7 +127,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } finally {
             setLoading(false);
         }
-    };
+    }, [mapApiItem]);
 
     // Tải lại giỏ hàng khi mount hoặc khi auth thay đổi
     useEffect(() => {

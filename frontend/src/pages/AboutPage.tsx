@@ -29,7 +29,7 @@ const STATS = [
 const VALUES = [
     {
         icon: 'fas fa-shield-alt',
-        color: '#f28b01',
+        color: '#e00429',
         title: 'Chính hãng 100%',
         desc: 'Toàn bộ sản phẩm nhập khẩu chính ngạch, có tem bảo hành nhà sản xuất, cam kết không hàng giả hàng nhái.',
     },
@@ -47,7 +47,7 @@ const VALUES = [
     },
     {
         icon: 'fas fa-truck',
-        color: '#f28b01',
+        color: '#e00429',
         title: 'Giao hàng nhanh',
         desc: 'Giao hàng toàn quốc trong 24 – 48 giờ. Miễn phí vận chuyển cho đơn hàng từ 500.000 VNĐ.',
     },
@@ -126,7 +126,7 @@ const StatCard: React.FC<{ icon: string; value: number; suffix: string; label: s
     return (
         <div className="col-6 col-md-3">
             <div className="text-center p-4" style={{ borderRadius: '1rem', background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(6px)' }}>
-                <i className={`${icon} fa-2x mb-3`} style={{ color: '#f28b01' }}></i>
+                <i className={`${icon} fa-2x mb-3`} style={{ color: '#e00429' }}></i>
                 <div className="display-5 fw-bold text-white">{count.toLocaleString()}{suffix}</div>
                 <div className="text-white-50 mt-1">{label}</div>
             </div>
@@ -174,21 +174,21 @@ const AboutPage: React.FC = () => {
                             <li className="breadcrumb-item">
                                 <Link to="/" className="text-decoration-none" style={{ color: '#aaa' }}>Trang chủ</Link>
                             </li>
-                            <li className="breadcrumb-item active" style={{ color: '#f28b01' }}>Giới thiệu</li>
+                            <li className="breadcrumb-item active" style={{ color: '#e00429' }}>Giới thiệu</li>
                         </ol>
                     </nav>
 
                     <div className="mb-3">
                         <span style={{
                             background: 'rgba(224,4,41,0.15)', border: '1px solid rgba(224,4,41,0.4)',
-                            color: '#f28b01', borderRadius: 999, padding: '6px 20px', fontSize: 13, fontWeight: 600,
+                            color: '#e00429', borderRadius: 999, padding: '6px 20px', fontSize: 13, fontWeight: 600,
                         }}>
                             🚀 Thành lập từ năm 2018
                         </span>
                     </div>
 
                     <h1 className="display-3 fw-bold text-white mb-4" style={{ letterSpacing: '-1px' }}>
-                        <span style={{ color: '#f28b01' }}> Về SpaceLink</span>
+                        <span style={{ color: '#e00429' }}> Về SpaceLink</span>
                     </h1>
 
                     <p className="lead mx-auto mb-5" style={{ maxWidth: 640, color: '#bbb', lineHeight: 1.8 }}>
@@ -198,14 +198,14 @@ const AboutPage: React.FC = () => {
 
                     <div className="d-flex gap-3 justify-content-center flex-wrap">
                         <Link to="/shop" className="btn btn-lg px-5 py-3 fw-bold" style={{
-                            background: '#f28b01', color: '#ffffffff', borderRadius: 999, border: 'none',
+                            background: '#e00429', color: '#ffffffff', borderRadius: 999, border: 'none',
                             boxShadow: '0 8px 30px rgba(224,4,41,0.4)',
                         }}>
                             <i className="fas fa-shopping-bag me-2"></i> Mua sắm ngay
                         </Link>
                         <Link to="/contact" className="btn btn-lg px-5 py-3 fw-bold" style={{
-                            background: 'transparent', color: '#f28b01', borderRadius: 999,
-                            border: '1px solid #f28b01',
+                            background: 'transparent', color: '#e00429', borderRadius: 999,
+                            border: '1px solid #e00429',
                         }}>
                             <i className="fas fa-envelope me-2"></i> Liên hệ
                         </Link>
@@ -216,7 +216,7 @@ const AboutPage: React.FC = () => {
             {/* ── STATS ── */}
             <section
                 ref={statsRef}
-                style={{ background: 'linear-gradient(90deg,#f28b01,#f28b01)', padding: '64px 0' }}
+                style={{ background: 'linear-gradient(90deg,#e00429,#e00429)', padding: '64px 0' }}
             >
                 <div className="container">
                     <div className="row g-4">
@@ -242,7 +242,7 @@ const AboutPage: React.FC = () => {
                                 {/* Floating badge */}
                                 <div style={{
                                     position: 'absolute', bottom: -20, right: -20,
-                                    background: '#f28b01', color: '#fff', borderRadius: '1rem',
+                                    background: '#e00429', color: '#fff', borderRadius: '1rem',
                                     padding: '16px 24px', boxShadow: '0 8px 30px rgba(224,4,41,0.5)',
                                 }}>
                                     <div className="fw-bold" style={{ fontSize: 28 }}>6+</div>
@@ -251,7 +251,7 @@ const AboutPage: React.FC = () => {
                             </div>
                         </div>
                         <div className="col-lg-7">
-                            <div className="mb-2" style={{ color: '#f28b01', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, fontSize: 13 }}>
+                            <div className="mb-2" style={{ color: '#e00429', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, fontSize: 13 }}>
                                 Câu chuyện của chúng tôi
                             </div>
                             <h2 className="display-5 fw-bold mb-4" style={{ lineHeight: 1.2 }}>
@@ -276,7 +276,7 @@ const AboutPage: React.FC = () => {
                                     { icon: 'fas fa-check-circle', text: 'Top 10 nhà bán lẻ điện tử uy tín 2024' },
                                 ].map((item, i) => (
                                     <div key={i} className="col-md-6 d-flex align-items-center gap-2">
-                                        <i className={`${item.icon}`} style={{ color: '#f28b01', fontSize: 18 }}></i>
+                                        <i className={`${item.icon}`} style={{ color: '#e00429', fontSize: 18 }}></i>
                                         <span style={{ fontSize: 15 }}>{item.text}</span>
                                     </div>
                                 ))}
@@ -290,7 +290,7 @@ const AboutPage: React.FC = () => {
             <section style={{ background: '#fff', padding: '90px 0' }}>
                 <div className="container">
                     <div className="text-center mb-5">
-                        <div className="mb-2" style={{ color: '#f28b01', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, fontSize: 13 }}>
+                        <div className="mb-2" style={{ color: '#e00429', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, fontSize: 13 }}>
                             Danh mục sản phẩm
                         </div>
                         <h2 className="display-5 fw-bold mb-3">Hơn 3.000 sản phẩm công nghệ</h2>
@@ -306,9 +306,9 @@ const AboutPage: React.FC = () => {
                                         className="text-center p-4 h-100 rounded-3 border"
                                         style={{ transition: 'all .25s', cursor: 'pointer' }}
                                         onMouseEnter={e => {
-                                            (e.currentTarget as HTMLDivElement).style.background = '#f28b01';
+                                            (e.currentTarget as HTMLDivElement).style.background = '#e00429';
                                             (e.currentTarget as HTMLDivElement).style.color = '#fff';
-                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#f28b01';
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#e00429';
                                             (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)';
                                             (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 40px rgba(224,4,41,0.25)';
                                         }}
@@ -335,7 +335,7 @@ const AboutPage: React.FC = () => {
             <section style={{ background: '#f8f9fa', padding: '90px 0' }}>
                 <div className="container">
                     <div className="text-center mb-5">
-                        <div className="mb-2" style={{ color: '#f28b01', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, fontSize: 13 }}>
+                        <div className="mb-2" style={{ color: '#e00429', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, fontSize: 13 }}>
                             Cam kết của chúng tôi
                         </div>
                         <h2 className="display-5 fw-bold mb-3">Tại sao chọn SpaceLink?</h2>
@@ -374,7 +374,7 @@ const AboutPage: React.FC = () => {
             <section style={{ background: '#fff', padding: '90px 0' }}>
                 <div className="container">
                     <div className="text-center mb-5">
-                        <div className="mb-2" style={{ color: '#f28b01', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, fontSize: 13 }}>
+                        <div className="mb-2" style={{ color: '#e00429', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, fontSize: 13 }}>
                             Lịch sử phát triển
                         </div>
                         <h2 className="display-5 fw-bold mb-3">Hành trình 6 năm của SpaceLink</h2>
@@ -386,7 +386,7 @@ const AboutPage: React.FC = () => {
                                     <div className="d-flex flex-column align-items-center">
                                         <div style={{
                                             width: 52, height: 52, borderRadius: '50%',
-                                            background: i % 2 === 0 ? '#f28b01' : '#0d6efd',
+                                            background: i % 2 === 0 ? '#e00429' : '#0d6efd',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             color: '#fff', fontWeight: 700, fontSize: 13, flexShrink: 0,
                                         }}>
@@ -411,7 +411,7 @@ const AboutPage: React.FC = () => {
             <section style={{ background: '#f8f9fa', padding: '90px 0' }}>
                 <div className="container">
                     <div className="text-center mb-5">
-                        <div className="mb-2" style={{ color: '#f28b01', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, fontSize: 13 }}>
+                        <div className="mb-2" style={{ color: '#e00429', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, fontSize: 13 }}>
                             Đội ngũ lãnh đạo
                         </div>
                         <h2 className="display-5 fw-bold mb-3">Những con người phía sau SpaceLink</h2>
@@ -432,14 +432,14 @@ const AboutPage: React.FC = () => {
                                         src={member.avatar}
                                         alt={member.name}
                                         className="rounded-circle mb-3"
-                                        style={{ width: 90, height: 90, objectFit: 'cover', border: '3px solid #f28b01' }}
+                                        style={{ width: 90, height: 90, objectFit: 'cover', border: '3px solid #e00429' }}
                                     />
                                     <h6 className="fw-bold mb-1">{member.name}</h6>
                                     <div className="text-muted mb-3" style={{ fontSize: 13 }}>{member.role}</div>
                                     <p style={{ fontSize: 13, color: '#666', lineHeight: 1.6, fontStyle: 'italic' }}>{member.quote}</p>
                                     <div className="d-flex justify-content-center gap-2 mt-3">
                                         <a href="#" style={{ color: '#0d6efd' }}><i className="fab fa-linkedin"></i></a>
-                                        <a href="#" style={{ color: '#f28b01' }}><i className="fab fa-facebook"></i></a>
+                                        <a href="#" style={{ color: '#e00429' }}><i className="fab fa-facebook"></i></a>
                                     </div>
                                 </div>
                             </div>
@@ -452,7 +452,7 @@ const AboutPage: React.FC = () => {
             <section style={{ background: '#fff', padding: '60px 0' }}>
                 <div className="container">
                     <div className="text-center mb-5">
-                        <div className="mb-2" style={{ color: '#f28b01', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, fontSize: 13 }}>
+                        <div className="mb-2" style={{ color: '#e00429', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, fontSize: 13 }}>
                             Đối tác thương hiệu
                         </div>
                         <h2 className="fw-bold h3 mb-2">Các thương hiệu công nghệ chúng tôi phân phối</h2>
@@ -467,8 +467,8 @@ const AboutPage: React.FC = () => {
                                         color: '#999', border: '1px solid #eee', transition: 'all .25s',
                                     }}
                                     onMouseEnter={e => {
-                                        (e.currentTarget as HTMLDivElement).style.color = '#f28b01';
-                                        (e.currentTarget as HTMLDivElement).style.borderColor = '#f28b01';
+                                        (e.currentTarget as HTMLDivElement).style.color = '#e00429';
+                                        (e.currentTarget as HTMLDivElement).style.borderColor = '#e00429';
                                         (e.currentTarget as HTMLDivElement).style.background = 'rgba(224,4,41,0.05)';
                                     }}
                                     onMouseLeave={e => {
@@ -487,7 +487,7 @@ const AboutPage: React.FC = () => {
 
             {/* ── CTA ── */}
             <section style={{
-                background: 'linear-gradient(135deg, #f28b01 0%, #7a0014 100%)',
+                background: 'linear-gradient(135deg, #e00429 0%, #7a0014 100%)',
                 padding: '90px 0',
             }}>
                 <div className="container text-center text-white">
@@ -497,7 +497,7 @@ const AboutPage: React.FC = () => {
                     </p>
                     <div className="d-flex gap-3 justify-content-center flex-wrap">
                         <Link to="/shop" className="btn btn-lg px-5 py-3 fw-bold" style={{
-                            background: '#fff', color: '#f28b01', borderRadius: 999,
+                            background: '#fff', color: '#e00429', borderRadius: 999,
                             boxShadow: '0 8px 30px rgba(0,0,0,0.2)',
                         }}>
                             <i className="fas fa-store me-2"></i> Xem cửa hàng

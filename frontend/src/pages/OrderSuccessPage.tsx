@@ -63,8 +63,8 @@ const OrderSuccessPage: React.FC = () => {
                                     icon={<EyeOutlined />}
                                     className="rounded-pill px-4 btn-track-order"
                                     style={{
-                                        background: '#F28B00',
-                                        borderColor: '#F28B00',
+                                        background: '#e00429',
+                                        borderColor: '#e00429',
                                         color: '#fff',
                                         fontWeight: 600,
                                     }}
@@ -87,7 +87,7 @@ const OrderSuccessPage: React.FC = () => {
             </div>
             <style>{`
                 .order-summary-box { background: #f0fdf4 !important; }
-                .btn-track-order:hover { background: #e07a00 !important; border-color: #e07a00 !important; color: #fff !important; box-shadow: 0 4px 14px rgba(242, 139, 0, 0.35); }
+                .btn-track-order:hover { background: #e07a00 !important; border-color: #e07a00 !important; color: #fff !important; box-shadow: 0 4px 14px rgba(224, 4, 41, 0.35); }
             `}</style>
         </div>
     );
