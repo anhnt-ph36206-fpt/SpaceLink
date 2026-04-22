@@ -70,7 +70,7 @@ const OrderSuccessPage: React.FC = () => {
                                     }}
                                     onClick={() => navigate(`/orders/${orderData.order_id}`)}
                                 >
-                                    Theo dõi đơn hàng
+                                    Xem chi tiết đơn hàng
                                 </Button>
                             )}
                             <Button

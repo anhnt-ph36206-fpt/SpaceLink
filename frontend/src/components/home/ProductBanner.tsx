@@ -157,12 +157,33 @@ export function ProductBanner() {
           cursor: pointer;
           transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
         }
+
+        /* Responsive styles for mobile */
+        @media (max-width: 768px) {
+          .banner-outer-wrapper { margin: 0 12px !important; border-radius: 12px !important; }
+          .banner-img-element { height: clamp(220px, 60vw, 320px) !important; }
+          .banner-text-content { padding: 24px 20px !important; }
+          .banner-title-text { font-size: 1.3rem !important; margin-bottom: 6px !important; }
+          .banner-desc-text { 
+            font-size: 0.85rem !important; 
+            margin-bottom: 12px !important; 
+            display: -webkit-box; 
+            -webkit-line-clamp: 2; 
+            -webkit-box-orient: vertical; 
+            overflow: hidden; 
+          }
+          .banner-action-btn { padding: 8px 20px !important; font-size: 0.85rem !important; }
+          .banner-arrow { width: 36px !important; height: 36px !important; font-size: 18px !important; }
+          .banner-arrow-left { left: 8px !important; }
+          .banner-arrow-right { right: 8px !important; }
+          .banner-counter-badge { top: 12px !important; right: 12px !important; font-size: 0.75rem !important; padding: 2px 8px !important; }
+        }
       `}</style>
 
       {/* Outer: sát header, không có padding-top */}
       <div style={{ marginTop: 0, paddingTop: 0, background: 'transparent' }}>
         <div
-          className="position-relative overflow-hidden"
+          className="position-relative overflow-hidden banner-outer-wrapper"
           style={{ borderRadius: 18, boxShadow: '0 16px 56px rgba(0,0,0,0.22)', margin: '0 16px' }}
         >
           {/* ── Slide image ── */}
@@ -175,6 +196,7 @@ export function ProductBanner() {
               <img
                 src={banner.image_full_url || banner.image_url}
                 alt={banner.title}
+                className="banner-img-element"
                 style={{
                   width: '100%',
                   height: 'clamp(280px, 46vw, 540px)',
@@ -198,6 +220,7 @@ export function ProductBanner() {
 
               {/* Text content */}
               <div
+                className="banner-text-content"
                 style={{
                   position: 'absolute',
                   bottom: 0,
@@ -209,6 +232,7 @@ export function ProductBanner() {
                 }}
               >
                 <h2
+                  className="banner-title-text"
                   style={{
                     color: '#fff',
                     fontSize: 'clamp(1.5rem, 3.2vw, 2.6rem)',
@@ -224,6 +248,7 @@ export function ProductBanner() {
 
                 {banner.description && (
                   <p
+                    className="banner-desc-text"
                     style={{
                       color: 'rgba(255,255,255,0.88)',
                       fontSize: 'clamp(0.9rem, 1.5vw, 1.1rem)',
@@ -238,6 +263,7 @@ export function ProductBanner() {
                 )}
 
                 <span
+                  className="banner-action-btn"
                   style={{
                     display: 'inline-block',
                     padding: '10px 28px',
@@ -261,7 +287,7 @@ export function ProductBanner() {
           {total > 1 && (
             <>
               <button
-                className="banner-arrow"
+                className="banner-arrow banner-arrow-left"
                 style={{ left: 16 }}
                 onClick={() => handleNav(prev)}
                 aria-label="Previous"
@@ -269,7 +295,7 @@ export function ProductBanner() {
                 ‹
               </button>
               <button
-                className="banner-arrow"
+                className="banner-arrow banner-arrow-right"
                 style={{ right: 16 }}
                 onClick={() => handleNav(next)}
                 aria-label="Next"
@@ -282,6 +308,7 @@ export function ProductBanner() {
           {/* ── Slide counter top-right ── */}
           {total > 1 && (
             <div
+              className="banner-counter-badge"
               style={{
                 position: 'absolute',
                 top: 16,
