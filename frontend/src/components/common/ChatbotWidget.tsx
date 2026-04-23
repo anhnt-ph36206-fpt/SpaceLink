@@ -32,20 +32,20 @@ const QUICK_REPLIES = [
 ];
 
 const ORDER_STATUS_LABEL: Record<string, { label: string; icon: string; color: string }> = {
-    pending:    { label: 'Chờ xác nhận',    icon: '⏳', color: '#b45309' },
-    confirmed:  { label: 'Đã xác nhận',     icon: '✅', color: '#0369a1' },
-    processing: { label: 'Đang đóng gói',   icon: '📦', color: '#7c3aed' },
-    shipping:   { label: 'Đang vận chuyển', icon: '🚚', color: '#e00429' },
-    delivered:  { label: 'Đã giao hàng',    icon: '🎁', color: '#0f766e' },
-    completed:  { label: 'Hoàn thành',      icon: '🎉', color: '#15803d' },
-    cancelled:  { label: 'Đã hủy',          icon: '❌', color: '#b91c1c' },
-    returned:   { label: 'Hoàn trả',        icon: '↩️', color: '#64748b' },
+    pending: { label: 'Chờ xác nhận', icon: '⏳', color: '#b45309' },
+    confirmed: { label: 'Đã xác nhận', icon: '✅', color: '#0369a1' },
+    processing: { label: 'Đang đóng gói', icon: '📦', color: '#7c3aed' },
+    shipping: { label: 'Đang vận chuyển', icon: '🚚', color: '#e00429' },
+    delivered: { label: 'Đã giao hàng', icon: '🎁', color: '#0f766e' },
+    completed: { label: 'Hoàn thành', icon: '🎉', color: '#15803d' },
+    cancelled: { label: 'Đã hủy', icon: '❌', color: '#b91c1c' },
+    returned: { label: 'Hoàn trả', icon: '↩️', color: '#64748b' },
 };
 
 const PAYMENT_STATUS_LABEL: Record<string, string> = {
-    unpaid:         'Chưa thanh toán',
-    paid:           'Đã thanh toán',
-    refunded:       'Đã hoàn tiền',
+    unpaid: 'Chưa thanh toán',
+    paid: 'Đã thanh toán',
+    refunded: 'Đã hoàn tiền',
     partial_refund: 'Hoàn một phần',
 };
 
@@ -341,8 +341,8 @@ const ChatbotWidget: React.FC = () => {
             <style>{`
                 .cw-wrapper {
                     position: fixed;
-                    bottom: 24px;
-                    right: 24px;
+                    bottom:30px;
+                    right: 100px;
                     z-index: 9999;
                     font-family: 'Inter', 'Segoe UI', sans-serif;
                 }
@@ -525,7 +525,7 @@ const ChatbotWidget: React.FC = () => {
                 .cw-send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
                 @media (max-width: 480px) {
                     .cw-chat-box { width: calc(100vw - 32px); right: 0; }
-                    .cw-wrapper { bottom: 16px; right: 16px; }
+                    .cw-wrapper { bottom: 72px; right: 16px; }
                 }
             `}</style>
 
