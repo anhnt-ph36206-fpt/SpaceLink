@@ -278,18 +278,18 @@ const ProfilePage: React.FC = () => {
           margin-bottom: 28px;
         }
         .profile-breadcrumb a { color: #6c757d; text-decoration: none; }
-        .profile-breadcrumb a:hover { color: #0d6efd; }
+        .profile-breadcrumb a:hover { color: #e00429; }
         .profile-breadcrumb .sep { margin: 0 8px; }
-        .profile-breadcrumb .current { color: #0d6efd; font-weight: 600; }
+        .profile-breadcrumb .current { color: #e00429; font-weight: 600; }
 
         /* ── Sidebar ── */
         .profile-sidebar {
-          background: linear-gradient(160deg, #0d6efd 0%, #0a58ca 55%, #084298 100%);
+          background: linear-gradient(160deg, #e00429 0%, #b8001f 55%, #990011 100%);
           border-radius: 20px;
           padding: 32px 24px;
           position: relative;
           overflow: hidden;
-          box-shadow: 0 8px 32px rgba(13,110,253,0.25);
+          box-shadow: 0 8px 32px rgba(224,4,41,0.25);
         }
         .profile-sidebar::before {
           content: '';
@@ -452,9 +452,9 @@ const ProfilePage: React.FC = () => {
           appearance: none;
         }
         .pf-input:focus {
-          border-color: #0d6efd;
+          border-color: #e00429;
           background: #fff;
-          box-shadow: 0 0 0 4px rgba(13,110,253,0.08);
+          box-shadow: 0 0 0 4px rgba(224,4,41,0.08);
         }
         .pf-input.pf-error { border-color: #e03e3e; background: #fff8f8; }
         .pf-input-wrap { position: relative; }
@@ -479,7 +479,7 @@ const ProfilePage: React.FC = () => {
           padding: 12px 28px;
           font-weight: 600;
           font-size: 14px;
-          background: linear-gradient(135deg, #0d6efd, #0a58ca);
+          background: linear-gradient(135deg, #e00429, #b8001f);
           color: #fff;
           border: none;
           cursor: pointer;
@@ -488,8 +488,8 @@ const ProfilePage: React.FC = () => {
         }
         .btn-pf-save:hover:not(:disabled) {
           transform: translateY(-2px);
-          box-shadow: 0 8px 22px rgba(13,110,253,0.38);
-          background: linear-gradient(135deg, #0a58ca, #084298);
+          box-shadow: 0 8px 22px rgba(224,4,41,0.38);
+          background: linear-gradient(135deg, #b8001f, #990011);
         }
         .btn-pf-save:disabled { opacity: 0.7; cursor: not-allowed; }
 
@@ -520,7 +520,7 @@ const ProfilePage: React.FC = () => {
           margin-bottom: 24px;
           transition: border-color 0.2s;
         }
-        .avatar-form-section:hover { border-color: #0d6efd; }
+        .avatar-form-section:hover { border-color: #e00429; }
         .avatar-form-big {
           width: 72px; height: 72px;
           border-radius: 50%;
@@ -532,16 +532,16 @@ const ProfilePage: React.FC = () => {
         .avatar-form-placeholder {
           width: 72px; height: 72px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #0d6efd22, #0a58ca33);
+          background: linear-gradient(135deg, #e0042922, #b8001f33);
           border: 3px solid #dde1ea;
           display: flex; align-items: center; justify-content: center;
-          font-size: 26px; color: #0d6efd;
+          font-size: 26px; color: #e00429;
           flex-shrink: 0;
         }
         .avatar-upload-btn {
           background: #fff;
-          border: 2px solid #0d6efd;
-          color: #0d6efd;
+          border: 2px solid #e00429;
+          color: #e00429;
           border-radius: 8px;
           padding: 7px 16px;
           font-size: 13px;
@@ -549,7 +549,7 @@ const ProfilePage: React.FC = () => {
           cursor: pointer;
           transition: all 0.2s;
         }
-        .avatar-upload-btn:hover { background: #0d6efd; color: #fff; }
+        .avatar-upload-btn:hover { background: #e00429; color: #fff; }
 
         /* ── Gender radio ── */
         .gender-radio-group { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -568,12 +568,12 @@ const ProfilePage: React.FC = () => {
           user-select: none;
         }
         .gender-radio-item:checked + .gender-radio-label {
-          border-color: #0d6efd;
+          border-color: #e00429;
           background: #eef3ff;
-          color: #0d6efd;
+          color: #e00429;
           font-weight: 600;
         }
-        .gender-radio-label:hover { border-color: #0d6efd33; }
+        .gender-radio-label:hover { border-color: #e0042933; }
 
         /* ── Orders tab ── */
         .orders-filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
@@ -582,15 +582,15 @@ const ProfilePage: React.FC = () => {
           border-radius:20px; padding:5px 14px; font-size:12px; font-weight:600;
           cursor:pointer; transition:all 0.2s;
         }
-        .order-filter-btn:hover { border-color:#0d6efd44; color:#0d6efd; }
-        .order-filter-btn.active { background:#0d6efd; border-color:#0d6efd; color:#fff; }
+        .order-filter-btn:hover { border-color:#e0042944; color:#e00429; }
+        .order-filter-btn.active { background:#e00429; border-color:#e00429; color:#fff; }
 
         .order-card {
           border:1.5px solid #eaecf0; border-radius:14px; margin-bottom:14px;
           background:#fff; transition:box-shadow 0.2s;
           overflow:hidden;
         }
-        .order-card:hover { box-shadow:0 4px 20px rgba(13,110,253,0.1); border-color:#0d6efd33; }
+        .order-card:hover { box-shadow:0 4px 20px rgba(224,4,41,0.1); border-color:#e0042933; }
         .order-card-head {
           display:flex; justify-content:space-between; align-items:center;
           padding:12px 18px; background:#f8f9fc; border-bottom:1px solid #eaecf0;
@@ -617,14 +617,14 @@ const ProfilePage: React.FC = () => {
           display:flex; justify-content:space-between; align-items:center;
           padding:10px 18px; border-top:1px solid #f0f2f7; gap:10px; flex-wrap:wrap;
         }
-        .order-total { font-size:15px; font-weight:700; color:#0d6efd; }
+        .order-total { font-size:15px; font-weight:700; color:#e00429; }
         .order-actions { display:flex; gap:8px; }
         .btn-order-detail {
-          background:#fff; border:1.5px solid #0d6efd; color:#0d6efd;
+          background:#fff; border:1.5px solid #e00429; color:#e00429;
           border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600;
           cursor:pointer; transition:all 0.2s;
         }
-        .btn-order-detail:hover { background:#0d6efd; color:#fff; }
+        .btn-order-detail:hover { background:#e00429; color:#fff; }
         .btn-order-cancel {
           background:#fff5f5; border:1.5px solid #dc3545; color:#dc3545;
           border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600;
@@ -646,7 +646,7 @@ const ProfilePage: React.FC = () => {
         .od-item-info { flex:1; }
         .od-item-name { font-size:13px; font-weight:600; color:#2d3748; }
         .od-item-sku { font-size:11px; color:#8590a3; margin-top:1px; }
-        .od-item-price { font-size:13px; font-weight:700; color:#0d6efd; white-space:nowrap; }
+        .od-item-price { font-size:13px; font-weight:700; color:#e00429; white-space:nowrap; }
 
         .order-timeline { list-style:none; padding:0; margin:0; }
         .order-timeline li {
@@ -661,8 +661,8 @@ const ProfilePage: React.FC = () => {
         .order-timeline li::after {
           content:''; position:absolute; left:4px; top:4px;
           width:8px; height:8px; border-radius:50%;
-          background:#0d6efd; border:2px solid #fff;
-          box-shadow:0 0 0 2px #0d6efd44;
+          background:#e00429; border:2px solid #fff;
+          box-shadow:0 0 0 2px #e0042944;
         }
         .tl-label { font-weight:600; color:#2d3748; }
         .tl-time { color:#adb5bd; font-size:11px; margin-top:2px; }
@@ -716,8 +716,8 @@ const ProfilePage: React.FC = () => {
           cursor:pointer; transition:all 0.2s;
           display:flex; align-items:center; justify-content:center;
         }
-        .order-page-btn:hover { border-color:#0d6efd; color:#0d6efd; }
-        .order-page-btn.active { background:#0d6efd; border-color:#0d6efd; color:#fff; }
+        .order-page-btn:hover { border-color:#e00429; color:#e00429; }
+        .order-page-btn.active { background:#e00429; border-color:#e00429; color:#fff; }
         .order-page-btn:disabled { opacity:0.4; cursor:not-allowed; }
       `}</style>
 

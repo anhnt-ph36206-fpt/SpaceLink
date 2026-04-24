@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { User } from '../../types/user';
+import { useAuth } from '../../context/AuthContext';
 import { axiosInstance } from '../../api/axios';
 import { userPrefix } from '../../api/apiAdminPrefix';
 
@@ -19,16 +20,19 @@ const { Title, Text } = Typography;
 const API_PREFIX = userPrefix;
 
 const ROLE_CONFIG: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
-  admin: { color: 'gold', label: 'Admin', icon: <CrownOutlined /> },
+  admin: { color: 'purple', label: 'Admin', icon: <CrownOutlined /> },
+  staff: { color: 'gold', label: 'Nhân viên', icon: <TeamOutlined /> },
   customer: { color: 'blue', label: 'Khách hàng', icon: <UserOutlined /> },
 };
 
 const ROLE_NAME_TO_ID: Record<string, number> = {
   admin: 1,
+  staff: 2,
   customer: 3,
 };
 
 const AdminUserPage: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -48,7 +52,7 @@ const AdminUserPage: React.FC = () => {
   });
 
   // Stats
-  const [stats, setStats] = useState({ total: 0, admin: 0, customer: 0, active: 0 });
+  const [stats, setStats] = useState({ total: 0, admin: 0, staff: 0, customer: 0, active: 0 });
 
   const fetchUsers = useCallback(async (page = 1, searchVal?: string, roleVal?: string, trashed?: boolean) => {
     setLoading(true);
@@ -91,14 +95,16 @@ const AdminUserPage: React.FC = () => {
       const res = await axiosInstance.get(API_PREFIX, { params: { per_page: 1, page: 1 } });
       const totalAll = res.data?.meta?.total ?? 0;
 
-      const [adminRes, customerRes] = await Promise.all([
+      const [adminRes, staffRes, customerRes] = await Promise.all([
         axiosInstance.get(API_PREFIX, { params: { per_page: 1, role_id: 1 } }),
+        axiosInstance.get(API_PREFIX, { params: { per_page: 1, role_id: 2 } }),
         axiosInstance.get(API_PREFIX, { params: { per_page: 1, role_id: 3 } }),
       ]);
 
       setStats({
         total: totalAll,
         admin: adminRes.data?.meta?.total ?? 0,
+        staff: staffRes.data?.meta?.total ?? 0,
         customer: customerRes.data?.meta?.total ?? 0,
         active: totalAll, // approximate
       });
@@ -143,6 +149,7 @@ const AdminUserPage: React.FC = () => {
     form.setFieldsValue({
       fullname: u.fullname,
       email: u.email,
+      phone: u.phone,
       role: u.role || 'customer',
       status: u.status || 'active',
       password: '',
@@ -159,6 +166,7 @@ const AdminUserPage: React.FC = () => {
         const payload: Record<string, unknown> = {};
 
         if (values.fullname) payload.fullname = values.fullname;
+        if (values.phone !== undefined) payload.phone = values.phone;
         if (values.status) payload.status = values.status;
 
         if (values.role) {
@@ -178,6 +186,7 @@ const AdminUserPage: React.FC = () => {
         const payload: Record<string, unknown> = {
           fullname: values.fullname,
           email: values.email,
+          phone: values.phone,
           password: values.password,
         };
 
@@ -303,7 +312,7 @@ const AdminUserPage: React.FC = () => {
           />
           <div>
             <div style={{ fontWeight: 600, fontSize: 14 }}>{r.fullname || '—'}</div>
-            <Text type="secondary" style={{ fontSize: 12 }}>{r.email}</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>{r.email} {r.phone ? ` - ${r.phone}` : ''}</Text>
           </div>
         </Space>
       ),
@@ -314,6 +323,7 @@ const AdminUserPage: React.FC = () => {
         <Select
           value={v || 'customer'}
           size="small"
+          disabled={r.id === currentUser?.id}
           style={{ width: 155 }}
           onChange={(newRole) => handleQuickRole(r.id, newRole)}
           options={Object.entries(ROLE_CONFIG).map(([k, cfg]) => ({
@@ -337,6 +347,7 @@ const AdminUserPage: React.FC = () => {
         <Select
           value={v || 'active'}
           size="small"
+          disabled={r.id === currentUser?.id}
           style={{ width: 135 }}
           onChange={(ns) => handleQuickStatus(r.id, ns)}
           options={[
@@ -358,14 +369,15 @@ const AdminUserPage: React.FC = () => {
               onClick={() => openEdit(r)}
             />
           </Tooltip>
-          <Tooltip title="Xóa">
+          <Tooltip title={r.id === currentUser?.id ? 'Không thể thao tác trên chính bạn' : 'Xóa'}>
             <Popconfirm
               title="Xóa người dùng này?"
               description="Người dùng sẽ bị vô hiệu hóa (có thể khôi phục)"
-              onConfirm={() => handleDelete(r.id)}
+              onConfirm={() => r.id !== currentUser?.id && handleDelete(r.id)}
               okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }}
+              disabled={r.id === currentUser?.id}
             >
-              <Button danger size="small" icon={<DeleteOutlined />} style={{ borderRadius: 8 }} />
+              <Button danger size="small" icon={<DeleteOutlined />} style={{ borderRadius: 8 }} disabled={r.id === currentUser?.id} />
             </Popconfirm>
           </Tooltip>
         </Space>
@@ -399,7 +411,7 @@ const AdminUserPage: React.FC = () => {
           />
           <div>
             <div style={{ fontWeight: 600, fontSize: 14, color: '#999' }}>{r.fullname || '—'}</div>
-            <Text type="secondary" style={{ fontSize: 12 }}>{r.email}</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>{r.email} {r.phone ? ` - ${r.phone}` : ''}</Text>
           </div>
         </Space>
       ),
@@ -472,8 +484,8 @@ const AdminUserPage: React.FC = () => {
           {[
             { label: 'Tổng người dùng', value: stats.total, color: '#0d6efd' },
             { label: 'Admin', value: stats.admin, color: '#ffc107' },
+            { label: 'Nhân viên', value: stats.staff, color: '#9c27b0' },
             { label: 'Khách hàng', value: stats.customer, color: '#198754' },
-            { label: 'Đang hoạt động', value: stats.active, color: '#0dcaf0' },
           ].map((item) => (
             <Col xs={12} sm={6} key={item.label}>
               <Card
@@ -580,6 +592,10 @@ const AdminUserPage: React.FC = () => {
               style={{ borderRadius: 8 }}
               disabled={!!editingUser}
             />
+          </Form.Item>
+
+          <Form.Item name="phone" label="Số điện thoại">
+            <Input placeholder="VD: 0987654321" style={{ borderRadius: 8 }} />
           </Form.Item>
 
           <Form.Item

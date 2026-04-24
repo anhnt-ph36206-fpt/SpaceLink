@@ -34,6 +34,9 @@ interface DashboardStats {
   total_products: number;
   total_customers: number;
   pending_contacts: number;
+  pending_complaints: number;
+  pending_returns: number;
+  total_discount: number;
   today_revenue: number;
   today_orders: number;
   period: string;
@@ -46,6 +49,16 @@ interface DashboardStats {
   customers_change: number | null;
   payment_sync: { delivered_unpaid: number; cod_delivered_paid: number; vnpay_paid: number };
   recent_orders: RecentOrder[];
+  top_vouchers: TopVoucher[];
+}
+
+interface TopVoucher {
+  id: number;
+  code: string;
+  name: string;
+  discount_type: 'percent' | 'fixed';
+  discount_value: number;
+  used_count: number;
 }
 
 interface RecentOrder {
@@ -77,6 +90,14 @@ interface CustomersStats {
   active_customers: number;
   trend: { label: string; new: number }[];
   top_customers: { id: number; name: string; email: string; avatar: string | null; order_count: number; total_spent: number }[];
+}
+
+interface LowStockProduct {
+  id: number;
+  name: string;
+  slug: string;
+  quantity: number;
+  image: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -154,12 +175,12 @@ const KpiCard: React.FC<{
   </Card>
 );
 
-const ChartTooltip = ({ active, payload, label }: any) => {
+const ChartTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number | string; color: string }[]; label?: string; }) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: '#fff', borderRadius: 12, padding: '10px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 160 }}>
       <div style={{ fontWeight: 700, marginBottom: 6, color: '#1a1a2e', fontSize: 13 }}>{label}</div>
-      {payload.map((e: any, i: number) => (
+      {payload.map((e, i: number) => (
         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 3 }}>
           <span style={{ color: e.color, fontSize: 12, fontWeight: 600 }}>
             {e.name === 'total' ? '💰 Doanh thu' : e.name === 'orders_count' ? '📦 Đơn hàng' : e.name === 'count' ? '📦 Đơn hàng' : '👤 Khách mới'}
@@ -173,7 +194,7 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: { cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; percent: number }) => {
   if (percent < 0.05) return null;
   const RADIAN = Math.PI / 180;
   const r = innerRadius + (outerRadius - innerRadius) * 0.5;
@@ -198,6 +219,7 @@ const AdminDashboardPage: React.FC = () => {
   const [topProductsSort, setTopProductsSort] = useState<'quantity' | 'revenue'>('revenue');
   const [ordersStats, setOrdersStats] = useState<OrdersStats | null>(null);
   const [customersStats, setCustomersStats] = useState<CustomersStats | null>(null);
+  const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
   // ── Fetch khi period thay đổi ──────────────────────────────────────────────
@@ -207,6 +229,9 @@ const AdminDashboardPage: React.FC = () => {
       // Stats cơ bản — cả Admin + Staff đều được gọi
       const statsRes = await axiosInstance.get('/admin/dashboard/stats', { params: { period: p } });
       setStats(statsRes.data.data);
+
+      const lowStockRes = await axiosInstance.get('/admin/dashboard/low-stock', { params: { limit: 10 } });
+      setLowStockProducts(lowStockRes.data.data ?? []);
 
       // Các API nâng cao — chỉ Admin mới có quyền
       if (isAdmin) {
@@ -254,7 +279,7 @@ const AdminDashboardPage: React.FC = () => {
     },
     {
       title: 'Khách hàng', key: 'customer',
-      render: (_: any, r: RecentOrder) => (
+      render: (_: unknown, r: RecentOrder) => (
         <div>
           <div style={{ fontWeight: 600, fontSize: 13 }}>{r.customer_name}</div>
           <div style={{ color: '#868e96', fontSize: 12 }}>{r.customer_email}</div>
@@ -274,7 +299,7 @@ const AdminDashboardPage: React.FC = () => {
     },
     {
       title: 'Thanh toán', key: 'payment',
-      render: (_: any, r: RecentOrder) => (
+      render: (_: unknown, r: RecentOrder) => (
         <div>
           <Tag color={r.payment_status === 'paid' ? 'green' : r.payment_status === 'failed' ? 'red' : 'orange'} style={{ borderRadius: 20, fontSize: 11 }}>
             {r.payment_status === 'paid' ? 'Đã TT' : r.payment_status === 'failed' ? 'Thất bại' : 'Chờ TT'}
@@ -397,18 +422,21 @@ const AdminDashboardPage: React.FC = () => {
       <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
         {[
           { label: 'Tổng doanh thu', value: formatVNDShort(stats.total_revenue), sub: 'All-time', color: '#F28B00' },
+          { label: 'Tổng giảm giá', value: formatVNDShort(stats.total_discount), sub: 'Khuyến mãi / Voucher', color: '#e83e8c' },
           { label: 'Tổng đơn hàng', value: stats.total_orders, sub: `${stats.completed_orders} hoàn thành`, color: '#0d6efd' },
-          { label: 'Tổng sản phẩm', value: stats.total_products, sub: '', color: '#6f42c1' },
           { label: 'Doanh thu hôm nay', value: formatVNDShort(stats.today_revenue), sub: `${stats.today_orders} đơn`, color: '#198754' },
           { label: 'Đơn chờ xử lý', value: stats.pending_orders, sub: '', color: '#fd7e14' },
+          { label: 'Hoàn trả chờ duyệt', value: stats.pending_returns, sub: '', color: '#dc3545' },
+          { label: 'Khiếu nại chờ xử lý', value: stats.pending_complaints, sub: '', color: '#dc3545' },
+          { label: 'Tổng sản phẩm', value: stats.total_products, sub: '', color: '#6f42c1' },
           { label: 'Liên hệ chờ', value: stats.pending_contacts, sub: '', color: '#dc3545' },
         ].map((item, i) => (
-          <Col xs={12} sm={8} lg={4} key={i}>
+          <Col xs={12} sm={8} lg={3} key={i}>
             <Card
-              style={{ borderRadius: 12, border: '1px solid #e9ecef', background: '#fff', textAlign: 'center' }}
-              styles={{ body: { padding: '14px 10px' } }}
+              style={{ borderRadius: 12, border: item.value > 0 && item.label.includes('chờ') ? '1px solid #fca5a5' : '1px solid #e9ecef', background: item.value > 0 && item.label.includes('chờ') ? '#fff5f5' : '#fff', textAlign: 'center', height: '100%' }}
+              styles={{ body: { padding: '14px 6px' } }}
             >
-              <div style={{ fontSize: 22, fontWeight: 800, color: item.color }}>{item.value}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: item.color }}>{item.value}</div>
               <div style={{ fontSize: 11, color: '#555', fontWeight: 600, marginTop: 2 }}>{item.label}</div>
               {item.sub && <div style={{ fontSize: 10, color: '#adb5bd', marginTop: 2 }}>{item.sub}</div>}
             </Card>
@@ -651,7 +679,7 @@ const AdminDashboardPage: React.FC = () => {
                 columns={[
                   {
                     title: '#', key: 'rank', width: 44, align: 'center' as const,
-                    render: (_: any, __: any, idx: number) => (
+                    render: (_: unknown, __: unknown, idx: number) => (
                       <div style={{
                         width: 26, height: 26, borderRadius: 8, margin: '0 auto',
                         background: idx === 0 ? 'linear-gradient(135deg,#ffc107,#c79100)'
@@ -665,7 +693,7 @@ const AdminDashboardPage: React.FC = () => {
                   },
                   {
                     title: 'Sản phẩm', key: 'product',
-                    render: (_: any, r: TopProduct) => (
+                    render: (_: unknown, r: TopProduct) => (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         {r.product_image
                           ? <img src={r.product_image} alt={r.product_name} style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', flexShrink: 0 }} />
@@ -693,6 +721,56 @@ const AdminDashboardPage: React.FC = () => {
         </Col>
       </Row>
       )}
+
+      {/* ── Section: Low Stock Products ────────────────────────────── */}
+      <Row style={{ marginBottom: 20 }}>
+        <Col xs={24}>
+          <Card
+            title={<span style={{ fontWeight: 700 }}><WarningOutlined style={{ color: '#dc3545', marginRight: 8 }} /> Cảnh báo sắp hết hàng</span>}
+            extra={<a href="/admin/products" style={{ fontSize: 13, color: '#0d6efd' }}>Quản lý kho →</a>}
+            style={{ borderRadius: 16, border: '1px solid #fca5a5', boxShadow: '0 4px 12px rgba(220,53,69,0.05)' }}
+            styles={{ body: { padding: 0 } }}
+          >
+            {lowStockProducts.length === 0 ? (
+              <Empty description="Kho hàng ổn định" style={{ padding: '30px 0' }} />
+            ) : (
+              <Table
+                dataSource={lowStockProducts}
+                rowKey="id"
+                pagination={false}
+                size="middle"
+                style={{ borderRadius: 16, overflow: 'hidden' }}
+                columns={[
+                  {
+                    title: 'Sản phẩm', key: 'product',
+                    render: (_: unknown, r: LowStockProduct) => (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {r.image
+                          ? <img src={r.image} alt={r.name} style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', flexShrink: 0 }} />
+                          : <div style={{ width: 40, height: 40, borderRadius: 8, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', flexShrink: 0 }}><ShoppingOutlined /></div>
+                        }
+                        <span style={{ fontWeight: 600, fontSize: 13 }}>{r.name}</span>
+                      </div>
+                    ),
+                  },
+                  {
+                    title: 'Mã (ID)', dataIndex: 'id', key: 'id', width: 100, align: 'center',
+                    render: (v: number) => <Text code>{v}</Text>,
+                  },
+                  {
+                    title: 'Tồn kho hiện tại', dataIndex: 'quantity', key: 'qty', width: 150, align: 'center',
+                    render: (v: number) => (
+                      <Tag color={v === 0 ? 'red' : 'volcano'} style={{ fontWeight: 700, padding: '2px 10px', borderRadius: 20 }}>
+                        {v === 0 ? 'Hết hàng' : `Chỉ còn ${v}`}
+                      </Tag>
+                    ),
+                  },
+                ]}
+              />
+            )}
+          </Card>
+        </Col>
+      </Row>
 
       {/* ── Section 5: Customer Analytics (Admin only) ────────────────────── */}
       {isAdmin && (
@@ -838,24 +916,58 @@ const AdminDashboardPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* ── Section 7: Recent Orders ───────────────────────────────────────── */}
-      <Row>
-        <Col xs={24}>
+      {/* ── Section 7: Recent Orders & Vouchers ──────────────────────────── */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={16}>
           <Card
             title={<span style={{ fontWeight: 700 }}>🛒 Đơn hàng gần đây</span>}
             extra={<a href="/admin/orders" style={{ fontSize: 13, color: '#0d6efd' }}>Xem tất cả →</a>}
-            style={{ borderRadius: 16, border: '1px solid #e9ecef', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}
+            style={{ borderRadius: 16, border: '1px solid #e9ecef', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', height: '100%' }}
             styles={{ body: { padding: 0 } }}
           >
-            <Table
-              columns={orderColumns}
-              dataSource={stats.recent_orders}
-              rowKey="id"
-              pagination={false}
-              size="middle"
-              style={{ borderRadius: 16, overflow: 'hidden' }}
-              locale={{ emptyText: 'Chưa có đơn hàng nào' }}
-            />
+            <div style={{ overflowX: 'auto' }}>
+              <Table
+                columns={orderColumns}
+                dataSource={stats.recent_orders}
+                rowKey="id"
+                pagination={false}
+                size="middle"
+                style={{ borderRadius: 16, minWidth: 600 }}
+                locale={{ emptyText: 'Chưa có đơn hàng nào' }}
+              />
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} lg={8}>
+          <Card
+            title={<span style={{ fontWeight: 700 }}>🎟️ Top Khuyến Mãi</span>}
+            extra={<a href="/admin/vouchers" style={{ fontSize: 13, color: '#e83e8c' }}>Tất cả →</a>}
+            style={{ borderRadius: 16, border: '1px solid #f8d7da', boxShadow: '0 2px 12px rgba(232,62,140,0.05)', height: '100%' }}
+            styles={{ body: { padding: '8px 16px' } }}
+          >
+            {!stats.top_vouchers || stats.top_vouchers.length === 0 ? (
+              <Empty description="Chưa có mã giảm giá nào được dùng" style={{ padding: '60px 0' }} />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {stats.top_vouchers.map((v, i) => (
+                  <div key={v.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: i === 0 ? '#fff0f3' : '#f8f9fa', borderRadius: 12, border: i === 0 ? '1px solid #ffb3c6' : '1px solid transparent' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: '#e83e8c', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {v.code}
+                        {i === 0 && <FireOutlined style={{ color: '#fd7e14' }} />}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#6c757d', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.name}</div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>
+                        {v.discount_type === 'percent' ? `${v.discount_value}%` : formatVND(v.discount_value)}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#198754', fontWeight: 600 }}>Tần suất: {v.used_count} lần</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </Col>
       </Row>

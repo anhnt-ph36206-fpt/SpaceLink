@@ -270,6 +270,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'staff'])->g
 
     // Stats cơ bản — Staff được xem
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('dashboard/low-stock', [DashboardController::class, 'lowStock']);
 });
 
 // ── 4b. Admin-only: Quản lý người dùng, báo cáo doanh thu & xóa dữ liệu ──
