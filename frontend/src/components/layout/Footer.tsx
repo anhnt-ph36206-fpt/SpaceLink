@@ -108,7 +108,7 @@ const Footer: React.FC = () => {
                             </span>
                         </div>
                         <div className="col-md-6 text-center text-md-end text-white">
-                            Designed By <a className="text-white text-decoration-underline" href="#">Your Name</a>
+                            Designed By <a className="text-white text-decoration-underline" href="#">SpaceLink</a>
                         </div>
                     </div>
                 </div>

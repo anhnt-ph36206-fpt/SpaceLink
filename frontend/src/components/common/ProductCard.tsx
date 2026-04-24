@@ -37,7 +37,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0, onAddToCa
                     border: 1px solid #eee; transition: transform 0.28s ease, box-shadow 0.28s ease;
                     display: flex; flex-direction: column; height: 100%; }
                 .pc-card:hover { transform: translateY(-6px); box-shadow: 0 12px 36px rgba(0,0,0,0.13) !important; border-color: transparent; }
-                .pc-img-wrap { overflow: hidden; background: #fafafa; height: 180px; display: flex; align-items: center; justify-content: center; }
+                .pc-img-wrap { overflow: hidden; background: #fff; height: 180px; display: flex; align-items: center; justify-content: center; }
                 .pc-img-wrap img { transition: transform 0.38s ease; max-height: 160px; object-fit: contain; width: 100%; padding: 8px; }
                 .pc-card:hover .pc-img-wrap img { transform: scale(1.08); }
                 .pc-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.12);
