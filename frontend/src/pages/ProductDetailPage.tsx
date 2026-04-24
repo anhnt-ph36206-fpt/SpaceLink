@@ -94,6 +94,29 @@ const ProductDetailPage: React.FC = () => {
     const [mainImg, setMainImg] = useState<string | null>(null);
     const [defaultMainImg, setDefaultMainImg] = useState<string | null>(null);
     const [qty, setQty] = useState(1);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [lightboxIndex, setLightboxIndex] = useState(0);
+
+    // Open lightbox at a given index
+    const openLightbox = (index: number) => {
+        setLightboxIndex(index);
+        setLightboxOpen(true);
+    };
+    const closeLightbox = () => setLightboxOpen(false);
+    const lightboxPrev = () => setLightboxIndex(i => (i - 1 + (product?.images?.length ?? 1)) % (product?.images?.length ?? 1));
+    const lightboxNext = () => setLightboxIndex(i => (i + 1) % (product?.images?.length ?? 1));
+
+    // Close on ESC key
+    useEffect(() => {
+        if (!lightboxOpen) return;
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowLeft') lightboxPrev();
+            if (e.key === 'ArrowRight') lightboxNext();
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [lightboxOpen, product?.images?.length]);
     const [relatedProducts, setRelatedProducts] = useState<{ id: string; name: string; image: string; price: number; oldPrice?: number; category?: string; rating?: number; isSale?: boolean; isNew?: boolean }[]>([]);
 
     // ── Reviews state ──────────────────────────────────────────────────
@@ -376,24 +399,39 @@ const ProductDetailPage: React.FC = () => {
                     <div className="row g-0">
                         {/* Images */}
                         <div className="col-lg-5 p-3 p-lg-4 d-flex flex-column align-items-center bg-white border-end">
-                            {/* Main image */}
+                            {/* Main image — click để phóng to */}
                             <div
                                 className="position-relative w-100 text-center mb-3"
-                                style={{ height: 380, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa', borderRadius: 12 }}
+                                style={{ height: 380, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa', borderRadius: 12, cursor: mainImg ? 'zoom-in' : 'default' }}
+                                onClick={() => {
+                                    if (!mainImg) return;
+                                    const idx = allImages.findIndex(img => imgUrl(img) === mainImg);
+                                    openLightbox(idx >= 0 ? idx : 0);
+                                }}
+                                title={mainImg ? 'Nhấn để xem ảnh lớn' : ''}
                             >
                                 {discountPct > 0 && (
                                     <span
                                         className="position-absolute top-0 start-0 m-3 badge bg-danger rounded-pill"
-                                        style={{ fontSize: 14, padding: '6px 12px' }}
+                                        style={{ fontSize: 14, padding: '6px 12px', zIndex: 1 }}
                                     >
                                         -{discountPct}%
+                                    </span>
+                                )}
+                                {/* Zoom hint icon */}
+                                {mainImg && (
+                                    <span
+                                        className="position-absolute bottom-0 end-0 m-2"
+                                        style={{ background: 'rgba(0,0,0,0.45)', borderRadius: 8, padding: '4px 8px', color: '#fff', fontSize: 13, pointerEvents: 'none' }}
+                                    >
+                                        <i className="fas fa-expand me-1" />Phóng to
                                     </span>
                                 )}
                                 {mainImg ? (
                                     <img
                                         src={mainImg}
                                         alt={product.name}
-                                        style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
+                                        style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', transition: 'transform .2s' }}
                                     />
                                 ) : (
                                     <i className="fas fa-box fa-5x text-muted" />
@@ -403,7 +441,7 @@ const ProductDetailPage: React.FC = () => {
                             {/* Thumbnails */}
                             {allImages.length > 1 && (
                                 <div className="d-flex gap-2 flex-wrap justify-content-center">
-                                    {allImages.map(img => {
+                                    {allImages.map((img, idx) => {
                                         const url = imgUrl(img);
                                         return url ? (
                                             <img
@@ -411,16 +449,81 @@ const ProductDetailPage: React.FC = () => {
                                                 src={url}
                                                 alt=""
                                                 onClick={() => setMainImg(url)}
+                                                title="Xem ảnh này"
                                                 style={{
                                                     width: 64, height: 64, objectFit: 'cover', borderRadius: 8,
-                                                    cursor: 'pointer', border: mainImg === url ? '2px solid #0d6efd' : '2px solid #dee2e6',
-                                                    transition: 'border .2s',
+                                                    cursor: 'pointer',
+                                                    border: mainImg === url ? '2px solid #0d6efd' : '2px solid #dee2e6',
+                                                    transition: 'border .2s, transform .15s',
+                                                    transform: mainImg === url ? 'scale(1.06)' : 'scale(1)',
                                                 }}
                                             />
                                         ) : null;
                                     })}
                                 </div>
                             )}
+
+                            {/* ── Lightbox Modal ── */}
+                            {lightboxOpen && allImages.length > 0 && (() => {
+                                const lb = allImages[lightboxIndex];
+                                const lbUrl = imgUrl(lb) || mainImg;
+                                return (
+                                    <div
+                                        onClick={closeLightbox}
+                                        style={{
+                                            position: 'fixed', inset: 0, zIndex: 9999,
+                                            background: 'rgba(0,0,0,0.88)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            animation: 'lbFadeIn .2s ease',
+                                        }}
+                                    >
+                                        <style>{`
+                                            @keyframes lbFadeIn { from { opacity: 0 } to { opacity: 1 } }
+                                            .lb-img { max-height: 88vh; max-width: 88vw; object-fit: contain; border-radius: 12px; box-shadow: 0 8px 48px rgba(0,0,0,.6); animation: lbFadeIn .25s ease; }
+                                            .lb-btn { position: fixed; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 24px; padding: 14px 18px; border-radius: 50%; cursor: pointer; transition: background .2s; z-index: 10000; }
+                                            .lb-btn:hover { background: rgba(255,255,255,0.3); }
+                                            .lb-close { position: fixed; top: 18px; right: 24px; background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 20px; padding: 8px 14px; border-radius: 50%; cursor: pointer; transition: background .2s; z-index: 10000; }
+                                            .lb-close:hover { background: rgba(255,255,255,0.3); }
+                                            .lb-counter { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.7); font-size: 14px; z-index: 10000; }
+                                        `}</style>
+
+                                        {/* Close */}
+                                        <button className="lb-close" onClick={closeLightbox} title="Đóng (ESC)">
+                                            <i className="fas fa-times" />
+                                        </button>
+
+                                        {/* Prev */}
+                                        {allImages.length > 1 && (
+                                            <button className="lb-btn" style={{ left: 16 }}
+                                                onClick={e => { e.stopPropagation(); lightboxPrev(); }}>
+                                                <i className="fas fa-chevron-left" />
+                                            </button>
+                                        )}
+
+                                        {/* Image */}
+                                        <img
+                                            key={lbUrl}
+                                            src={lbUrl || ''}
+                                            alt={product.name}
+                                            className="lb-img"
+                                            onClick={e => e.stopPropagation()}
+                                        />
+
+                                        {/* Next */}
+                                        {allImages.length > 1 && (
+                                            <button className="lb-btn" style={{ right: 16 }}
+                                                onClick={e => { e.stopPropagation(); lightboxNext(); }}>
+                                                <i className="fas fa-chevron-right" />
+                                            </button>
+                                        )}
+
+                                        {/* Counter */}
+                                        {allImages.length > 1 && (
+                                            <div className="lb-counter">{lightboxIndex + 1} / {allImages.length}</div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* Info */}

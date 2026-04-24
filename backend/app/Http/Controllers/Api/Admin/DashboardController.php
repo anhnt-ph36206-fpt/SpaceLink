@@ -88,8 +88,11 @@ class DashboardController extends Controller
             'total_customers'   => User::where('role_id', '!=', 1)->count(),
             'pending_orders'    => Order::where('status', 'pending')->count(),
             'completed_orders'  => Order::whereIn('status', ['delivered', 'completed'])->count(),
-            'incomplete_orders' => Order::whereNotIn('status', ['delivered', 'completed', 'cancelled'])->count(),
+            'incomplete_orders' => Order::whereNotIn('status', ['delivered', 'completed', 'cancelled', 'returned'])->count(),
             'pending_contacts'  => Contact::where('status', 'pending')->count(),
+            'pending_complaints'=> \App\Models\OrderComplaint::where('status', 'pending')->count(),
+            'pending_returns'   => \App\Models\ProductReturn::where('status', 'pending')->count(),
+            'total_discount'    => (float) Order::where('payment_status', 'paid')->sum('voucher_discount'),
 
             // ── Today ──
             'today_revenue' => (float) Order::where('payment_status', 'paid')->whereDate('created_at', $today)->sum('total_amount'),
@@ -135,6 +138,12 @@ class DashboardController extends Controller
             ]);
 
         $stats['recent_orders'] = $recentOrders;
+
+        // ── Top 5 Vouchers ──
+        $stats['top_vouchers'] = \App\Models\Voucher::where('used_count', '>', 0)
+            ->orderByDesc('used_count')
+            ->take(5)
+            ->get(['id', 'code', 'name', 'discount_type', 'discount_value', 'used_count']);
 
         return response()->json(['status' => 'success', 'data' => $stats]);
     }
@@ -527,5 +536,40 @@ class DashboardController extends Controller
                 'top_customers'    => $topCustomers,
             ],
         ]);
+    }
+
+    /**
+     * GET /api/admin/dashboard/low-stock
+     */
+    public function lowStock(Request $request)
+    {
+        $limit = min((int) $request->get('limit', 10), 50);
+
+        $products = Product::where('quantity', '<', 10)
+            ->where('is_active', true)
+            ->orderBy('quantity', 'asc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($p) {
+                $image = DB::table('product_images')
+                    ->where('product_id', $p->id)
+                    ->orderByDesc('is_primary')
+                    ->orderBy('id')
+                    ->value('image_path');
+
+                if ($image && !str_starts_with($image, 'http')) {
+                    $image = asset('storage/' . $image);
+                }
+
+                return [
+                    'id'       => $p->id,
+                    'name'     => $p->name,
+                    'slug'     => $p->slug,
+                    'quantity' => $p->quantity,
+                    'image'    => $image,
+                ];
+            });
+
+        return response()->json(['status' => 'success', 'data' => $products]);
     }
 }

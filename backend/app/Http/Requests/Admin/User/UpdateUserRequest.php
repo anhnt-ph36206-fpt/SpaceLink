@@ -16,7 +16,7 @@ class UpdateUserRequest extends FormRequest
         return [
             'fullname'      => 'sometimes|string|max:150',
             'phone'         => 'sometimes|nullable|string|max:15',
-            'role_id'       => 'sometimes|integer|in:1,3',
+            'role_id'       => 'sometimes|integer|in:1,2,3',
             'status'        => 'sometimes|in:active,inactive,banned',
             'gender'        => 'sometimes|nullable|in:male,female,other',
             'date_of_birth' => 'sometimes|nullable|date',
@@ -27,7 +27,7 @@ class UpdateUserRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'role_id.in'    => 'role_id không hợp lệ (1=Admin, 3=Customer).',
+            'role_id.in'    => 'role_id không hợp lệ (1=Admin, 2=Staff, 3=Customer).',
             'status.in'     => 'status không hợp lệ (active, inactive, banned).',
             'gender.in'     => 'gender không hợp lệ (male, female, other).',
             'password.min'  => 'Mật khẩu phải có ít nhất 6 ký tự.',
