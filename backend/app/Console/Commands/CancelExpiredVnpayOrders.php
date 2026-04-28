@@ -34,11 +34,25 @@ class CancelExpiredVnpayOrders extends Command
         $count = 0;
         foreach ($orders as $order) {
             \Illuminate\Support\Facades\DB::transaction(function () use ($order, &$count, $expireMinutes) {
-                // Lazy deduction: đơn pending CHƯA trừ kho → KHÔNG hoàn kho
+                // Immediate deduction: stock ĐÃ bị trừ ngay khi checkout → PHẢI hoàn kho khi hủy
                 $variantIds = [];
                 foreach ($order->items as $item) {
                     if ($item->variant_id) {
                         $variantIds[] = $item->variant_id;
+
+                        // Hoàn kho cho variant
+                        $variant = \App\Models\ProductVariant::find($item->variant_id);
+                        if ($variant) {
+                            $variant->increment('quantity', $item->quantity);
+                        }
+
+                        // Sync lại tổng quantity cho product
+                        $product = \App\Models\Product::find($item->product_id);
+                        if ($product) {
+                            $product->update([
+                                'quantity' => \App\Models\ProductVariant::where('product_id', $product->id)->sum('quantity'),
+                            ]);
+                        }
                     }
                 }
 
@@ -50,7 +64,7 @@ class CancelExpiredVnpayOrders extends Command
                     \App\Models\Voucher::where('id', $order->voucher_id)->decrement('used_count');
                 }
 
-                // Đổi trạng thái Hủỷ
+                // Đổi trạng thái Hủy
                 $order->update([
                     'status' => 'cancelled',
                     'cancelled_reason' => "Hệ thống tự động hủy do giao dịch VNPAY quá hạn {$expireMinutes} phút.",
