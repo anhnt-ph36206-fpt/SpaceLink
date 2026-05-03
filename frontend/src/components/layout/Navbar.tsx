@@ -269,18 +269,10 @@ const Navbar: React.FC = () => {
                                     <Link to="/" className={`nav-item nav-link px-3 ${isActive('/')}`}>Trang Chủ</Link>
                                     <Link to="/about" className={`nav-item nav-link px-3 ${isActive('/about')}`}>Giới Thiệu</Link>
                                     <Link to="/shop" className={`nav-item nav-link px-3 ${isActive('/shop')}`}>Sản Phẩm</Link>
+                                    <Link to="/news" className={`nav-item nav-link px-3 ${isActive('/shop')}`}>Tin tức</Link>
 
                                     {/* Tin Tức dropdown */}
-                                    <div className="nav-item dropdown">
-                                        <a href="#" className="nav-link dropdown-toggle px-3" data-bs-toggle="dropdown">
-                                            Tin Tức
-                                        </a>
-                                        <div className="dropdown-menu m-0 shadow-sm border-0 rounded-0">
-                                            <Link to="/blog" className="dropdown-item">Tin công nghệ</Link>
-                                            <Link to="/tips" className="dropdown-item">Mẹo hay</Link>
-                                            <Link to="/review" className="dropdown-item">Đánh giá sản phẩm</Link>
-                                        </div>
-                                    </div>
+
 
                                     <Link to="/contact" className={`nav-item nav-link px-3 me-2 ${isActive('/contact')}`}>Liên Hệ</Link>
 
@@ -326,4 +318,4 @@ const Navbar: React.FC = () => {
     );
 };
 
-export default Navbar;
+export default Navbar;
